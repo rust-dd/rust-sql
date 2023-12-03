@@ -30,5 +30,7 @@ pub fn QueryEditor(set_editor: WriteSignal<ModelCell>) -> impl IntoView {
             prev.replace(Some(editor));
         });
     });
-    view! {<div class="border-b-1 border-neutral-200" _ref=node_ref />}
+
+    view! { <div class="border-b-1 border-neutral-200" _ref=node_ref></div> }
 }
+

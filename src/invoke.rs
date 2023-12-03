@@ -9,3 +9,4 @@ pub struct InvokePostgresConnectionArgs {
 pub struct InvokeTablesArgs {
     pub schema: String,
 }
+

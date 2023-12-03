@@ -8,3 +8,4 @@ extern "C" {
     #[wasm_bindgen(js_namespace = console)]
     pub(crate) fn log(s: &str);
 }
+

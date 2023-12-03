@@ -1,5 +1,6 @@
 {
   "emmet.includeLanguages": {
     "rust": "html"
-  }
+  },
+  "rust-analyzer.rustfmt.overrideCommand": ["leptosfmt", "--stdin", "--rustfmt"]
 }

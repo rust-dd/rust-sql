@@ -12,7 +12,8 @@ pub fn App() -> impl IntoView {
 
     view! {
         <Layout>
-            <QueryEditor set_editor=set_editor />
+            <QueryEditor set_editor=set_editor/>
         </Layout>
     }
 }
+

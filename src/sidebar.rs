@@ -12,23 +12,43 @@ pub fn Sidebar() -> impl IntoView {
                 <Show when=move || db.is_connecting.get()>
                     <p>Loading...</p>
                 </Show>
-                {move || db.schemas.get().into_iter().map(|(schema, toggle)| {
-                    let s = schema.clone();
-                    view! {
-                        <div key=&schema>
-                            <button class=if toggle {"font-semibold"} else {"hover:font-semibold"} on:click=move |_| {
-                                let s_clone = s.clone();
-                                db.schemas.update(|prev| {
-                                    prev.insert(s_clone, !toggle);
-                                });
-                            }>{&schema}</button>
-                            <Show when=move || toggle>
-                                <Tables schema=schema.clone() />
-                            </Show>
-                        </div>
-                    }})
-                .collect_view()}
+                {move || {
+                    db.schemas
+                        .get()
+                        .into_iter()
+                        .map(|(schema, toggle)| {
+                            let s = schema.clone();
+                            view! {
+                                <div key=&schema>
+                                    <button
+                                        class=if toggle {
+                                            "font-semibold"
+                                        } else {
+                                            "hover:font-semibold"
+                                        }
+
+                                        on:click=move |_| {
+                                            let s_clone = s.clone();
+                                            db.schemas
+                                                .update(|prev| {
+                                                    prev.insert(s_clone, !toggle);
+                                                });
+                                        }
+                                    >
+
+                                        {&schema}
+                                    </button>
+                                    <Show when=move || toggle>
+                                        <Tables schema=schema.clone()/>
+                                    </Show>
+                                </div>
+                            }
+                        })
+                        .collect_view()
+                }}
+
             </div>
         </div>
     }
 }
+

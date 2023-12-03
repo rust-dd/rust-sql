@@ -1,0 +1,6 @@
+/dist/
+/target/
+/Cargo.lock
+
+# Environment file
+.env

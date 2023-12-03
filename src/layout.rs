@@ -10,7 +10,7 @@ pub fn Layout(children: Children) -> impl IntoView {
             <Sidebar/>
             <div class="flex grow flex-col overflow-auto">
                 <DBConnector/>
-                <main class="p-8">
+                <main class="">
                     {children()}
                 </main>
             </div>

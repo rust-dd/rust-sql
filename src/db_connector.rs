@@ -17,7 +17,7 @@ pub fn DBConnector() -> impl IntoView {
             <div class="flex flex-row gap-2">
             <input class="border-1 border-neutral-200 p-1 rounded-md" type="text" value=move || db.db_user.get() placeholder="username" on:input=move |e| {
             db.db_user.set(event_target_value(&e)); } />
-            <input class="border-1 border-neutral-200 p-1 rounded-md" type="text" value=move || db.db_password.get() placeholder="password" on:input=move |e| {
+            <input class="border-1 border-neutral-200 p-1 rounded-md" type="password" value=move || db.db_password.get() placeholder="password" on:input=move |e| {
             db.db_password.set(event_target_value(&e)); } />
             <input class="border-1 border-neutral-200 p-1 rounded-md" type="text" value=move || db.db_host.get() placeholder="host" on:input=move |e| {
             db.db_host.set(event_target_value(&e)); } />

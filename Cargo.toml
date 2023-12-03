@@ -15,6 +15,7 @@ leptos_icons = "0.1.0" # https://carlosted.github.io/icondata/
 serde_json = "1.0.108"
 gloo = "0.10.0"
 wasm-bindgen-futures = "0.4.39"
+monaco = "0.4.0"
 
 [workspace]
 members = ["src-tauri"]

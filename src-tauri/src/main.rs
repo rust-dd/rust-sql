@@ -3,9 +3,10 @@
 
 mod postgres;
 
-use postgres::{get_query_result, get_schema_tables, pg_connector};
+use postgres::{get_schema_tables, get_sql_result, pg_connector};
 use sqlx::PgPool;
 use std::sync::Arc;
+#[cfg(debug_assertions)]
 use tauri::Manager;
 use tokio::sync::Mutex;
 
@@ -30,7 +31,7 @@ fn main() {
         .invoke_handler(tauri::generate_handler![
             get_schema_tables,
             pg_connector,
-            get_query_result
+            get_sql_result
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

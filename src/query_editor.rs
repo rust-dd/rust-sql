@@ -7,13 +7,13 @@ use monaco::{
 };
 use wasm_bindgen::JsCast;
 
-use crate::store::{db::DBStore, editor::EditorState};
+use crate::store::{editor::EditorState, query::QueryState};
 
 pub type ModelCell = Rc<RefCell<Option<CodeEditor>>>;
 
 #[component]
 pub fn QueryEditor() -> impl IntoView {
-    let query = use_context::<DBStore>().unwrap().query;
+    let query = use_context::<QueryState>().unwrap().sql;
     let set_editor = use_context::<EditorState>().unwrap().editor;
     let node_ref = create_node_ref();
 
@@ -23,7 +23,7 @@ pub fn QueryEditor() -> impl IntoView {
         let editor = CodeEditor::create(
             html_element,
             Some(CodeEditorOptions {
-                value: query.get(),
+                value: Some(query.get()),
                 language: Some("sql".to_string()),
                 automatic_layout: Some(true),
                 dimension: Some(IDimension::new(0, 240)),

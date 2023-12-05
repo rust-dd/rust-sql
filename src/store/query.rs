@@ -6,7 +6,8 @@ use super::editor::EditorState;
 
 #[derive(Clone, Copy, Debug)]
 pub struct QueryState {
-    pub query_result: RwSignal<Option<(Vec<String>, Vec<Vec<String>>)>>,
+    pub sql: RwSignal<String>,
+    pub sql_result: RwSignal<Option<(Vec<String>, Vec<Vec<String>>)>>,
     pub is_loading: RwSignal<bool>,
 }
 
@@ -19,7 +20,8 @@ impl Default for QueryState {
 impl QueryState {
     pub fn new() -> Self {
         Self {
-            query_result: create_rw_signal(Some((Vec::new(), Vec::new()))),
+            sql: create_rw_signal(String::from("SELECT * FROM users LIMIT 100;")),
+            sql_result: create_rw_signal(Some((Vec::new(), Vec::new()))),
             is_loading: create_rw_signal(false),
         }
     }
@@ -42,9 +44,9 @@ impl QueryState {
         })
         .unwrap();
 
-        let data = invoke("get_query_result", args).await;
+        let data = invoke("get_sql_result", args).await;
         let data = serde_wasm_bindgen::from_value::<(Vec<String>, Vec<Vec<String>>)>(data).unwrap();
-        self.query_result.update(|prev| {
+        self.sql_result.update(|prev| {
             *prev = Some(data);
         });
         self.is_loading.update(|prev| {

@@ -55,7 +55,7 @@ pub async fn get_schema_tables(
 }
 
 #[tauri::command]
-pub async fn get_query_result(
+pub async fn get_sql_result(
     sql: String,
     app_state: State<'_, AppState>,
 ) -> Result<(Vec<String>, Vec<Vec<String>>)> {

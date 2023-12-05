@@ -10,3 +10,8 @@ pub struct InvokeTablesArgs {
     pub schema: String,
 }
 
+#[derive(Serialize, Deserialize)]
+pub struct InvokeQueryArgs {
+    pub sql: String,
+}
+

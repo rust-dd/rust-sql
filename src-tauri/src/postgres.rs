@@ -1,4 +1,4 @@
-use sqlx::postgres::PgPoolOptions;
+use sqlx::{postgres::PgPoolOptions, Column, Row};
 use tauri::{Result, State};
 
 use crate::AppState;
@@ -52,5 +52,40 @@ pub async fn get_schema_tables(
     let tables = tables.iter().map(|r| r.0.clone()).collect();
 
     Ok(tables)
+}
+
+#[tauri::command]
+pub async fn get_query_result(
+    sql: String,
+    app_state: State<'_, AppState>,
+) -> Result<(Vec<String>, Vec<Vec<String>>)> {
+    let pool = app_state.pool.lock().await;
+
+    let query = sqlx::query(&sql)
+        .fetch_all(pool.as_ref().unwrap())
+        .await
+        .unwrap();
+    // get columns
+    let columns = query
+        .get(0)
+        .unwrap()
+        .columns()
+        .iter()
+        .map(|c| c.name().to_string())
+        .collect::<Vec<String>>();
+    // get rows
+    let rows = query
+        .iter()
+        .map(|r| {
+            let mut row = Vec::new();
+            for i in 0..r.len() {
+                let value = r.try_get::<String, _>(i).unwrap_or(String::from("null"));
+                row.push(value);
+            }
+            row
+        })
+        .collect::<Vec<Vec<String>>>();
+
+    Ok((columns, rows))
 }
 

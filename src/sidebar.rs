@@ -6,7 +6,7 @@ pub fn Sidebar() -> impl IntoView {
     let db = use_context::<DBStore>().unwrap();
 
     view! {
-        <div class="flex border-r-1 h-screen overflow-auto border-neutral-200 flex-col gap-2 px-4 pt-4">
+        <header class="flex border-r-1 border-neutral-200 flex-col gap-2 px-4 pt-4">
             <p class="font-semibold">Schemas</p>
             <div class="pl-2">
                 <Show when=move || db.is_connecting.get()>
@@ -48,7 +48,7 @@ pub fn Sidebar() -> impl IntoView {
                 }}
 
             </div>
-        </div>
+        </header>
     }
 }
 

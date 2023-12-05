@@ -1,9 +1,6 @@
 use leptos::*;
 
-use crate::{
-    query_editor::ModelCell,
-    store::{db::DBStore, editor::EditorState},
-};
+use crate::store::{db::DBStore, query::QueryState};
 
 #[component]
 pub fn DBConnector() -> impl IntoView {
@@ -12,20 +9,15 @@ pub fn DBConnector() -> impl IntoView {
         let mut db_clone = *db;
         async move { db_clone.connect().await }
     });
-    let editor = use_context::<EditorState>().unwrap().editor;
-    let query = create_action(move |editor: &ModelCell| {
-        let code = editor
-            .borrow()
-            .as_ref()
-            .unwrap()
-            .get_model()
-            .unwrap()
-            .get_value();
-
-        async move { code }
+    //let editor = use_context::<EditorState>().unwrap().editor;
+    let query_state = use_context::<QueryState>().unwrap();
+    let run_query = create_action(move |query_state: &QueryState| {
+        let query_state = *query_state;
+        async move { query_state.run_query().await }
     });
+
     view! {
-        <div class="flex flex-row justify-between p-4 gap-2 border-b-1 border-neutral-200">
+        <header class="flex flex-row justify-between p-4 gap-2 border-b-1 border-neutral-200">
             <div class="flex flex-row gap-2">
                 <input
                     class="border-1 border-neutral-200 p-1 rounded-md"
@@ -71,9 +63,7 @@ pub fn DBConnector() -> impl IntoView {
             <div class="flex flex-row gap-2">
                 <button
                     class="px-4 py-2 border-1 border-neutral-200 hover:bg-neutral-200 rounded-md"
-                    on:click=move |_| {
-                        query.dispatch(editor.get());
-                    }
+                    on:click=move |_| { run_query.dispatch(query_state) }
                 >
 
                     Query
@@ -88,7 +78,7 @@ pub fn DBConnector() -> impl IntoView {
                     Connect
                 </button>
             </div>
-        </div>
+        </header>
     }
 }
 

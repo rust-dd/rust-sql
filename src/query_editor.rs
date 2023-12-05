@@ -15,8 +15,8 @@ pub type ModelCell = Rc<RefCell<Option<CodeEditor>>>;
 pub fn QueryEditor() -> impl IntoView {
     let query = use_context::<DBStore>().unwrap().query;
     let set_editor = use_context::<EditorState>().unwrap().editor;
-
     let node_ref = create_node_ref();
+
     node_ref.on_load(move |node| {
         let div_element: &web_sys::HtmlDivElement = &node;
         let html_element = div_element.unchecked_ref::<web_sys::HtmlElement>();
@@ -36,6 +36,6 @@ pub fn QueryEditor() -> impl IntoView {
         });
     });
 
-    view! { <div class="border-b-1 border-neutral-200" _ref=node_ref></div> }
+    view! { <div class="border-b-1 border-neutral-200 sticky" _ref=node_ref></div> }
 }
 

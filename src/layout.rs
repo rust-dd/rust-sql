@@ -5,13 +5,11 @@ use crate::{db_connector::DBConnector, sidebar::Sidebar};
 #[component]
 pub fn Layout(children: Children) -> impl IntoView {
     view! {
-        <div class="w-screen h-screen">
-            <div class="flex flex-row">
-                <Sidebar/>
-                <div class="flex grow flex-col overflow-auto">
-                    <DBConnector/>
-                    <main class="">{children()}</main>
-                </div>
+        <div class="flex h-screen">
+            <Sidebar/>
+            <div class="flex flex-col flex-1 overflow-hidden">
+                <DBConnector/>
+                <main class="flex-1 overflow-y-scroll">{children()}</main>
             </div>
         </div>
     }

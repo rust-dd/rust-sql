@@ -7,10 +7,15 @@ use monaco::{
 };
 use wasm_bindgen::JsCast;
 
+use crate::store::{db::DBStore, editor::EditorState};
+
 pub type ModelCell = Rc<RefCell<Option<CodeEditor>>>;
 
 #[component]
-pub fn QueryEditor(set_editor: WriteSignal<ModelCell>) -> impl IntoView {
+pub fn QueryEditor() -> impl IntoView {
+    let query = use_context::<DBStore>().unwrap().query;
+    let set_editor = use_context::<EditorState>().unwrap().editor;
+
     let node_ref = create_node_ref();
     node_ref.on_load(move |node| {
         let div_element: &web_sys::HtmlDivElement = &node;
@@ -18,7 +23,7 @@ pub fn QueryEditor(set_editor: WriteSignal<ModelCell>) -> impl IntoView {
         let editor = CodeEditor::create(
             html_element,
             Some(CodeEditorOptions {
-                value: Some("SELECT * FROM users LIMIT 100;".to_string()),
+                value: query.get(),
                 language: Some("sql".to_string()),
                 automatic_layout: Some(true),
                 dimension: Some(IDimension::new(0, 240)),

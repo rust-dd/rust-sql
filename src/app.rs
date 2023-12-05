@@ -1,18 +1,18 @@
 use crate::{
     layout::Layout,
-    query_editor::{ModelCell, QueryEditor},
-    store::db::DBStore,
+    query_editor::QueryEditor,
+    store::{db::DBStore, editor::EditorState},
 };
 use leptos::*;
 
 #[component]
 pub fn App() -> impl IntoView {
     provide_context(DBStore::default());
-    let (editor, set_editor) = create_signal(ModelCell::default());
+    provide_context(EditorState::default());
 
     view! {
         <Layout>
-            <QueryEditor set_editor=set_editor/>
+            <QueryEditor/>
         </Layout>
     }
 }

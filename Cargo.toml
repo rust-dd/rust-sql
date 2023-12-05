@@ -19,3 +19,5 @@ monaco = "0.4.0"
 
 [workspace]
 members = ["src-tauri"]
+
+

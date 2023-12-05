@@ -14,6 +14,7 @@ pub struct DBStore {
     pub schemas: RwSignal<HashMap<String, bool>>,
     pub is_connecting: RwSignal<bool>,
     pub tables: RwSignal<HashMap<String, Vec<String>>>,
+    pub query: RwSignal<Option<String>>,
 }
 
 impl Default for DBStore {
@@ -32,6 +33,7 @@ impl DBStore {
             db_port: create_rw_signal(String::new()),
             db_user: create_rw_signal(String::new()),
             db_password: create_rw_signal(String::new()),
+            query: create_rw_signal(Some(String::from("SELECT * FROM users LIMIT 100;"))),
         }
     }
 

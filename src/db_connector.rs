@@ -1,4 +1,4 @@
-use leptos::*;
+use leptos::{html::*, *};
 
 use crate::store::{db::DBStore, query::QueryState};
 
@@ -16,69 +16,78 @@ pub fn DBConnector() -> impl IntoView {
         async move { query_state.run_query().await }
     });
 
-    view! {
-        <header class="flex flex-row justify-between p-4 gap-2 border-b-1 border-neutral-200">
-            <div class="flex flex-row gap-2">
-                <input
-                    class="border-1 border-neutral-200 p-1 rounded-md"
-                    type="text"
-                    value=move || db.db_user.get()
-                    placeholder="username"
-                    on:input=move |e| {
-                        db.db_user.set(event_target_value(&e));
-                    }
-                />
-
-                <input
-                    class="border-1 border-neutral-200 p-1 rounded-md"
-                    type="password"
-                    value=move || db.db_password.get()
-                    placeholder="password"
-                    on:input=move |e| {
-                        db.db_password.set(event_target_value(&e));
-                    }
-                />
-
-                <input
-                    class="border-1 border-neutral-200 p-1 rounded-md"
-                    type="text"
-                    value=move || db.db_host.get()
-                    placeholder="host"
-                    on:input=move |e| {
-                        db.db_host.set(event_target_value(&e));
-                    }
-                />
-
-                <input
-                    class="border-1 border-neutral-200 p-1 rounded-md"
-                    type="text"
-                    value=move || db.db_port.get()
-                    placeholder="port"
-                    on:input=move |e| {
-                        db.db_port.set(event_target_value(&e));
-                    }
-                />
-
-            </div>
-            <div class="flex flex-row gap-2">
-                <button
-                    class="px-4 py-2 border-1 border-neutral-200 hover:bg-neutral-200 rounded-md"
-                    on:click=move |_| { run_query.dispatch(query_state) }
-                >
-
-                    Query
-                </button>
-                <button
-                    class="px-4 py-2 border-1 border-neutral-200 hover:bg-neutral-200 rounded-md"
-                    on:click=move |_| {
-                        connect.dispatch(db);
-                    }
-                >
-
-                    Connect
-                </button>
-            </div>
-        </header>
-    }
+    header()
+        .attr(
+            "class",
+            "flex flex-row justify-between p-4 gap-2 border-b-1 border-neutral-200",
+        )
+        .child(
+            div()
+                .attr("class", "flex flex-row gap-2")
+                .child(
+                    input()
+                        .attr("class", "border-1 border-neutral-200 p-1 rounded-md")
+                        .attr("type", "text")
+                        .attr("value", move || db.db_user.get())
+                        .attr("placeholder", "username")
+                        .on(ev::input, move |e| {
+                            db.db_user.set(event_target_value(&e));
+                        }),
+                )
+                .child(
+                    input()
+                        .attr("class", "border-1 border-neutral-200 p-1 rounded-md")
+                        .attr("type", "password")
+                        .attr("value", move || db.db_password.get())
+                        .attr("placeholder", "password")
+                        .on(ev::input, move |e| {
+                            db.db_password.set(event_target_value(&e));
+                        }),
+                )
+                .child(
+                    input()
+                        .attr("class", "border-1 border-neutral-200 p-1 rounded-md")
+                        .attr("type", "text")
+                        .attr("value", move || db.db_host.get())
+                        .attr("placeholder", "host")
+                        .on(ev::input, move |e| {
+                            db.db_host.set(event_target_value(&e));
+                        }),
+                )
+                .child(
+                    input()
+                        .attr("class", "border-1 border-neutral-200 p-1 rounded-md")
+                        .attr("type", "text")
+                        .attr("value", move || db.db_port.get())
+                        .attr("placeholder", "port")
+                        .on(ev::input, move |e| {
+                            db.db_port.set(event_target_value(&e));
+                        }),
+                ),
+        )
+        .child(
+            div()
+                .attr("class", "flex flex-row gap-2")
+                .child(
+                    button()
+                        .attr(
+                            "class",
+                            "px-4 py-2 border-1 border-neutral-200 hover:bg-neutral-200 rounded-md",
+                        )
+                        .on(ev::click, move |_| run_query.dispatch(query_state))
+                        .child("Query"),
+                )
+                .child(
+                    button()
+                        .attr(
+                            "class",
+                            "px-4 py-2 border-1 border-neutral-200 hover:bg-neutral-200 rounded-md",
+                        )
+                        .on(ev::click, move |_| {
+                            connect.dispatch(db);
+                        })
+                        .child("Connect"),
+                ),
+        )
 }
 

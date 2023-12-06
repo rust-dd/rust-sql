@@ -1,54 +1,57 @@
-use crate::{store::db::DBStore, tables::Tables};
-use leptos::*;
+use crate::{store::db::DBStore, tables::tables};
+use leptos::{html::*, *};
 
-#[component]
-pub fn Sidebar() -> impl IntoView {
+pub fn sidebar() -> impl IntoView {
     let db = use_context::<DBStore>().unwrap();
 
-    view! {
-        <div class="flex border-r-1 border-neutral-200 flex-col gap-2 px-4 pt-4 overflow-auto">
-            <p class="font-semibold">Schemas</p>
-            <div class="pl-2">
-                <Show when=move || db.is_connecting.get()>
-                    <p>Loading...</p>
-                </Show>
-                {move || {
-                    db.schemas
-                        .get()
-                        .into_iter()
-                        .map(|(schema, toggle)| {
-                            let s = schema.clone();
-                            view! {
-                                <div key=&schema>
-                                    <button
-                                        class=if toggle {
-                                            "font-semibold"
-                                        } else {
-                                            "hover:font-semibold"
-                                        }
-
-                                        on:click=move |_| {
-                                            let s_clone = s.clone();
-                                            db.schemas
-                                                .update(|prev| {
-                                                    prev.insert(s_clone, !toggle);
-                                                });
-                                        }
-                                    >
-
-                                        {&schema}
-                                    </button>
-                                    <Show when=move || toggle>
-                                        <Tables schema=schema.clone()/>
-                                    </Show>
-                                </div>
-                            }
-                        })
-                        .collect_view()
-                }}
-
-            </div>
-        </div>
-    }
+    div()
+        .attr(
+            "class",
+            "flex border-r-1 border-neutral-200 flex-col gap-2 px-4 pt-4 overflow-auto",
+        )
+        .child(p().attr("class", "font-semibold").child("Schemas"))
+        .child(Show(ShowProps {
+            when: move || db.is_connecting.get(),
+            children: ChildrenFn::to_children(move || {
+                Fragment::new(vec![p().child("Loading...").into_view()])
+            }),
+            fallback: ViewFn::from(|| div()),
+        }))
+        .child(move || {
+            db.schemas
+                .get()
+                .into_iter()
+                .map(|(schema, toggle)| {
+                    let s = schema.clone();
+                    div()
+                        .attr("key", &schema)
+                        .child(
+                            button()
+                                .attr(
+                                    "class",
+                                    if toggle {
+                                        "font-semibold"
+                                    } else {
+                                        "hover:font-semibold"
+                                    },
+                                )
+                                .on(ev::click, move |_| {
+                                    let s_clone = s.clone();
+                                    db.schemas.update(move |prev| {
+                                        prev.insert(s_clone, !toggle);
+                                    });
+                                })
+                                .child(&schema),
+                        )
+                        .child(Show(ShowProps {
+                            when: move || toggle,
+                            children: ChildrenFn::to_children(move || {
+                                Fragment::new(vec![tables(schema.clone()).into_view()])
+                            }),
+                            fallback: ViewFn::from(|| div()),
+                        }))
+                })
+                .collect_view()
+        })
 }
 

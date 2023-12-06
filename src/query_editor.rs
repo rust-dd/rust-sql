@@ -1,6 +1,6 @@
 use std::{cell::RefCell, rc::Rc};
 
-use leptos::*;
+use leptos::{html::*, *};
 use monaco::{
     api::{CodeEditor, CodeEditorOptions},
     sys::editor::IDimension,
@@ -11,8 +11,7 @@ use crate::store::{editor::EditorState, query::QueryState};
 
 pub type ModelCell = Rc<RefCell<Option<CodeEditor>>>;
 
-#[component]
-pub fn QueryEditor() -> impl IntoView {
+pub fn query_editor() -> impl IntoView {
     let query = use_context::<QueryState>().unwrap().sql;
     let set_editor = use_context::<EditorState>().unwrap().editor;
     let node_ref = create_node_ref();
@@ -36,6 +35,8 @@ pub fn QueryEditor() -> impl IntoView {
         });
     });
 
-    view! { <div class="border-b-1 border-neutral-200 sticky" _ref=node_ref></div> }
+    div()
+        .attr("class", "border-b-1 border-neutral-200 sticky")
+        .node_ref(node_ref)
 }
 

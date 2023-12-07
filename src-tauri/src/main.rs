@@ -19,6 +19,7 @@ pub struct AppState {
 
 fn main() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_store::Builder::default().build())
         .setup(|app| {
             #[cfg(debug_assertions)]
             {

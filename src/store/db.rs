@@ -18,20 +18,25 @@ pub struct DBStore {
 
 impl Default for DBStore {
     fn default() -> Self {
-        Self::new()
+        Self::new(None, None, None, None)
     }
 }
 
 impl DBStore {
-    pub fn new() -> Self {
+    pub fn new(
+        db_hust: Option<String>,
+        db_post: Option<String>,
+        db_user: Option<String>,
+        db_password: Option<String>,
+    ) -> Self {
         Self {
             schemas: create_rw_signal(HashMap::new()),
             tables: create_rw_signal(HashMap::new()),
             is_connecting: create_rw_signal(false),
-            db_host: create_rw_signal(String::new()),
-            db_port: create_rw_signal(String::new()),
-            db_user: create_rw_signal(String::new()),
-            db_password: create_rw_signal(String::new()),
+            db_host: create_rw_signal(db_hust.unwrap_or(String::new())),
+            db_port: create_rw_signal(db_post.unwrap_or(String::new())),
+            db_user: create_rw_signal(db_user.unwrap_or(String::new())),
+            db_password: create_rw_signal(db_password.unwrap_or(String::new())),
         }
     }
 

@@ -37,7 +37,7 @@ impl DBStore {
 
     pub fn create_connection_string(&self) -> String {
         format!(
-            "postgresql://{}:{}@{}:{}",
+            "user={} password={} host={} port={}",
             self.db_user.get_untracked(),
             self.db_password.get_untracked(),
             self.db_host.get_untracked(),

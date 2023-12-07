@@ -1,33 +1,35 @@
-use sqlx::{postgres::PgPoolOptions, Column, Row};
 use tauri::{Result, State};
+use tokio_postgres::{connect, NoTls};
 
-use crate::AppState;
+use crate::{utils::reflective_get, AppState};
 
 #[tauri::command]
 pub async fn pg_connector(key: &str, app_state: State<'_, AppState>) -> Result<Vec<String>> {
     if key.is_empty() {
         return Ok(Vec::new());
     }
+    let (client, connection) = connect(key, NoTls).await.expect("connection error");
 
-    let pool = PgPoolOptions::new()
-        .max_connections(5)
-        .connect(key)
-        .await
-        .unwrap();
+    tokio::spawn(async move {
+        if let Err(e) = connection.await {
+            eprintln!("connection error: {}", e);
+        }
+    });
 
-    let schemas: Vec<(String,)> = sqlx::query_as(
-        r#"
+    let schemas = client
+        .query(
+            r#"
         SELECT schema_name
         FROM information_schema.schemata;
         "#,
-    )
-    .fetch_all(&pool)
-    .await
-    .unwrap();
-    let schemas = schemas.iter().map(|r| r.0.clone()).collect();
+            &[],
+        )
+        .await
+        .unwrap();
+    let schemas = schemas.iter().map(|r| r.get(0)).collect();
 
     *app_state.connection_strings.lock().await = key.to_string();
-    *app_state.pool.lock().await = Some(pool);
+    *app_state.client.lock().await = Some(client);
 
     Ok(schemas)
 }
@@ -37,19 +39,20 @@ pub async fn get_schema_tables(
     schema: &str,
     app_state: State<'_, AppState>,
 ) -> Result<Vec<String>> {
-    let pool = app_state.pool.lock().await;
-    let tables: Vec<(String,)> = sqlx::query_as(
-        r#"
+    let client = app_state.client.lock().await;
+    let client = client.as_ref().unwrap();
+    let tables = client
+        .query(
+            r#"
         SELECT table_name
         FROM information_schema.tables
         WHERE table_schema = $1
         "#,
-    )
-    .bind(schema)
-    .fetch_all(pool.as_ref().unwrap())
-    .await
-    .unwrap();
-    let tables = tables.iter().map(|r| r.0.clone()).collect();
+            &[&schema],
+        )
+        .await
+        .unwrap();
+    let tables = tables.iter().map(|r| r.get(0)).collect();
 
     Ok(tables)
 }
@@ -59,30 +62,26 @@ pub async fn get_sql_result(
     sql: String,
     app_state: State<'_, AppState>,
 ) -> Result<(Vec<String>, Vec<Vec<String>>)> {
-    let pool = app_state.pool.lock().await;
+    let client = app_state.client.lock().await;
+    let client = client.as_ref().unwrap();
 
-    let query = sqlx::query(&sql)
-        .fetch_all(pool.as_ref().unwrap())
-        .await
-        .unwrap();
-    // get columns
-    let columns = query
-        .get(0)
+    let rows = client.query(sql.as_str(), &[]).await.unwrap();
+    let columns = rows
+        .first()
         .unwrap()
         .columns()
         .iter()
         .map(|c| c.name().to_string())
         .collect::<Vec<String>>();
-    // get rows
-    let rows = query
+    let rows = rows
         .iter()
-        .map(|r| {
-            let mut row = Vec::new();
-            for i in 0..r.len() {
-                let value = r.try_get::<String, _>(i).unwrap_or(String::from("null"));
-                row.push(value);
+        .map(|row| {
+            let mut row_values = Vec::new();
+            for i in 0..row.len() {
+                let value = reflective_get(row, i);
+                row_values.push(value);
             }
-            row
+            row_values
         })
         .collect::<Vec<Vec<String>>>();
 

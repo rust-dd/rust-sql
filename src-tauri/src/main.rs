@@ -2,18 +2,19 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 mod postgres;
+mod utils;
 
 use postgres::{get_schema_tables, get_sql_result, pg_connector};
-use sqlx::PgPool;
 use std::sync::Arc;
 #[cfg(debug_assertions)]
 use tauri::Manager;
 use tokio::sync::Mutex;
+use tokio_postgres::Client;
 
 #[derive(Default)]
 pub struct AppState {
     pub connection_strings: Arc<Mutex<String>>,
-    pub pool: Arc<Mutex<Option<PgPool>>>,
+    pub client: Arc<Mutex<Option<Client>>>,
 }
 
 fn main() {

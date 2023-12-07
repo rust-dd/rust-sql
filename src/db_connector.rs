@@ -2,8 +2,7 @@ use leptos::{html::*, *};
 
 use crate::store::{db::DBStore, query::QueryState};
 
-#[component]
-pub fn DBConnector() -> impl IntoView {
+pub fn db_connector() -> impl IntoView {
     let db = use_context::<DBStore>().unwrap();
     let connect = create_action(move |db: &DBStore| {
         let mut db_clone = *db;

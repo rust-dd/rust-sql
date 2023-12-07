@@ -15,7 +15,7 @@ pub fn sidebar() -> impl IntoView {
             children: ChildrenFn::to_children(move || {
                 Fragment::new(vec![p().child("Loading...").into_view()])
             }),
-            fallback: ViewFn::from(|| div()),
+            fallback: ViewFn::from(div),
         }))
         .child(move || {
             db.schemas
@@ -48,7 +48,7 @@ pub fn sidebar() -> impl IntoView {
                             children: ChildrenFn::to_children(move || {
                                 Fragment::new(vec![tables(schema.clone()).into_view()])
                             }),
-                            fallback: ViewFn::from(|| div()),
+                            fallback: ViewFn::from(div),
                         }))
                 })
                 .collect_view()

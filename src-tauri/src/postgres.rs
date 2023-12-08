@@ -66,6 +66,11 @@ pub async fn get_sql_result(
     let client = client.as_ref().unwrap();
 
     let rows = client.query(sql.as_str(), &[]).await.unwrap();
+
+    if rows.is_empty() {
+        return Ok((Vec::new(), Vec::new()));
+    }
+
     let columns = rows
         .first()
         .unwrap()

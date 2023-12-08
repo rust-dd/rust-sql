@@ -8,7 +8,7 @@
   },
   "package": {
     "productName": "Rust SQL GUI",
-    "version": "0.0.1"
+    "version": "1.0.0.alpha"
   },
   "tauri": {
     "allowlist": {

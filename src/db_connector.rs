@@ -8,7 +8,6 @@ pub fn db_connector() -> impl IntoView {
         let mut db_clone = *db;
         async move { db_clone.connect().await }
     });
-    //let editor = use_context::<EditorState>().unwrap().editor;
     let query_state = use_context::<QueryState>().unwrap();
     let run_query = create_action(move |query_state: &QueryState| {
         let query_state = *query_state;

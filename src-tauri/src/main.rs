@@ -2,29 +2,37 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 mod postgres;
+mod project_db;
 mod utils;
 
 use postgres::{get_schema_tables, get_sql_result, pg_connector};
+use project_db::{get_project_details, get_projects, ProjectDB};
 use std::sync::Arc;
 #[cfg(debug_assertions)]
 use tauri::Manager;
-use tauri_plugin_store::StoreBuilder;
 use tokio::sync::Mutex;
 use tokio_postgres::Client;
 
-#[derive(Default)]
 pub struct AppState {
     pub connection_strings: Arc<Mutex<String>>,
     pub client: Arc<Mutex<Option<Client>>>,
+    pub project_db: Arc<Mutex<Option<ProjectDB>>>,
+}
+
+impl Default for AppState {
+    fn default() -> Self {
+        Self {
+            connection_strings: Arc::new(Mutex::new(String::new())),
+            client: Arc::new(Mutex::new(None)),
+            project_db: Arc::new(Mutex::new(Some(ProjectDB::default()))),
+        }
+    }
 }
 
 fn main() {
     tauri::Builder::default()
-        .plugin(tauri_plugin_store::Builder::default().build())
+        .manage(AppState::default())
         .setup(|app| {
-            // create persistent storage
-            StoreBuilder::new(app.app_handle(), "local_storage.bin".parse().unwrap()).build();
-
             // open devtools if we are in debug mode
             #[cfg(debug_assertions)]
             {
@@ -35,8 +43,9 @@ fn main() {
 
             Ok(())
         })
-        .manage(AppState::default())
         .invoke_handler(tauri::generate_handler![
+            get_projects,
+            get_project_details,
             get_schema_tables,
             pg_connector,
             get_sql_result

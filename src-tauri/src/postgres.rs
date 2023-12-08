@@ -4,12 +4,22 @@ use tokio_postgres::{connect, NoTls};
 use crate::{utils::reflective_get, AppState};
 
 #[tauri::command]
-pub async fn pg_connector(key: &str, app_state: State<'_, AppState>) -> Result<Vec<String>> {
+pub async fn pg_connector(
+    project: &str,
+    key: &str,
+    app_state: State<'_, AppState>,
+) -> Result<Vec<String>> {
     if key.is_empty() {
         return Ok(Vec::new());
     }
-    let (client, connection) = connect(key, NoTls).await.expect("connection error");
 
+    // Save connection string to local db
+    let db_path = app_state.project_db.lock().await;
+    let db_path = db_path.as_ref().unwrap().db_path.as_str();
+    let db = sled::open(db_path).unwrap();
+    db.insert(project, key).unwrap();
+
+    let (client, connection) = connect(key, NoTls).await.expect("connection error");
     tokio::spawn(async move {
         if let Err(e) = connection.await {
             eprintln!("connection error: {}", e);

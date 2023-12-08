@@ -2,6 +2,7 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize)]
 pub struct InvokePostgresConnectionArgs {
+    pub project: String,
     pub key: String,
 }
 
@@ -13,5 +14,13 @@ pub struct InvokeTablesArgs {
 #[derive(Serialize, Deserialize)]
 pub struct InvokeQueryArgs {
     pub sql: String,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct InvokeProjectsArgs;
+
+#[derive(Serialize, Deserialize)]
+pub struct InvokeProjectDetailsArgs {
+    pub project: String,
 }
 

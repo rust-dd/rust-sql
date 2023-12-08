@@ -4,9 +4,13 @@ use crate::store::{db::DBStore, query::QueryState};
 
 pub fn db_connector() -> impl IntoView {
     let db = use_context::<DBStore>().unwrap();
+    let refetch_projects = use_context::<Resource<(), Vec<String>>>().unwrap();
     let connect = create_action(move |db: &DBStore| {
         let mut db_clone = *db;
-        async move { db_clone.connect().await }
+        async move {
+            db_clone.connect().await;
+            refetch_projects.refetch();
+        }
     });
     let query_state = use_context::<QueryState>().unwrap();
     let run_query = create_action(move |query_state: &QueryState| {
@@ -22,6 +26,16 @@ pub fn db_connector() -> impl IntoView {
         .child(
             div()
                 .attr("class", "flex flex-row gap-2")
+                .child(
+                    input()
+                        .attr("class", "border-1 border-neutral-200 p-1 rounded-md")
+                        .attr("type", "text")
+                        .attr("value", move || db.project.get())
+                        .attr("placeholder", "project")
+                        .on(ev::input, move |e| {
+                            db.project.set(event_target_value(&e));
+                        }),
+                )
                 .child(
                     input()
                         .attr("class", "border-1 border-neutral-200 p-1 rounded-md")
@@ -79,8 +93,14 @@ pub fn db_connector() -> impl IntoView {
                     button()
                         .attr(
                             "class",
-                            "px-4 py-2 border-1 border-neutral-200 hover:bg-neutral-200 rounded-md",
-                        )
+                            "px-4 py-2 border-1 border-neutral-200 hover:bg-neutral-200 rounded-md disabled:opacity-50",
+                        ).attr("disabled", move || {
+                            db.is_connecting.get()
+                                || db.db_host.get().is_empty()
+                                || db.db_port.get().is_empty()
+                                || db.db_user.get().is_empty()
+                                || db.db_password.get().is_empty()
+                        })
                         .on(ev::click, move |_| {
                             connect.dispatch(db);
                         })

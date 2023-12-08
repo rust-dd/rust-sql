@@ -703,3 +703,7 @@ video {
 .hover\:font-semibold:hover {
   font-weight: 600;
 }
+
+.disabled\:opacity-50:disabled {
+  opacity: 0.5;
+}

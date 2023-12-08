@@ -8,6 +8,7 @@ use postgres::{get_schema_tables, get_sql_result, pg_connector};
 use std::sync::Arc;
 #[cfg(debug_assertions)]
 use tauri::Manager;
+use tauri_plugin_store::StoreBuilder;
 use tokio::sync::Mutex;
 use tokio_postgres::Client;
 
@@ -21,12 +22,17 @@ fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_store::Builder::default().build())
         .setup(|app| {
+            // create persistent storage
+            StoreBuilder::new(app.app_handle(), "local_storage.bin".parse().unwrap()).build();
+
+            // open devtools if we are in debug mode
             #[cfg(debug_assertions)]
             {
                 let window = app.get_window("main").unwrap();
                 window.open_devtools();
                 window.close_devtools();
             }
+
             Ok(())
         })
         .manage(AppState::default())

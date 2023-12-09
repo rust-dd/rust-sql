@@ -2,5 +2,9 @@
 /target/
 /Cargo.lock
 
+/node_modules/
+
+/style/
+
 # Environment file
 .env

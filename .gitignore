@@ -5,6 +5,7 @@
 /node_modules/
 
 /style/
+/.xwin-cache/
 
 # Environment file
 .env

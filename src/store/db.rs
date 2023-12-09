@@ -63,9 +63,6 @@ impl DBStore {
   }
 
   pub async fn connect(&mut self) {
-    if !self.schemas.get_untracked().is_empty() {
-      return;
-    }
     self.is_connecting.set(true);
     let args = serde_wasm_bindgen::to_value(&InvokePostgresConnectionArgs {
       project: self.project.get_untracked(),
@@ -131,12 +128,10 @@ impl DBStore {
     Ok(())
   }
 
-  pub async fn remove_project(&mut self) -> Result<(), ()> {
-    let args = serde_wasm_bindgen::to_value(&InvokeRemoveProjectArgs {
-      project: self.project.get_untracked(),
-    })
-    .unwrap();
+  pub async fn remove_project(&mut self, project: String) -> Result<(), ()> {
+    let args = serde_wasm_bindgen::to_value(&InvokeRemoveProjectArgs { project }).unwrap();
     invoke(&Invoke::remove_project.to_string(), args).await;
     Ok(())
   }
 }
+

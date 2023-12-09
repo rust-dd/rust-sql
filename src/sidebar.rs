@@ -24,10 +24,11 @@ pub fn sidebar() -> impl IntoView {
       serde_wasm_bindgen::from_value::<Vec<String>>(projects).unwrap()
     },
   );
-  let remove_project = create_action(move |db: &DBStore| {
+  let remove_project = create_action(move |(db, project): &(DBStore, String)| {
     let mut db_clone = *db;
+    let project = project.clone();
     async move {
-      db_clone.remove_project().await.unwrap();
+      db_clone.remove_project(project).await.unwrap();
       projects.refetch();
     }
   });
@@ -54,9 +55,11 @@ pub fn sidebar() -> impl IntoView {
             button()
               .attr("class", "px-2 rounded-full hover:bg-gray-200")
               .child("-")
-              .on(ev::click, move |_| {
-                remove_project.dispatch(db);
-                projects.update(|prev| prev.as_mut().unwrap().retain(|p| p != &project.clone()));
+              .on(ev::click, {
+                let project = project.clone();
+                move |_| {
+                  remove_project.dispatch((db, project.clone()));
+                }
               }),
           )
       })
@@ -80,16 +83,7 @@ pub fn sidebar() -> impl IntoView {
         ),
     )
     .child(Suspense(SuspenseProps {
-      children: ChildrenFn::to_children(move || {
-        Fragment::new(vec![Show(ShowProps {
-          when: move || !projects.get().unwrap_or_default().is_empty(),
-          fallback: ViewFn::from(|| p().attr("class", "text-xs").child("No projects")),
-          children: ChildrenFn::to_children(move || {
-            Fragment::new(vec![projects_result.into_view()])
-          }),
-        })
-        .into_view()])
-      }),
+      children: ChildrenFn::to_children(move || Fragment::new(vec![projects_result.into_view()])),
       fallback: ViewFn::from(|| p().child("Loading...")),
     }))
     .child(p().attr("class", "font-semibold").child("Schemas"))
@@ -137,3 +131,4 @@ pub fn sidebar() -> impl IntoView {
         .collect_view()
     })
 }
+

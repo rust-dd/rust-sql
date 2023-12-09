@@ -97,8 +97,10 @@ impl ProjectDB {
 
   pub fn remove_project(&self, project: &str) -> Result<()> {
     let db = sled::open(&self.db_path).unwrap();
+    println!("Removing project: {}", project);
     db.remove(project).unwrap();
 
     Ok(())
   }
 }
+

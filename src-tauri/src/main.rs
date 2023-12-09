@@ -6,7 +6,7 @@ mod project_db;
 mod utils;
 
 use postgres::{get_schema_tables, get_sql_result, pg_connector};
-use project_db::{get_project_details, get_projects, ProjectDB};
+use project_db::{get_project_details, get_projects, remove_project, ProjectDB};
 use std::sync::Arc;
 #[cfg(debug_assertions)]
 use tauri::Manager;
@@ -48,7 +48,8 @@ fn main() {
             get_project_details,
             get_schema_tables,
             pg_connector,
-            get_sql_result
+            get_sql_result,
+            remove_project,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

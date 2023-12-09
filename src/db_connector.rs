@@ -106,3 +106,4 @@ pub fn db_connector() -> impl IntoView {
                 ),
         )
 }
+

@@ -2,7 +2,7 @@ use crate::{
   invoke::{Invoke, InvokePostgresConnectionArgs, InvokeRemoveProjectArgs, InvokeTablesArgs},
   wasm_functions::invoke,
 };
-use leptos::{create_rw_signal, RwSignal, SignalGetUntracked, SignalSet, SignalUpdate};
+use leptos::{create_rw_signal, logging, RwSignal, SignalGetUntracked, SignalSet, SignalUpdate};
 use std::collections::HashMap;
 
 #[derive(Clone, Copy, Debug)]
@@ -50,6 +50,7 @@ impl DBStore {
     self.db_user.set(String::new());
     self.db_password.set(String::new());
     self.is_connecting.set(false);
+    logging::log!("{:?}", self.project.get_untracked());
   }
 
   pub fn create_connection_string(&self) -> String {

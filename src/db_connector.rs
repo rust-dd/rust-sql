@@ -3,22 +3,20 @@ use leptos::{html::*, *};
 use crate::store::{db::DBStore, query::QueryState};
 
 pub fn db_connector() -> impl IntoView {
-    let db = use_context::<DBStore>().unwrap();
-    let refetch_projects = use_context::<Resource<(), Vec<String>>>().unwrap();
-    let connect = create_action(move |db: &DBStore| {
-        let mut db_clone = *db;
-        async move {
-            db_clone.connect().await;
-            refetch_projects.refetch();
-        }
-    });
-    let query_state = use_context::<QueryState>().unwrap();
-    let run_query = create_action(move |query_state: &QueryState| {
-        let query_state = *query_state;
-        async move { query_state.run_query().await }
-    });
+  let db = use_context::<DBStore>().unwrap();
+  let connect = create_action(move |db: &DBStore| {
+    let mut db_clone = *db;
+    async move {
+      db_clone.connect().await;
+    }
+  });
+  let query_state = use_context::<QueryState>().unwrap();
+  let run_query = create_action(move |query_state: &QueryState| {
+    let query_state = *query_state;
+    async move { query_state.run_query().await }
+  });
 
-    header()
+  header()
         .attr(
             "class",
             "flex flex-row justify-between p-4 gap-2 border-b-1 border-neutral-200",
@@ -108,4 +106,3 @@ pub fn db_connector() -> impl IntoView {
                 ),
         )
 }
-

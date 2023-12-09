@@ -28,12 +28,8 @@ impl Default for AppState {
     Self {
       connection_strings: Arc::new(Mutex::new(String::new())),
       client: Arc::new(Mutex::new(None)),
-      project_db: Arc::new(Mutex::new(Some(
-        sled::open(constant::PROJECT_DB_PATH).unwrap(),
-      ))),
-      query_db: Arc::new(Mutex::new(Some(
-        sled::open(constant::QUERY_DB_PATH).unwrap(),
-      ))),
+      project_db: Arc::new(Mutex::new(None)),
+      query_db: Arc::new(Mutex::new(None)),
     }
   }
 }

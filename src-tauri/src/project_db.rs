@@ -1,7 +1,7 @@
 use serde::Serialize;
-use tauri::{Result, State};
+use tauri::{AppHandle, Manager, Result, State};
 
-use crate::AppState;
+use crate::{constant::PROJECT_DB_PATH, AppState};
 
 #[derive(Default, Serialize)]
 pub struct ProjectDetails {
@@ -12,8 +12,15 @@ pub struct ProjectDetails {
 }
 
 #[tauri::command]
-pub async fn get_projects(app_state: State<'_, AppState>) -> Result<Vec<String>> {
-  let db = app_state.project_db.lock().await;
+pub async fn get_projects(app: AppHandle) -> Result<Vec<String>> {
+  let app_state = app.state::<AppState>();
+  let mut db = app_state.project_db.lock().await;
+  if db.clone().is_none() {
+    let app_dir = app.path_resolver().app_data_dir().unwrap();
+    let db_path = app_dir.join(PROJECT_DB_PATH);
+    let _db = sled::open(db_path).unwrap();
+    *db = Some(_db);
+  }
   let db = db.clone().unwrap();
   let projects = db
     .iter()

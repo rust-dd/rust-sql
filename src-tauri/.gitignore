@@ -4,4 +4,6 @@
 
 /project_db/
 /query_db/
-
+/Cache/
+/AppData/
+/projects/

@@ -1,15 +1,18 @@
-use tauri::{Result, State};
+use tauri::{AppHandle, Manager, Result, State};
 use tokio_postgres::{connect, NoTls};
 
-use crate::{utils::reflective_get, AppState};
+use crate::{constant::PROJECT_DB_PATH, utils::reflective_get, AppState};
 
 #[tauri::command]
-pub async fn pg_connector(
-  project: &str,
-  key: &str,
-  app_state: State<'_, AppState>,
-) -> Result<Vec<String>> {
-  let db = app_state.project_db.lock().await;
+pub async fn pg_connector(project: &str, key: &str, app: AppHandle) -> Result<Vec<String>> {
+  let app_state = app.state::<AppState>();
+  let mut db = app_state.project_db.lock().await;
+  if db.clone().is_none() {
+    let app_dir = app.path_resolver().app_data_dir().unwrap();
+    let db_path = app_dir.join(PROJECT_DB_PATH);
+    let _db = sled::open(db_path).unwrap();
+    *db = Some(_db);
+  }
   db.clone().unwrap().insert(project, key).unwrap();
 
   let (client, connection) = connect(key, NoTls).await.expect("connection error");

@@ -13,6 +13,10 @@
   "tauri": {
     "allowlist": {
       "all": false,
+      "fs": {
+        "all": true,
+        "scope": ["$APPDATA/*"]
+      },
       "shell": {
         "all": false,
         "open": true

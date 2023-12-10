@@ -7,8 +7,9 @@ mod project_db;
 mod query_db;
 mod utils;
 
-use postgres::{get_schema_tables, get_sql_result, pg_connector};
-use project_db::{get_project_details, get_projects, remove_project};
+use postgres::{pg_connector, select_schema_tables, select_sql_result};
+use project_db::{delete_project, select_project_details, select_projects};
+use query_db::{delete_query, insert_query, select_queries};
 use sled::Db;
 use std::sync::Arc;
 #[cfg(debug_assertions)]
@@ -49,12 +50,15 @@ fn main() {
       Ok(())
     })
     .invoke_handler(tauri::generate_handler![
-      get_projects,
-      get_project_details,
-      get_schema_tables,
+      delete_project,
+      delete_query,
+      insert_query,
       pg_connector,
-      get_sql_result,
-      remove_project,
+      select_projects,
+      select_project_details,
+      select_queries,
+      select_schema_tables,
+      select_sql_result,
     ])
     .run(tauri::generate_context!())
     .expect("error while running tauri application");

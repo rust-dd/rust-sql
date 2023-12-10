@@ -48,7 +48,7 @@ impl QueryState {
     })
     .unwrap();
 
-    let data = invoke(&Invoke::get_sql_result.to_string(), args).await;
+    let data = invoke(&Invoke::select_sql_result.to_string(), args).await;
     let data = serde_wasm_bindgen::from_value::<(Vec<String>, Vec<Vec<String>>)>(data).unwrap();
     self.sql_result.update(|prev| {
       *prev = Some(data);
@@ -58,3 +58,4 @@ impl QueryState {
     });
   }
 }
+

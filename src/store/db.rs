@@ -2,7 +2,7 @@ use crate::{
   invoke::{Invoke, InvokePostgresConnectionArgs, InvokeRemoveProjectArgs, InvokeTablesArgs},
   wasm_functions::invoke,
 };
-use leptos::{create_rw_signal, logging, RwSignal, SignalGetUntracked, SignalSet, SignalUpdate};
+use leptos::{create_rw_signal, RwSignal, SignalGetUntracked, SignalSet, SignalUpdate};
 use std::collections::HashMap;
 
 #[derive(Clone, Copy, Debug)]
@@ -50,7 +50,6 @@ impl DBStore {
     self.db_user.set(String::new());
     self.db_password.set(String::new());
     self.is_connecting.set(false);
-    logging::log!("{:?}", self.project.get_untracked());
   }
 
   pub fn create_connection_string(&self) -> String {
@@ -80,7 +79,7 @@ impl DBStore {
     self.is_connecting.set(false);
   }
 
-  pub async fn get_tables(&mut self, schema: String) -> Result<Vec<(String, bool)>, ()> {
+  pub async fn select_tables(&mut self, schema: String) -> Result<Vec<(String, bool)>, ()> {
     if let Some(tables) = self.tables.get_untracked().get(&schema) {
       if !tables.is_empty() {
         return Ok(tables.clone());
@@ -91,7 +90,7 @@ impl DBStore {
       schema: schema.to_string(),
     })
     .unwrap();
-    let tables = invoke(&Invoke::get_schema_tables.to_string(), args).await;
+    let tables = invoke(&Invoke::select_schema_tables.to_string(), args).await;
     let mut tables = serde_wasm_bindgen::from_value::<Vec<String>>(tables).unwrap();
     tables.sort();
     let tables = tables
@@ -104,13 +103,13 @@ impl DBStore {
     Ok(tables)
   }
 
-  pub async fn get_project_details(&mut self, project: String) -> Result<(), ()> {
+  pub async fn select_project_details(&mut self, project: String) -> Result<(), ()> {
     let args = serde_wasm_bindgen::to_value(&InvokePostgresConnectionArgs {
       project: project.clone(),
       key: String::new(),
     })
     .unwrap();
-    let project_details = invoke(&Invoke::get_project_details.to_string(), args).await;
+    let project_details = invoke(&Invoke::select_project_details.to_string(), args).await;
     let project_details =
       serde_wasm_bindgen::from_value::<HashMap<String, String>>(project_details).unwrap();
     self.project.set(project);
@@ -129,9 +128,9 @@ impl DBStore {
     Ok(())
   }
 
-  pub async fn remove_project(&mut self, project: String) -> Result<(), ()> {
+  pub async fn delete_project(&mut self, project: String) -> Result<(), ()> {
     let args = serde_wasm_bindgen::to_value(&InvokeRemoveProjectArgs { project }).unwrap();
-    invoke(&Invoke::remove_project.to_string(), args).await;
+    invoke(&Invoke::delete_project.to_string(), args).await;
     Ok(())
   }
 }

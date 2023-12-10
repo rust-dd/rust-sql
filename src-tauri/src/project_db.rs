@@ -12,7 +12,7 @@ pub struct ProjectDetails {
 }
 
 #[tauri::command]
-pub async fn get_projects(app: AppHandle) -> Result<Vec<String>> {
+pub async fn select_projects(app: AppHandle) -> Result<Vec<String>> {
   let app_state = app.state::<AppState>();
   let mut db = app_state.project_db.lock().await;
   if db.clone().is_none() {
@@ -34,7 +34,7 @@ pub async fn get_projects(app: AppHandle) -> Result<Vec<String>> {
 }
 
 #[tauri::command]
-pub async fn get_project_details(
+pub async fn select_project_details(
   project: String,
   app_state: State<'_, AppState>,
 ) -> Result<ProjectDetails> {
@@ -67,7 +67,7 @@ pub async fn get_project_details(
 }
 
 #[tauri::command]
-pub async fn remove_project(project: String, app_state: State<'_, AppState>) -> Result<()> {
+pub async fn delete_project(project: String, app_state: State<'_, AppState>) -> Result<()> {
   let db = app_state.project_db.lock().await;
   let db = db.clone().unwrap();
   db.remove(project).unwrap();

@@ -8,27 +8,27 @@ use leptos::{html::*, *};
 
 pub fn sidebar() -> impl IntoView {
   let mut db = use_context::<DBStore>().unwrap();
-  let get_project_details = create_action(move |(db, project): &(DBStore, String)| {
+  let select_project_details = create_action(move |(db, project): &(DBStore, String)| {
     let mut db_clone = *db;
     let project = project.clone();
-    async move { db_clone.get_project_details(project).await }
+    async move { db_clone.select_project_details(project).await }
   });
   let projects = create_resource(
     move || db.is_connecting.get(),
     move |_| async move {
       let projects = invoke(
-        &Invoke::get_projects.to_string(),
+        &Invoke::select_projects.to_string(),
         serde_wasm_bindgen::to_value(&InvokeProjectsArgs).unwrap_or_default(),
       )
       .await;
       serde_wasm_bindgen::from_value::<Vec<String>>(projects).unwrap()
     },
   );
-  let remove_project = create_action(move |(db, project): &(DBStore, String)| {
+  let delete_project = create_action(move |(db, project): &(DBStore, String)| {
     let mut db_clone = *db;
     let project = project.clone();
     async move {
-      db_clone.remove_project(project).await.unwrap();
+      db_clone.delete_project(project).await.unwrap();
       projects.refetch();
     }
   });
@@ -48,7 +48,7 @@ pub fn sidebar() -> impl IntoView {
               .child(&project)
               .on(ev::click, {
                 let project = project.clone();
-                move |_| get_project_details.dispatch((db, project.clone()))
+                move |_| select_project_details.dispatch((db, project.clone()))
               }),
           )
           .child(
@@ -58,7 +58,7 @@ pub fn sidebar() -> impl IntoView {
               .on(ev::click, {
                 let project = project.clone();
                 move |_| {
-                  remove_project.dispatch((db, project.clone()));
+                  delete_project.dispatch((db, project.clone()));
                 }
               }),
           )

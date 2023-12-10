@@ -41,7 +41,7 @@ pub async fn pg_connector(project: &str, key: &str, app: AppHandle) -> Result<Ve
 }
 
 #[tauri::command]
-pub async fn get_schema_tables(
+pub async fn select_schema_tables(
   schema: &str,
   app_state: State<'_, AppState>,
 ) -> Result<Vec<String>> {
@@ -64,7 +64,7 @@ pub async fn get_schema_tables(
 }
 
 #[tauri::command]
-pub async fn get_sql_result(
+pub async fn select_sql_result(
   sql: String,
   app_state: State<'_, AppState>,
 ) -> Result<(Vec<String>, Vec<Vec<String>>)> {

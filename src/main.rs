@@ -13,6 +13,7 @@ use app::*;
 use leptos::*;
 
 fn main() {
-    mount_to_body(app)
+  leptos_devtools::devtools();
+  mount_to_body(app)
 }
 

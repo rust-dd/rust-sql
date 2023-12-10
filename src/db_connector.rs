@@ -5,7 +5,7 @@ use crate::store::{db::DBStore, query::QueryState};
 pub fn db_connector() -> impl IntoView {
   let db = use_context::<DBStore>().unwrap();
   let connect = create_action(move |db: &DBStore| {
-    let mut db_clone = *db;
+    let db_clone = *db;
     async move {
       db_clone.connect().await;
     }

@@ -2,7 +2,7 @@ use crate::store::{db::DBStore, editor::EditorState, query::QueryState};
 use leptos::{html::*, *};
 
 pub fn tables(schema: String) -> impl IntoView {
-  let mut db = use_context::<DBStore>().unwrap();
+  let db = use_context::<DBStore>().unwrap();
   let query_store = use_context::<QueryState>().unwrap();
   let tables = create_resource(
     || {},

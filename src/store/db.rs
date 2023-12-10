@@ -43,7 +43,7 @@ impl DBStore {
     }
   }
 
-  pub fn reset(&mut self) {
+  pub fn reset(&self) {
     self.project.set(String::new());
     self.db_host.set(String::new());
     self.db_port.set(String::new());
@@ -62,7 +62,7 @@ impl DBStore {
     )
   }
 
-  pub async fn connect(&mut self) {
+  pub async fn connect(&self) {
     self.is_connecting.set(true);
     let args = serde_wasm_bindgen::to_value(&InvokePostgresConnectionArgs {
       project: self.project.get_untracked(),
@@ -79,7 +79,7 @@ impl DBStore {
     self.is_connecting.set(false);
   }
 
-  pub async fn select_tables(&mut self, schema: String) -> Result<Vec<(String, bool)>, ()> {
+  pub async fn select_tables(&self, schema: String) -> Result<Vec<(String, bool)>, ()> {
     if let Some(tables) = self.tables.get_untracked().get(&schema) {
       if !tables.is_empty() {
         return Ok(tables.clone());
@@ -103,7 +103,7 @@ impl DBStore {
     Ok(tables)
   }
 
-  pub async fn select_project_details(&mut self, project: String) -> Result<(), ()> {
+  pub async fn select_project_details(&self, project: String) -> Result<(), ()> {
     let args = serde_wasm_bindgen::to_value(&InvokePostgresConnectionArgs {
       project: project.clone(),
       key: String::new(),

@@ -7,9 +7,9 @@ use crate::{
 use leptos::{html::*, *};
 
 pub fn sidebar() -> impl IntoView {
-  let mut db = use_context::<DBStore>().unwrap();
+  let db = use_context::<DBStore>().unwrap();
   let select_project_details = create_action(move |(db, project): &(DBStore, String)| {
-    let mut db_clone = *db;
+    let db_clone = *db;
     let project = project.clone();
     async move { db_clone.select_project_details(project).await }
   });

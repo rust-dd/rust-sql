@@ -36,7 +36,6 @@ pub fn query_editor() -> impl IntoView {
   });
 
   div()
-    .attr("class", "border-b-1 border-neutral-200 sticky")
+    .classes("border-b-1 border-neutral-200 sticky")
     .node_ref(node_ref)
 }
-

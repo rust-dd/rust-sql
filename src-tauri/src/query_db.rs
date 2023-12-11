@@ -23,4 +23,3 @@ pub async fn select_queries() -> Result<HashMap<String, String>> {
 pub async fn delete_query(key: String) {
   todo!()
 }
-

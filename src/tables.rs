@@ -12,8 +12,8 @@ pub fn tables(schema: String) -> impl IntoView {
     },
   );
   let when = move || !tables.get().unwrap_or_default().is_empty();
-  let show_fallback = move || ViewFn::from(|| p().attr("class", "pl-2").child("No tables found"));
-  let fallback = ViewFn::from(|| p().attr("class", "pl-2").child("Loading..."));
+  let show_fallback = move || ViewFn::from(|| p().classes("pl-2").child("No tables found"));
+  let fallback = ViewFn::from(|| p().classes("pl-2").child("Loading..."));
   let tables = move || {
     tables
       .get()
@@ -23,15 +23,12 @@ pub fn tables(schema: String) -> impl IntoView {
       .map(|(i, (table, is_selected))| {
         let table_clone = table.clone();
         li()
-          .attr("key", i)
-          .attr(
-            "class",
-            if is_selected {
-              "pl-4 font-semibold cursor-pointer"
-            } else {
-              "hover:font-semibold pl-4 cursor-pointer"
-            },
-          )
+          .prop("key", i)
+          .classes(if is_selected {
+            "pl-4 font-semibold cursor-pointer"
+          } else {
+            "hover:font-semibold pl-4 cursor-pointer"
+          })
           .on(ev::click, move |_| {
             let schema = db
               .schemas
@@ -78,4 +75,3 @@ pub fn tables(schema: String) -> impl IntoView {
   });
   Suspense::<Fragment>(SuspenseProps { fallback, children })
 }
-

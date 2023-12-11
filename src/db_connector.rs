@@ -6,9 +6,7 @@ pub fn db_connector() -> impl IntoView {
   let db = use_context::<DBStore>().unwrap();
   let connect = create_action(move |db: &DBStore| {
     let db_clone = *db;
-    async move {
-      db_clone.connect().await;
-    }
+    async move { db_clone.connect().await }
   });
   let query_state = use_context::<QueryState>().unwrap();
   let run_query = create_action(move |query_state: &QueryState| {
@@ -17,59 +15,58 @@ pub fn db_connector() -> impl IntoView {
   });
 
   header()
-        .attr(
-            "class",
-            "flex flex-row justify-between p-4 gap-2 border-b-1 border-neutral-200",
-        )
+        .classes("flex flex-row justify-between p-4 gap-2 border-b-1 border-neutral-200")
         .child(
             div()
-                .attr("class", "flex flex-row gap-2")
+                .classes("flex flex-row gap-2")
                 .child(
                     input()
-                        .attr("class", "border-1 border-neutral-200 p-1 rounded-md")
-                        .attr("type", "text")
-                        .attr("value", move || db.project.get())
-                        .attr("placeholder", "project")
+                        .classes("border-1 border-neutral-200 p-1 rounded-md")
+                        .prop("type", "text")
+                        .prop("placeholder", "project")
+                        .prop("value", move || db.project.get())
                         .on(ev::input, move |e| {
-                            db.project.set(event_target_value(&e));
+                            db.project.update(|prev| {
+                                *prev = event_target_value(&e);
+                            });
                         }),
                 )
                 .child(
                     input()
-                        .attr("class", "border-1 border-neutral-200 p-1 rounded-md")
-                        .attr("type", "text")
-                        .attr("value", move || db.db_user.get())
-                        .attr("placeholder", "username")
+                        .classes("border-1 border-neutral-200 p-1 rounded-md")
+                        .prop("type", "text")
+                        .prop("value", move || db.db_user.get())
+                        .prop("placeholder", "username")
                         .on(ev::input, move |e| {
                             db.db_user.set(event_target_value(&e));
                         }),
                 )
                 .child(
                     input()
-                        .attr("class", "border-1 border-neutral-200 p-1 rounded-md")
-                        .attr("type", "password")
-                        .attr("value", move || db.db_password.get())
-                        .attr("placeholder", "password")
+                        .classes( "border-1 border-neutral-200 p-1 rounded-md")
+                        .prop("type", "password")
+                        .prop("value", move || db.db_password.get())
+                        .prop("placeholder", "password")
                         .on(ev::input, move |e| {
                             db.db_password.set(event_target_value(&e));
                         }),
                 )
                 .child(
                     input()
-                        .attr("class", "border-1 border-neutral-200 p-1 rounded-md")
-                        .attr("type", "text")
-                        .attr("value", move || db.db_host.get())
-                        .attr("placeholder", "host")
+                        .classes("border-1 border-neutral-200 p-1 rounded-md")
+                        .prop("type", "text")
+                        .prop("value", move || db.db_host.get())
+                        .prop("placeholder", "host")
                         .on(ev::input, move |e| {
                             db.db_host.set(event_target_value(&e));
                         }),
                 )
                 .child(
                     input()
-                        .attr("class", "border-1 border-neutral-200 p-1 rounded-md")
-                        .attr("type", "text")
-                        .attr("value", move || db.db_port.get())
-                        .attr("placeholder", "port")
+                        .classes("border-1 border-neutral-200 p-1 rounded-md")
+                        .prop("type", "text")
+                        .prop("value", move || db.db_port.get())
+                        .prop("placeholder", "port")
                         .on(ev::input, move |e| {
                             db.db_port.set(event_target_value(&e));
                         }),
@@ -77,22 +74,16 @@ pub fn db_connector() -> impl IntoView {
         )
         .child(
             div()
-                .attr("class", "flex flex-row gap-2")
+                .classes("flex flex-row gap-2")
                 .child(
                     button()
-                        .attr(
-                            "class",
-                            "px-4 py-2 border-1 border-neutral-200 hover:bg-neutral-200 rounded-md",
-                        )
+                        .classes("px-4 py-2 border-1 border-neutral-200 hover:bg-neutral-200 rounded-md")
                         .on(ev::click, move |_| run_query.dispatch(query_state))
                         .child("Query"),
                 )
                 .child(
                     button()
-                        .attr(
-                            "class",
-                            "px-4 py-2 border-1 border-neutral-200 hover:bg-neutral-200 rounded-md disabled:opacity-50",
-                        ).attr("disabled", move || {
+                        .classes("px-4 py-2 border-1 border-neutral-200 hover:bg-neutral-200 rounded-md disabled:opacity-50").prop("disabled", move || {
                             db.is_connecting.get()
                                 || db.db_host.get().is_empty()
                                 || db.db_port.get().is_empty()
@@ -106,4 +97,3 @@ pub fn db_connector() -> impl IntoView {
                 ),
         )
 }
-

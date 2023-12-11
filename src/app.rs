@@ -17,4 +17,3 @@ pub fn app() -> impl IntoView {
     Fragment::new(vec![query_editor().into_view(), query_table().into_view()])
   }))
 }
-

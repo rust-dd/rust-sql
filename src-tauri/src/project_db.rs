@@ -73,4 +73,3 @@ pub async fn delete_project(project: String, app_state: State<'_, AppState>) -> 
   db.remove(project).unwrap();
   Ok(())
 }
-

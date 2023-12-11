@@ -16,4 +16,3 @@ fn main() {
   leptos_devtools::devtools();
   mount_to_body(app)
 }
-

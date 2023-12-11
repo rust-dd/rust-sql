@@ -40,11 +40,11 @@ pub fn sidebar() -> impl IntoView {
       .enumerate()
       .map(|(idx, project)| {
         div()
-          .attr("key", idx)
-          .attr("class", "flex flex-row justify-between items-center")
+          .prop("key", idx)
+          .classes("flex flex-row justify-between items-center")
           .child(
             button()
-              .attr("class", "hover:font-semibold")
+              .classes("hover:font-semibold")
               .child(&project)
               .on(ev::click, {
                 let project = project.clone();
@@ -53,7 +53,7 @@ pub fn sidebar() -> impl IntoView {
           )
           .child(
             button()
-              .attr("class", "px-2 rounded-full hover:bg-gray-200")
+              .classes("px-2 rounded-full hover:bg-gray-200")
               .child("-")
               .on(ev::click, {
                 let project = project.clone();
@@ -67,17 +67,16 @@ pub fn sidebar() -> impl IntoView {
   };
 
   div()
-    .attr(
-      "class",
+    .classes(
       "flex border-r-1 min-w-[200px] border-neutral-200 flex-col gap-2 px-4 pt-4 overflow-auto",
     )
     .child(
       div()
-        .attr("class", "flex w-full flex-row justify-between items-center")
-        .child(p().attr("class", "font-semibold").child("Projects"))
+        .classes("flex w-full flex-row justify-between items-center")
+        .child(p().classes("font-semibold").child("Projects"))
         .child(
           button()
-            .attr("class", "px-2 rounded-full hover:bg-gray-200")
+            .classes("px-2 rounded-full hover:bg-gray-200")
             .child("+")
             .on(ev::click, move |_| db.reset()),
         ),
@@ -86,7 +85,7 @@ pub fn sidebar() -> impl IntoView {
       children: ChildrenFn::to_children(move || Fragment::new(vec![projects_result.into_view()])),
       fallback: ViewFn::from(|| p().child("Loading...")),
     }))
-    .child(p().attr("class", "font-semibold").child("Schemas"))
+    .child(p().classes("font-semibold").child("Schemas"))
     .child(Show(ShowProps {
       when: move || db.is_connecting.get(),
       children: ChildrenFn::to_children(move || {
@@ -101,17 +100,14 @@ pub fn sidebar() -> impl IntoView {
         .map(|(schema, toggle)| {
           let s = schema.clone();
           div()
-            .attr("key", &schema)
+            .prop("key", &schema)
             .child(
               button()
-                .attr(
-                  "class",
-                  if toggle {
-                    "font-semibold"
-                  } else {
-                    "hover:font-semibold"
-                  },
-                )
+                .classes(if toggle {
+                  "font-semibold"
+                } else {
+                  "hover:font-semibold"
+                })
                 .on(ev::click, move |_| {
                   let s_clone = s.clone();
                   db.schemas.update(move |prev| {
@@ -131,4 +127,3 @@ pub fn sidebar() -> impl IntoView {
         .collect_view()
     })
 }
-

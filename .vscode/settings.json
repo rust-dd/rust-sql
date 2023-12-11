@@ -2,5 +2,18 @@
   "emmet.includeLanguages": {
     "rust": "html"
   },
-  "rust-analyzer.rustfmt.overrideCommand": ["leptosfmt", "--stdin", "--rustfmt"]
+  "editor.formatOnSave": true,
+  "[rust]": {
+    "editor.semanticHighlighting.enabled": false
+  },
+  "editor.tokenColorCustomizations": {
+    "[LaserWave High Contrast]": {
+      "textMateRules": [
+        {
+          "scope": "variable.other.rust",
+          "settings": {}
+        }
+      ]
+    }
+  }
 }

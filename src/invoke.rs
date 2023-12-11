@@ -53,4 +53,3 @@ pub struct InvokeProjectDetailsArgs {
 pub struct InvokeRemoveProjectArgs {
   pub project: String,
 }
-

@@ -98,4 +98,3 @@ pub async fn select_sql_result(
 
   Ok((columns, rows))
 }
-

@@ -29,7 +29,6 @@ pub fn sidebar() -> impl IntoView {
     let project = project.clone();
     async move {
       db_clone.delete_project(project).await.unwrap();
-      projects.refetch();
     }
   });
   let projects_result = move || {
@@ -81,10 +80,7 @@ pub fn sidebar() -> impl IntoView {
             .on(ev::click, move |_| db.reset()),
         ),
     )
-    .child(Suspense(SuspenseProps {
-      children: ChildrenFn::to_children(move || Fragment::new(vec![projects_result.into_view()])),
-      fallback: ViewFn::from(|| p().child("Loading...")),
-    }))
+    .child(projects_result.into_view())
     .child(p().classes("font-semibold").child("Schemas"))
     .child(Show(ShowProps {
       when: move || db.is_connecting.get(),

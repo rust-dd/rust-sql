@@ -14,7 +14,7 @@ pub struct DBStore {
   pub db_password: RwSignal<String>,
   pub schemas: RwSignal<HashMap<String, bool>>,
   pub is_connecting: RwSignal<bool>,
-  pub tables: RwSignal<HashMap<String, Vec<(String, bool)>>>,
+  pub tables: RwSignal<HashMap<String, Vec<(String, String, bool)>>>,
 }
 
 impl Default for DBStore {
@@ -79,7 +79,7 @@ impl DBStore {
     self.is_connecting.set(false);
   }
 
-  pub async fn select_tables(&self, schema: String) -> Result<Vec<(String, bool)>, ()> {
+  pub async fn select_tables(&self, schema: String) -> Result<Vec<(String, String, bool)>, ()> {
     if let Some(tables) = self.tables.get_untracked().get(&schema) {
       if !tables.is_empty() {
         return Ok(tables.clone());
@@ -91,12 +91,12 @@ impl DBStore {
     })
     .unwrap();
     let tables = invoke(&Invoke::select_schema_tables.to_string(), args).await;
-    let mut tables = serde_wasm_bindgen::from_value::<Vec<String>>(tables).unwrap();
-    tables.sort();
+    let mut tables = serde_wasm_bindgen::from_value::<Vec<(String, String)>>(tables).unwrap();
+    tables.sort_by(|(_, a), (_, b)| b.partial_cmp(a).unwrap());
     let tables = tables
       .into_iter()
-      .map(|t| (t, false))
-      .collect::<Vec<(String, bool)>>();
+      .map(|(t, size)| (t, size, false))
+      .collect::<Vec<(String, String, bool)>>();
     self.tables.update(|prev| {
       prev.insert(schema, tables.clone());
     });
@@ -125,6 +125,7 @@ impl DBStore {
     self
       .db_port
       .set(project_details.get("port").unwrap().to_string());
+    self.connect().await;
     Ok(())
   }
 

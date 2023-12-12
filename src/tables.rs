@@ -20,7 +20,7 @@ pub fn tables(schema: String) -> impl IntoView {
       .unwrap_or_default()
       .into_iter()
       .enumerate()
-      .map(|(i, (table, is_selected))| {
+      .map(|(i, (table, size, is_selected))| {
         let table_clone = table.clone();
         li()
           .prop("key", i)
@@ -53,13 +53,18 @@ pub fn tables(schema: String) -> impl IntoView {
             let table_clone = table_clone.clone();
             tables.update(move |prev| {
               prev.iter_mut().for_each(|tables| {
-                tables.iter_mut().for_each(|(t, s)| {
+                tables.iter_mut().for_each(|(t, _, s)| {
                   *s = t == &table_clone;
                 });
               });
             });
           })
-          .child(table)
+          .child(
+            div()
+              .classes("flex flex-row justify-between items-center gap-4")
+              .child(p().classes("pl-2").child(table))
+              .child(p().classes("pr-2 text-xs").child(size)),
+          )
       })
       .collect_view()
   };

@@ -1,7 +1,11 @@
 use tauri::{AppHandle, Manager, Result, State};
 use tokio_postgres::{connect, NoTls};
 
-use crate::{constant::PROJECT_DB_PATH, utils::reflective_get, AppState};
+use crate::{
+  constant::PROJECT_DB_PATH,
+  utils::{create_or_open_local_db, reflective_get},
+  AppState,
+};
 
 #[tauri::command]
 pub async fn pg_connector(project: &str, key: &str, app: AppHandle) -> Result<Vec<String>> {
@@ -9,9 +13,7 @@ pub async fn pg_connector(project: &str, key: &str, app: AppHandle) -> Result<Ve
   let mut db = app_state.project_db.lock().await;
   if db.clone().is_none() {
     let app_dir = app.path_resolver().app_data_dir().unwrap();
-    let db_path = app_dir.join(PROJECT_DB_PATH);
-    let _db = sled::open(db_path).unwrap();
-    *db = Some(_db);
+    *db = Some(create_or_open_local_db(PROJECT_DB_PATH, &app_dir));
   }
   db.clone().unwrap().insert(project, key).unwrap();
 
@@ -44,21 +46,30 @@ pub async fn pg_connector(project: &str, key: &str, app: AppHandle) -> Result<Ve
 pub async fn select_schema_tables(
   schema: &str,
   app_state: State<'_, AppState>,
-) -> Result<Vec<String>> {
+) -> Result<Vec<(String, String)>> {
   let client = app_state.client.lock().await;
   let client = client.as_ref().unwrap();
   let tables = client
     .query(
       r#"
-        SELECT table_name
-        FROM information_schema.tables
-        WHERE table_schema = $1
+        SELECT 
+          table_name,
+          pg_size_pretty(pg_total_relation_size('"' || table_schema || '"."' || table_name || '"')) AS size
+        FROM 
+          information_schema.tables
+        WHERE 
+          table_schema = $1
+        ORDER BY 
+          pg_total_relation_size('"' || table_schema || '"."' || table_name || '"') DESC;
         "#,
       &[&schema],
     )
     .await
     .unwrap();
-  let tables = tables.iter().map(|r| r.get(0)).collect();
+  let tables = tables
+    .iter()
+    .map(|r| (r.get(0), r.get(1)))
+    .collect::<Vec<(String, String)>>();
 
   Ok(tables)
 }

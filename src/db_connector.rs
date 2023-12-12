@@ -78,6 +78,13 @@ pub fn db_connector() -> impl IntoView {
                 .child(
                     button()
                         .classes("px-4 py-2 border-1 border-neutral-200 hover:bg-neutral-200 rounded-md")
+                        .on(ev::click, move |_| {
+                        })
+                        .child("Save Query"),
+                )
+                .child(
+                    button()
+                        .classes("px-4 py-2 border-1 border-neutral-200 hover:bg-neutral-200 rounded-md")
                         .on(ev::click, move |_| run_query.dispatch(query_state))
                         .child("Query"),
                 )

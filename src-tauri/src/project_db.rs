@@ -1,7 +1,7 @@
 use serde::Serialize;
 use tauri::{AppHandle, Manager, Result, State};
 
-use crate::{constant::PROJECT_DB_PATH, AppState};
+use crate::{constant::PROJECT_DB_PATH, utils::create_or_open_local_db, AppState};
 
 #[derive(Default, Serialize)]
 pub struct ProjectDetails {
@@ -17,9 +17,7 @@ pub async fn select_projects(app: AppHandle) -> Result<Vec<String>> {
   let mut db = app_state.project_db.lock().await;
   if db.clone().is_none() {
     let app_dir = app.path_resolver().app_data_dir().unwrap();
-    let db_path = app_dir.join(PROJECT_DB_PATH);
-    let _db = sled::open(db_path).unwrap();
-    *db = Some(_db);
+    *db = Some(create_or_open_local_db(PROJECT_DB_PATH, &app_dir))
   }
   let db = db.clone().unwrap();
   let projects = db

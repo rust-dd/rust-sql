@@ -1,4 +1,17 @@
+use std::path::Path;
+
 use tokio_postgres::Row;
+
+pub fn create_or_open_local_db(path: &str, app_dir: &Path) -> sled::Db {
+  if cfg!(debug_assertions) {
+    let db = sled::open(path).unwrap();
+    return db;
+  }
+
+  let db_path = app_dir.join(path);
+  let db = sled::open(db_path).unwrap();
+  db
+}
 
 /// The postgres-crate does not provide a default mapping to fallback to String for all
 /// types: row.get is generic and without a type assignment the FromSql-Trait cannot be inferred.

@@ -9,8 +9,7 @@ pub fn create_or_open_local_db(path: &str, app_dir: &Path) -> sled::Db {
   }
 
   let db_path = app_dir.join(path);
-  let db = sled::open(db_path).unwrap();
-  db
+  sled::open(db_path).unwrap()
 }
 
 /// The postgres-crate does not provide a default mapping to fallback to String for all

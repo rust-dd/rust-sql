@@ -33,10 +33,6 @@ pub async fn select_queries(app_state: State<'_, AppState>) -> Result<HashMap<St
       queries.insert(key, value);
     }
   };
-  queries = queries
-    .into_iter()
-    .map(|(k, v)| (k, v))
-    .collect::<HashMap<String, String>>();
   Ok(queries)
 }
 

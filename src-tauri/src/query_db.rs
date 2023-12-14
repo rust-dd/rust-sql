@@ -37,7 +37,7 @@ pub async fn select_queries(app_state: State<'_, AppState>) -> Result<BTreeMap<S
 }
 
 #[tauri::command]
-pub async fn delete_query(key: String, app_state: State<'_, AppState>) -> Result<()> {
+pub async fn delete_query(key: &str, app_state: State<'_, AppState>) -> Result<()> {
   let query_db = app_state.query_db.lock().await;
   if let Some(ref query_db) = *query_db {
     query_db.remove(key).unwrap();

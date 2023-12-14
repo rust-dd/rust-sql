@@ -45,8 +45,8 @@ pub fn db_connector() -> impl IntoView {
                             .prop("type", "text")
                             .prop("placeholder", "Add query name..")
                             .prop("value", query_title)
-                            .on(ev::click, move |e| {
-                                set_query_title(event_target_value(&e))
+                            .on(ev::input, move |e| {
+                                set_query_title(event_target_value(&e));
                             })
                         )
                         .into_view()

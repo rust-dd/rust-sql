@@ -27,9 +27,7 @@ pub fn query_editor() -> impl IntoView {
     let minimap_settings = IEditorMinimapOptions::default();
     minimap_settings.set_enabled(Some(false));
     options.set_minimap(Some(&minimap_settings));
-
     let editor = CodeEditor::create(html_element, Some(options));
-
     set_editor.update(|prev| {
       prev.replace(Some(editor));
     });

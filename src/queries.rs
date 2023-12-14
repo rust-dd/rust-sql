@@ -1,60 +1,49 @@
 use leptos::{html::*, *};
 
-use crate::{
-  invoke::{Invoke, InvokeSelectQueriesArgs},
-  store::query::QueryState,
-  wasm_functions::invoke,
-};
+use crate::store::query::QueryState;
 
 pub fn queries() -> impl IntoView {
   let query_state = use_context::<QueryState>().unwrap();
-  let queries = move || query_state.saved_queries.get();
-  let q = create_resource(
+  create_resource(
     || {},
-    move |_| async move { query_state.select_queries().await.unwrap() },
+    move |_| async move {
+      query_state.select_queries().await.unwrap();
+    },
   );
-  logging::log!("queries, {:?}", q);
 
-  let queries_result = move || {
-    queries()
+  move || {
+    query_state
+      .saved_queries
+      .get()
       .into_iter()
       .enumerate()
-      .map(|(idx, (name, sql))| {
+      .map(|(idx, (key, _))| {
         div()
           .prop("key", idx)
           .classes("flex flex-row justify-between items-center")
           .child(
             button()
               .classes("hover:font-semibold")
-              .child(&name)
+              .child(&key)
               .on(ev::click, {
-                let sql = sql.clone();
+                let key = key.clone();
                 move |_| {
-                  query_state.sql.update(|prev| {
-                    *prev = sql.clone();
-                  });
+                  query_state.load_query(&key);
                 }
               }),
           )
           .child(
             button()
-              .classes("hover:font-semibold")
-              .child("Delete")
-              .on(ev::click, {
-                let name = name.clone();
-                move |_| {
-                  query_state.delete_query(&name);
-                }
+              .classes("px-2 rounded-full hover:bg-gray-200")
+              .child("-")
+              .on(ev::click, move |_| {
+                let key = key.clone();
+                spawn_local(async move {
+                  query_state.delete_query(&key).await.unwrap();
+                })
               }),
           )
       })
       .collect_view()
-  };
-  let children =
-    move || ChildrenFn::to_children(move || Fragment::new(vec![queries_result().into_view()]));
-  let fallback = ViewFn::from(|| p().classes("pl-2").child("Loading..."));
-  Suspense::<Fragment>(SuspenseProps {
-    fallback,
-    children: children(),
-  })
+  }
 }

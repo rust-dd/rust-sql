@@ -83,7 +83,7 @@ pub fn sidebar() -> impl IntoView {
     )
     .child(projects_result.into_view())
     .child(p().classes("font-semibold").child("Saved Queries"))
-    .child(queries())
+    .child(queries().into_view())
     .child(p().classes("font-semibold").child("Schemas"))
     .child(Show(ShowProps {
       when: move || db.is_connecting.get(),

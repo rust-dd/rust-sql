@@ -22,7 +22,8 @@ pub async fn pg_connector(project: &str, key: &str, app: AppHandle) -> Result<Ve
     .query(
       r#"
         SELECT schema_name
-        FROM information_schema.schemata;
+        FROM information_schema.schemata
+        WHERE schema_name NOT IN ('pg_catalog', 'information_schema');
         "#,
       &[],
     )
@@ -54,7 +55,7 @@ pub async fn select_schema_tables(
         WHERE 
           table_schema = $1
         ORDER BY 
-          pg_total_relation_size('"' || table_schema || '"."' || table_name || '"') DESC;
+          table_name;
         "#,
       &[&schema],
     )
@@ -64,7 +65,6 @@ pub async fn select_schema_tables(
     .iter()
     .map(|r| (r.get(0), r.get(1)))
     .collect::<Vec<(String, String)>>();
-
   Ok(tables)
 }
 

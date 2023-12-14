@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 
 use serde::Serialize;
 use tauri::{AppHandle, Manager, Result, State};
@@ -22,9 +22,9 @@ pub async fn insert_query(key: &str, sql: &str, app: AppHandle) -> Result<()> {
 }
 
 #[tauri::command]
-pub async fn select_queries(app_state: State<'_, AppState>) -> Result<HashMap<String, String>> {
+pub async fn select_queries(app_state: State<'_, AppState>) -> Result<BTreeMap<String, String>> {
   let query_db = app_state.query_db.lock().await;
-  let mut queries = HashMap::new();
+  let mut queries = BTreeMap::new();
   if let Some(ref query_db) = *query_db {
     for query in query_db.iter() {
       let (key, value) = query.unwrap();

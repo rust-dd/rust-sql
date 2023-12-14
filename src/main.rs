@@ -2,6 +2,7 @@ mod app;
 mod db_connector;
 mod invoke;
 mod layout;
+mod queries;
 mod query_editor;
 mod query_table;
 mod sidebar;

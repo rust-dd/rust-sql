@@ -25,9 +25,9 @@ pub fn tables(schema: String) -> impl IntoView {
         li()
           .prop("key", i)
           .classes(if is_selected {
-            "pl-4 font-semibold cursor-pointer"
+            "pl-2 font-semibold cursor-pointer"
           } else {
-            "hover:font-semibold pl-4 cursor-pointer"
+            "hover:font-semibold pl-2 cursor-pointer"
           })
           .on(ev::click, move |_| {
             let schema = db
@@ -61,9 +61,9 @@ pub fn tables(schema: String) -> impl IntoView {
           })
           .child(
             div()
-              .classes("flex flex-row justify-between items-center gap-4")
-              .child(p().classes("pl-2").child(table))
-              .child(p().classes("pr-2 text-xs").child(size)),
+              .classes("flex flex-row justify-between items-center")
+              .child(p().classes("pl-2 text-xs").child(table))
+              .child(p().classes("text-xs").child(size)),
           )
       })
       .collect_view()

@@ -1,5 +1,6 @@
 use crate::{
   invoke::{Invoke, InvokeProjectsArgs},
+  queries::queries,
   store::db::DBStore,
   tables::tables,
   wasm_functions::invoke,
@@ -81,6 +82,8 @@ pub fn sidebar() -> impl IntoView {
         ),
     )
     .child(projects_result.into_view())
+    .child(p().classes("font-semibold").child("Saved Queries"))
+    .child(queries())
     .child(p().classes("font-semibold").child("Schemas"))
     .child(Show(ShowProps {
       when: move || db.is_connecting.get(),

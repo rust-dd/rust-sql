@@ -1,7 +1,9 @@
+use std::collections::BTreeMap;
+
 use leptos::{create_rw_signal, use_context, RwSignal, SignalGetUntracked, SignalUpdate};
 
 use crate::{
-  invoke::{Invoke, InvokeQueryArgs},
+  invoke::{Invoke, InvokeInsertQueryArgs, InvokeQueryArgs, InvokeSelectQueriesArgs},
   wasm_functions::invoke,
 };
 
@@ -13,6 +15,7 @@ pub struct QueryState {
   #[allow(clippy::type_complexity)]
   pub sql_result: RwSignal<Option<(Vec<String>, Vec<Vec<String>>)>>,
   pub is_loading: RwSignal<bool>,
+  pub saved_queries: RwSignal<BTreeMap<String, String>>,
 }
 
 impl Default for QueryState {
@@ -27,6 +30,7 @@ impl QueryState {
       sql: create_rw_signal(String::from("SELECT * FROM users LIMIT 100;")),
       sql_result: create_rw_signal(Some((Vec::new(), Vec::new()))),
       is_loading: create_rw_signal(false),
+      saved_queries: create_rw_signal(BTreeMap::new()),
     }
   }
 
@@ -56,5 +60,35 @@ impl QueryState {
     self.is_loading.update(|prev| {
       *prev = false;
     });
+  }
+
+  pub async fn select_queries(&self) -> Result<BTreeMap<String, String>, ()> {
+    let saved_queries = invoke(
+      &Invoke::select_queries.to_string(),
+      serde_wasm_bindgen::to_value(&InvokeSelectQueriesArgs).unwrap_or_default(),
+    )
+    .await;
+    let queries = serde_wasm_bindgen::from_value::<Vec<(String, String)>>(saved_queries).unwrap();
+    self.saved_queries.update(|prev| {
+      *prev = queries.into_iter().collect();
+    });
+    Ok(self.saved_queries.get_untracked())
+  }
+
+  pub async fn insert_query(&self, key: &str) -> Result<(), ()> {
+    let args = serde_wasm_bindgen::to_value(&InvokeInsertQueryArgs {
+      key: key.to_string(),
+      sql: self.sql.get_untracked(),
+    });
+    invoke(&Invoke::insert_query.to_string(), args.unwrap_or_default()).await;
+    self.select_queries().await?;
+    Ok(())
+  }
+
+  pub async fn delete_query(&self, key: &str) -> Result<(), ()> {
+    let args = serde_wasm_bindgen::to_value(&key.to_string());
+    invoke(&Invoke::delete_query.to_string(), args.unwrap_or_default()).await;
+    self.select_queries().await?;
+    Ok(())
   }
 }

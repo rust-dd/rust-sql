@@ -21,6 +21,14 @@ pub fn db_connector() -> impl IntoView {
     let query_state = *query_state;
     async move { query_state.run_query().await }
   });
+  let query_db = use_context::<QueryState>().unwrap();
+  let insert_query = create_action(move |(query_db, key): &(QueryState, String)| {
+    let query_db_clone = *query_db;
+    let key = key.clone();
+    async move {
+      query_db_clone.insert_query(key.as_str()).await.unwrap();
+    }
+  });
 
   header()
         .classes("flex flex-row justify-between p-4 gap-2 border-b-1 border-neutral-200")
@@ -52,7 +60,8 @@ pub fn db_connector() -> impl IntoView {
                                 button()
                                 .classes("px-4 py-2 border-1 border-neutral-200 hover:bg-neutral-200 rounded-md")
                                 .on(ev::click, move |_| {
-                                    show.set(false)
+                                    insert_query.dispatch((query_db, query_title()));
+                                    show.set(false);
                                 })
                                 .child("Save")
                             )

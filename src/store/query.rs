@@ -13,7 +13,6 @@ use super::editor::EditorState;
 
 #[derive(Clone, Copy, Debug)]
 pub struct QueryState {
-  pub sql: RwSignal<String>,
   #[allow(clippy::type_complexity)]
   pub sql_result: RwSignal<Option<(Vec<String>, Vec<Vec<String>>)>>,
   pub is_loading: RwSignal<bool>,
@@ -29,7 +28,6 @@ impl Default for QueryState {
 impl QueryState {
   pub fn new() -> Self {
     Self {
-      sql: create_rw_signal(String::from("SELECT * FROM users LIMIT 100;")),
       sql_result: create_rw_signal(Some((Vec::new(), Vec::new()))),
       is_loading: create_rw_signal(false),
       saved_queries: create_rw_signal(BTreeMap::new()),
@@ -40,18 +38,9 @@ impl QueryState {
     self.is_loading.update(|prev| {
       *prev = true;
     });
-    let editor = use_context::<EditorState>().unwrap().editor.get_untracked();
-    let code = editor
-      .borrow()
-      .as_ref()
-      .unwrap()
-      .get_model()
-      .unwrap()
-      .get_value();
-    let args = serde_wasm_bindgen::to_value(&InvokeQueryArgs {
-      sql: code.to_string(),
-    })
-    .unwrap();
+    let editor_state = use_context::<EditorState>().unwrap();
+    let sql = editor_state.get_value();
+    let args = serde_wasm_bindgen::to_value(&InvokeQueryArgs { sql }).unwrap();
     let data = invoke(&Invoke::select_sql_result.to_string(), args).await;
     let data = serde_wasm_bindgen::from_value::<(Vec<String>, Vec<Vec<String>>)>(data).unwrap();
     self.sql_result.update(|prev| {
@@ -74,17 +63,11 @@ impl QueryState {
   }
 
   pub async fn insert_query(&self, key: &str) -> Result<(), ()> {
-    let editor = use_context::<EditorState>().unwrap().editor.get_untracked();
-    let sql = editor
-      .borrow()
-      .as_ref()
-      .unwrap()
-      .get_model()
-      .unwrap()
-      .get_value();
+    let editor_state = use_context::<EditorState>().unwrap();
+    let sql = editor_state.get_value();
     let args = serde_wasm_bindgen::to_value(&InvokeInsertQueryArgs {
       key: key.to_string(),
-      sql: sql.to_string(),
+      sql,
     });
     invoke(&Invoke::insert_query.to_string(), args.unwrap_or_default()).await;
     self.select_queries().await?;
@@ -100,19 +83,9 @@ impl QueryState {
     Ok(())
   }
 
-  pub fn load_query(&self, key: &str) -> () {
+  pub fn load_query(&self, key: &str) {
     let query = self.saved_queries.get_untracked().get(key).unwrap().clone();
-    let editor = use_context::<EditorState>().unwrap().editor.get_untracked();
-    editor
-      .borrow()
-      .as_ref()
-      .unwrap()
-      .get_model()
-      .unwrap()
-      .set_value(&query);
-    self.sql.update(|prev| {
-      *prev = query;
-    });
-    ()
+    let editor_state = use_context::<EditorState>().unwrap();
+    editor_state.set_value(&query);
   }
 }

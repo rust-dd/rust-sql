@@ -1,4 +1,4 @@
-use leptos::{create_rw_signal, RwSignal};
+use leptos::{create_rw_signal, RwSignal, SignalGetUntracked};
 
 use crate::query_editor::ModelCell;
 
@@ -18,5 +18,29 @@ impl EditorState {
     Self {
       editor: create_rw_signal(ModelCell::default()),
     }
+  }
+
+  pub fn get_value(&self) -> String {
+    self
+      .editor
+      .get_untracked()
+      .borrow()
+      .as_ref()
+      .unwrap()
+      .get_model()
+      .unwrap()
+      .get_value()
+  }
+
+  pub fn set_value(&self, value: &str) {
+    self
+      .editor
+      .get_untracked()
+      .borrow()
+      .as_ref()
+      .unwrap()
+      .get_model()
+      .unwrap()
+      .set_value(value);
   }
 }

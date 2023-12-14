@@ -3,7 +3,7 @@ use leptos::{html::*, *};
 
 pub fn tables(schema: String) -> impl IntoView {
   let db = use_context::<DBStore>().unwrap();
-  let query_store = use_context::<QueryState>().unwrap();
+  let query_state = use_context::<QueryState>().unwrap();
   let tables = create_resource(
     || {},
     move |_| {
@@ -40,15 +40,9 @@ pub fn tables(schema: String) -> impl IntoView {
               .clone();
             let t_clone = table_clone.clone();
             spawn_local(async move {
-              let editor = use_context::<EditorState>().unwrap().editor.get_untracked();
-              editor
-                .borrow()
-                .as_ref()
-                .unwrap()
-                .get_model()
-                .unwrap()
-                .set_value(&format!("SELECT * FROM {}.{} LIMIT 100;", schema, t_clone));
-              query_store.run_query().await;
+              let editor_state = use_context::<EditorState>().unwrap();
+              editor_state.set_value(&format!("SELECT * FROM {}.{} LIMIT 100;", schema, t_clone));
+              query_state.run_query().await;
             });
             let table_clone = table_clone.clone();
             tables.update(move |prev| {

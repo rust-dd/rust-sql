@@ -14,6 +14,7 @@ pub struct DBStore {
   pub db_password: RwSignal<String>,
   pub schemas: RwSignal<BTreeMap<String, bool>>,
   pub is_connecting: RwSignal<bool>,
+  #[allow(clippy::type_complexity)]
   pub tables: RwSignal<BTreeMap<String, Vec<(String, String, bool)>>>,
 }
 

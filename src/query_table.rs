@@ -3,8 +3,8 @@ use leptos::{html::*, leptos_dom::Each, *};
 use crate::store::query::QueryState;
 
 pub fn query_table() -> impl IntoView {
-  let data = use_context::<QueryState>().unwrap();
-  let when = move || !data.is_loading.get();
+  let query_state = use_context::<QueryState>().unwrap();
+  let when = move || !query_state.is_loading.get();
   let fallback = ViewFn::from(|| p().classes("pl-2").child("Loading..."));
   let children = ChildrenFn::to_children(move || {
     Fragment::new(vec![table()
@@ -14,14 +14,14 @@ pub fn query_table() -> impl IntoView {
           tr()
             .classes("bg-gray-100 hover:bg-gray-200 divide-x divide-gray-200")
             .child(Each::new(
-              move || data.sql_result.get().unwrap().0.clone(),
+              move || query_state.sql_result.get().unwrap().0.clone(),
               move |n| n.clone(),
               move |col| th().classes("text-xs px-4").child(col),
             )),
         ),
       )
       .child(tbody().child(Each::new(
-        move || data.sql_result.get().unwrap().1.clone(),
+        move || query_state.sql_result.get().unwrap().1.clone(),
         move |n| n.clone(),
         move |row| {
           tr()

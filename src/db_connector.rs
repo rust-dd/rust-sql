@@ -1,8 +1,16 @@
-use leptos::{html::*, *};
-
 use crate::store::{db::DBStore, query::QueryState};
+use leptos::{html::*, *};
+use leptos_use::{use_document, use_event_listener};
+use thaw::{Modal, ModalFooter, ModalProps};
 
 pub fn db_connector() -> impl IntoView {
+  let show = create_rw_signal(false);
+  let _ = use_event_listener(use_document(), ev::keydown, move |event| {
+    if event.key() == "Escape" {
+      show.set(false);
+    }
+  });
+  let (query_title, set_query_title) = create_signal(String::new());
   let db = use_context::<DBStore>().unwrap();
   let connect = create_action(move |db: &DBStore| {
     let db_clone = *db;
@@ -18,6 +26,47 @@ pub fn db_connector() -> impl IntoView {
         .classes("flex flex-row justify-between p-4 gap-2 border-b-1 border-neutral-200")
         .child(
             div()
+            .child(Modal(ModalProps {
+                    show,
+                    title: MaybeSignal::derive(move || String::from("Save query!")),
+                    children: Children::to_children(move || Fragment::new(vec![
+                        div()
+                        .child(
+                            input()
+                            .classes("border-1 border-neutral-200 p-1 rounded-md w-full")
+                            .prop("type", "text")
+                            .prop("placeholder", "Add query name..")
+                            .prop("value", query_title)
+                            .on(ev::click, move |e| {
+                                set_query_title(event_target_value(&e))
+                            })
+                        )
+                        .into_view()
+                        ])),
+                    modal_footer: Some(ModalFooter {
+                        children: ChildrenFn::to_children(move || Fragment::new(vec![
+                            div()
+                            .classes("flex gap-2")
+                            .attr("style", "justify-content: flex-end")
+                            .child(
+                                button()
+                                .classes("px-4 py-2 border-1 border-neutral-200 hover:bg-neutral-200 rounded-md")
+                                .on(ev::click, move |_| {
+                                    show.set(false)
+                                })
+                                .child("Save")
+                            )
+                            .child(
+                                button()
+                                .classes("px-4 py-2 border-1 border-neutral-200 hover:bg-neutral-200 rounded-md")
+                                .on(ev::click, move |_| {
+                                    show.set(false)
+                                })
+                                .child("Cancel")
+                            ).into_view(),
+                        ])),
+                    })
+                }))
                 .classes("flex flex-row gap-2")
                 .child(
                     input()
@@ -79,6 +128,7 @@ pub fn db_connector() -> impl IntoView {
                     button()
                         .classes("px-4 py-2 border-1 border-neutral-200 hover:bg-neutral-200 rounded-md")
                         .on(ev::click, move |_| {
+                            show.set(true)
                         })
                         .child("Save Query"),
                 )

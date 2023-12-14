@@ -1,7 +1,7 @@
 use serde::Serialize;
-use tauri::{AppHandle, Manager, Result, State};
+use tauri::{Result, State};
 
-use crate::{constant::PROJECT_DB_PATH, utils::create_or_open_local_db, AppState};
+use crate::AppState;
 
 #[derive(Default, Serialize)]
 pub struct ProjectDetails {
@@ -12,22 +12,18 @@ pub struct ProjectDetails {
 }
 
 #[tauri::command]
-pub async fn select_projects(app: AppHandle) -> Result<Vec<String>> {
-  let app_state = app.state::<AppState>();
-  let mut db = app_state.project_db.lock().await;
-  if db.clone().is_none() {
-    let app_dir = app.path_resolver().app_data_dir().unwrap();
-    *db = Some(create_or_open_local_db(PROJECT_DB_PATH, &app_dir))
-  }
-  let db = db.clone().unwrap();
-  let projects = db
+pub async fn select_projects(app_state: State<'_, AppState>) -> Result<Vec<String>> {
+  let project_db = app_state.project_db.lock().await;
+  let mut projects = project_db
+    .clone()
+    .unwrap()
     .iter()
     .map(|r| {
       let (project, _) = r.unwrap();
       String::from_utf8(project.to_vec()).unwrap()
     })
-    .collect();
-
+    .collect::<Vec<String>>();
+  projects.sort();
   Ok(projects)
 }
 
@@ -60,7 +56,6 @@ pub async fn select_project_details(
       }
     }
   }
-
   Ok(project_details)
 }
 

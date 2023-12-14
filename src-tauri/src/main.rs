@@ -7,6 +7,7 @@ mod project_db;
 mod query_db;
 mod utils;
 
+use constant::{PROJECT_DB_PATH, QUERY_DB_PATH};
 use postgres::{pg_connector, select_schema_tables, select_sql_result};
 use project_db::{delete_project, select_project_details, select_projects};
 use query_db::{delete_query, insert_query, select_queries};
@@ -16,6 +17,7 @@ use std::sync::Arc;
 use tauri::Manager;
 use tokio::sync::Mutex;
 use tokio_postgres::Client;
+use utils::create_or_open_local_db;
 
 pub struct AppState {
   pub connection_strings: Arc<Mutex<String>>,
@@ -39,6 +41,17 @@ fn main() {
   tauri::Builder::default()
     .manage(AppState::default())
     .setup(|app| {
+      let app_handle = app.handle();
+
+      tauri::async_runtime::spawn(async move {
+        let app_dir = app_handle.path_resolver().app_data_dir().unwrap();
+        let app_state = &app_handle.state::<AppState>();
+        let project_db = create_or_open_local_db(PROJECT_DB_PATH, &app_dir);
+        let query_db = create_or_open_local_db(QUERY_DB_PATH, &app_dir);
+        *app_state.project_db.lock().await = Some(project_db);
+        *app_state.query_db.lock().await = Some(query_db);
+      });
+
       // open devtools if we are in debug mode
       #[cfg(debug_assertions)]
       {

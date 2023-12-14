@@ -1,7 +1,9 @@
 use std::collections::HashMap;
 
 use serde::Serialize;
-use tauri::Result;
+use tauri::{AppHandle, Manager, Result, State};
+
+use crate::AppState;
 
 #[derive(Default, Serialize)]
 pub struct QueryDetails {
@@ -10,16 +12,39 @@ pub struct QueryDetails {
 }
 
 #[tauri::command]
-pub fn insert_query(key: String, sql: String) {
-  todo!()
+pub async fn insert_query(key: &str, sql: &str, app: AppHandle) -> Result<()> {
+  let app_state = app.state::<AppState>();
+  let db = app_state.query_db.lock().await;
+  if let Some(ref db_instance) = *db {
+    db_instance.insert(key, sql).unwrap();
+  }
+  Ok(())
 }
 
 #[tauri::command]
-pub async fn select_queries() -> Result<HashMap<String, String>> {
-  todo!()
+pub async fn select_queries(app_state: State<'_, AppState>) -> Result<HashMap<String, String>> {
+  let query_db = app_state.query_db.lock().await;
+  let mut queries = HashMap::new();
+  if let Some(ref query_db) = *query_db {
+    for query in query_db.iter() {
+      let (key, value) = query.unwrap();
+      let key = String::from_utf8(key.to_vec()).unwrap();
+      let value = String::from_utf8(value.to_vec()).unwrap();
+      queries.insert(key, value);
+    }
+  };
+  queries = queries
+    .into_iter()
+    .map(|(k, v)| (k, v))
+    .collect::<HashMap<String, String>>();
+  Ok(queries)
 }
 
 #[tauri::command]
-pub async fn delete_query(key: String) {
-  todo!()
+pub async fn delete_query(key: String, app_state: State<'_, AppState>) -> Result<()> {
+  let query_db = app_state.query_db.lock().await;
+  if let Some(ref query_db) = *query_db {
+    query_db.remove(key).unwrap();
+  };
+  Ok(())
 }

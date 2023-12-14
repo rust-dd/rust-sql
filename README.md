@@ -29,5 +29,5 @@ Welcome to the Tauri-Leptos PostgreSQL GUI, a fully Rust-based application for e
 
 - [x] **Connection Data Storage:** Implement secure storage for database connection details.
 - [x] **Multi-Connection Support:** Enable the GUI to handle multiple database connections simultaneously.
-- [ ] **SQL Query Saving:** Allow users to save and manage their frequently used SQL queries.
+- [x] **SQL Query Saving:** Allow users to save and manage their frequently used SQL queries.
 

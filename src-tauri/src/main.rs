@@ -13,7 +13,6 @@ use project_db::{delete_project, select_project_details, select_projects};
 use query_db::{delete_query, insert_query, select_queries};
 use sled::Db;
 use std::sync::Arc;
-#[cfg(debug_assertions)]
 use tauri::Manager;
 use tokio::sync::Mutex;
 use tokio_postgres::Client;
@@ -45,7 +44,7 @@ fn main() {
 
       tauri::async_runtime::spawn(async move {
         let app_dir = app_handle.path_resolver().app_data_dir().unwrap();
-        let app_state = &app_handle.state::<AppState>();
+        let app_state = app_handle.state::<AppState>();
         let project_db = create_or_open_local_db(PROJECT_DB_PATH, &app_dir);
         let query_db = create_or_open_local_db(QUERY_DB_PATH, &app_dir);
         *app_state.project_db.lock().await = Some(project_db);

@@ -1,6 +1,5 @@
-use leptos::{html::*, leptos_dom::Each, *};
-
 use crate::store::query::QueryState;
+use leptos::{html::*, leptos_dom::Each, *};
 
 pub fn query_table() -> impl IntoView {
   let query_state = use_context::<QueryState>().unwrap();

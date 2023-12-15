@@ -1,5 +1,6 @@
 mod app;
 mod db_connector;
+mod enums;
 mod invoke;
 mod layout;
 mod queries;

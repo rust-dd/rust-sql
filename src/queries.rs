@@ -1,6 +1,6 @@
-use leptos::{html::*, *};
-
 use crate::store::query::QueryState;
+use leptos::{html::*, *};
+use leptos_icons::*;
 
 pub fn queries() -> impl IntoView {
   let query_state = use_context::<QueryState>().unwrap();
@@ -24,7 +24,18 @@ pub fn queries() -> impl IntoView {
           .child(
             button()
               .classes("hover:font-semibold")
-              .child(&key)
+              .child(
+                div()
+                  .classes("flex flex-row items-center gap-1")
+                  .child(Icon(IconProps {
+                    icon: MaybeSignal::derive(|| Icon::from(HiIcon::HiCircleStackOutlineLg)),
+                    width: Some(MaybeSignal::derive(|| String::from("12"))),
+                    height: Some(MaybeSignal::derive(|| String::from("12"))),
+                    class: None,
+                    style: None,
+                  }))
+                  .child(&key),
+              )
               .on(ev::click, {
                 let key = key.clone();
                 move |_| {

@@ -63,8 +63,8 @@ pub fn tables(schema: String) -> impl IntoView {
                     .classes("flex flex-row items-center gap-1")
                     .child(Icon(IconProps {
                       icon: MaybeSignal::derive(|| Icon::from(HiIcon::HiTableCellsOutlineLg)),
-                      width: Some(MaybeSignal::derive(|| 12.to_string())),
-                      height: Some(MaybeSignal::derive(|| 12.to_string())),
+                      width: Some(MaybeSignal::derive(|| String::from("12"))),
+                      height: Some(MaybeSignal::derive(|| String::from("12"))),
                       class: None,
                       style: None,
                     }))

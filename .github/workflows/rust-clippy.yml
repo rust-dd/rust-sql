@@ -23,7 +23,7 @@ jobs:
     name: Run rust-clippy analyzing
     runs-on: ubuntu-latest
     container:
-      image: rust:nightly
+      image: rust:latest
     permissions:
       contents: read
       security-events: write

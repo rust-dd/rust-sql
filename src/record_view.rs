@@ -13,7 +13,10 @@ pub fn record_view() -> impl IntoView {
     .first()
     .unwrap()
     .clone();
-  let columns_with_values = columns.into_iter().zip(first_row).collect::<Vec<_>>();
+  let columns_with_values = columns
+    .into_iter()
+    .zip(first_row.into_iter())
+    .collect::<Vec<_>>();
 
   // 2 columns table Properties, Values
   table()
@@ -26,23 +29,18 @@ pub fn record_view() -> impl IntoView {
           .child(th().classes("text-xs px-4").child("Values")),
       ),
     )
-    .child(
-      tbody().child(
-        Each::new(
-          move || columns_with_values.clone(),
-          move |n| n.clone(),
-          move |(col, val)| {
-            tr()
-              .classes("divide-y divide-gray-200")
-              .child(
-                td()
-                  .classes("px-4 text-xs bg-gray-200 font-semibold")
-                  .child(col),
-              )
-              .child(td().classes("px-4 text-xs hover:bg-gray-100").child(val))
-          },
-        )
-        .into_view(),
-      ),
-    )
+    .child(tbody().child(Each::new(
+      move || columns_with_values.clone(),
+      move |n| n.clone(),
+      move |(col, val)| {
+        tr()
+          .classes("divide-y divide-gray-200")
+          .child(
+            td()
+              .classes("px-4 text-xs bg-gray-200 font-semibold")
+              .child(col),
+          )
+          .child(td().classes("px-4 text-xs hover:bg-gray-100").child(val))
+      },
+    )))
 }

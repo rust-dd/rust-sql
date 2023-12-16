@@ -28,7 +28,7 @@ impl Default for QueryState {
 impl QueryState {
   pub fn new() -> Self {
     Self {
-      sql_result: create_rw_signal(Some((Vec::new(), Vec::new()))),
+      sql_result: create_rw_signal(None),
       is_loading: create_rw_signal(false),
       saved_queries: create_rw_signal(BTreeMap::new()),
     }
@@ -43,9 +43,7 @@ impl QueryState {
     let args = serde_wasm_bindgen::to_value(&InvokeQueryArgs { sql }).unwrap();
     let data = invoke(&Invoke::select_sql_result.to_string(), args).await;
     let data = serde_wasm_bindgen::from_value::<(Vec<String>, Vec<Vec<String>>)>(data).unwrap();
-    self.sql_result.update(|prev| {
-      *prev = Some(data);
-    });
+    self.sql_result.set(Some(data));
     self.is_loading.update(|prev| {
       *prev = false;
     });

@@ -1,7 +1,7 @@
 [package]
 name = "rust-sql-gui"
-version = "1.0.0-alpha.1"
-description = "A Tauri App"
+version = "1.0.0-alpha.2"
+description = "PostgreSQL GUI written in Rust"
 authors = ["you"]
 license = ""
 repository = ""

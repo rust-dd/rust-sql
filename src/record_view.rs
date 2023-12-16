@@ -13,10 +13,7 @@ pub fn record_view() -> impl IntoView {
     .first()
     .unwrap()
     .clone();
-  let columns_with_values = columns
-    .into_iter()
-    .zip(first_row.into_iter())
-    .collect::<Vec<_>>();
+  let columns_with_values = columns.into_iter().zip(first_row).collect::<Vec<_>>();
 
   // 2 columns table Properties, Values
   table()

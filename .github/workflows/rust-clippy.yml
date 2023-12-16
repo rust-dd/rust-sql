@@ -21,7 +21,9 @@ on:
 jobs:
   rust-clippy-analyze:
     name: Run rust-clippy analyzing
-    runs-on: rust:nightly
+    runs-on: ubuntu-latest
+    container:
+      image: rust:nightly
     permissions:
       contents: read
       security-events: write

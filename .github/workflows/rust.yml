@@ -12,7 +12,10 @@ env:
 jobs:
   build:
 
-    runs-on: rust:nightly
+    runs-on: ubuntu-latest
+    # add rust nightly
+    container:
+      image: rust:nightly
 
     steps:
     - uses: actions/checkout@v3

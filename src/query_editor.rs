@@ -6,7 +6,7 @@ use monaco::{
   api::{CodeEditor, CodeEditorOptions},
   sys::editor::{IDimension, IEditorMinimapOptions},
 };
-use wasm_bindgen::JsCast;
+use wasm_bindgen::{closure::Closure, JsCast};
 
 use crate::store::{editor::EditorState, query::QueryState};
 
@@ -42,6 +42,12 @@ pub fn query_editor() -> impl IntoView {
     options.set_minimap(Some(&minimap_settings));
 
     let e = CodeEditor::create(html_element, Some(options));
+    let keycode = monaco::sys::KeyMod::win_ctrl() as u32 | monaco::sys::KeyCode::Enter.to_value();
+    e.as_ref().add_command(
+      keycode.into(),
+      Closure::<dyn Fn()>::new(|| ()).as_ref().unchecked_ref(),
+      None,
+    );
     editor.update(|prev| {
       prev.replace(Some(e));
     });

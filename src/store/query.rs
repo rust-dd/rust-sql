@@ -39,8 +39,24 @@ impl QueryState {
       *prev = true;
     });
     let editor_state = use_context::<EditorState>().unwrap();
+    let position: monaco::sys::Position = editor_state
+      .editor
+      .get_untracked()
+      .borrow()
+      .as_ref()
+      .unwrap()
+      .as_ref()
+      .get_position()
+      .unwrap();
     let sql = editor_state.get_value();
-    let args = serde_wasm_bindgen::to_value(&InvokeQueryArgs { sql }).unwrap();
+    let sql = match self.find_query_for_line(&sql, position.line_number()) {
+      Some(query) => Some(query),
+      None => None,
+    };
+    let args = serde_wasm_bindgen::to_value(&InvokeQueryArgs {
+      sql: sql.unwrap().query,
+    })
+    .unwrap();
     let data = invoke(&Invoke::select_sql_result.to_string(), args).await;
     let data = serde_wasm_bindgen::from_value::<(Vec<String>, Vec<Vec<String>>)>(data).unwrap();
     self.sql_result.set(Some(data));
@@ -86,4 +102,41 @@ impl QueryState {
     let editor_state = use_context::<EditorState>().unwrap();
     editor_state.set_value(&query);
   }
+
+  fn find_query_for_line(&self, queries: &str, line_number: f64) -> Option<QueryInfo> {
+    let mut start_line = 1f64;
+    let mut end_line = 1f64;
+    let mut current_query = String::new();
+
+    for line in queries.lines() {
+      if !current_query.is_empty() {
+        current_query.push('\n');
+      }
+      current_query.push_str(line);
+      end_line += 1f64;
+
+      if line.ends_with(';') {
+        if line_number >= start_line && line_number < end_line {
+          return Some(QueryInfo {
+            query: current_query.clone(),
+            start_line,
+            end_line: end_line - 1f64,
+          });
+        }
+        start_line = end_line;
+        current_query.clear();
+      }
+    }
+
+    None
+  }
+}
+
+#[derive(Clone, Debug)]
+struct QueryInfo {
+  query: String,
+  #[allow(dead_code)]
+  start_line: f64,
+  #[allow(dead_code)]
+  end_line: f64,
 }

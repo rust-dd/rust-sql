@@ -103,6 +103,7 @@ impl QueryState {
     editor_state.set_value(&query);
   }
 
+  // TODO: improve this
   fn find_query_for_line(&self, queries: &str, line_number: f64) -> Option<QueryInfo> {
     let mut start_line = 1f64;
     let mut end_line = 1f64;

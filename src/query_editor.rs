@@ -43,6 +43,7 @@ pub fn query_editor() -> impl IntoView {
 
     let e = CodeEditor::create(html_element, Some(options));
     let keycode = monaco::sys::KeyMod::win_ctrl() as u32 | monaco::sys::KeyCode::Enter.to_value();
+    // TODO: Fix this
     e.as_ref().add_command(
       keycode.into(),
       Closure::<dyn Fn()>::new(|| ()).as_ref().unchecked_ref(),

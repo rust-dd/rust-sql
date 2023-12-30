@@ -1,6 +1,14 @@
-use std::collections::{BTreeMap, HashMap};
+use std::{
+  borrow::BorrowMut,
+  collections::{BTreeMap, HashMap},
+};
 
 use leptos::{create_rw_signal, RwSignal, SignalGet, SignalGetUntracked};
+
+use crate::{
+  invoke::{Invoke, InvokePostgresConnectionArgs},
+  wasm_functions::invoke,
+};
 
 use super::db::DBStore;
 
@@ -47,5 +55,19 @@ impl ProjectsStore {
     )
   }
 
-  pub async fn connect(&self) {}
+  pub async fn connect(&mut self, project_key: &str) {
+    let mut project = self.0.get_untracked();
+    let project = project.get_mut(project_key).unwrap();
+    project.status = ProjectStatus::Connecting;
+    let connection_string = self.create_project_connection_string(project_key);
+    let args = serde_wasm_bindgen::to_value(&InvokePostgresConnectionArgs {
+      project: project_key.to_string(),
+      key: connection_string,
+    })
+    .unwrap();
+    let schemas = invoke(&Invoke::pg_connector.to_string(), args).await;
+    let schemas = serde_wasm_bindgen::from_value::<Vec<String>>(schemas).unwrap();
+    project.schemas = schemas;
+    project.status = ProjectStatus::Connected;
+  }
 }

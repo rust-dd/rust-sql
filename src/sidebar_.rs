@@ -9,11 +9,11 @@ use leptos::{html::*, *};
 
 pub fn sidebar() -> impl IntoView {
   let db_state = use_context::<DBStore>().unwrap();
-  let select_project_details = create_action(move |(db, project): &(DBStore, String)| {
-    let db_clone = *db;
-    let project = project.clone();
-    async move { db_clone.select_project_details(project).await }
-  });
+  // let select_project_details = create_action(move |(db, project): &(DBStore, String)| {
+  //   let db_clone = *db;
+  //   let project = project.clone();
+  //   async move { db_clone.select_project_details(project).await }
+  // });
   let projects = create_resource(
     move || db_state.is_connecting.get(),
     move |_| async move {
@@ -46,7 +46,7 @@ pub fn sidebar() -> impl IntoView {
               .child(&project)
               .on(ev::click, {
                 let project = project.clone();
-                move |_| select_project_details.dispatch((db_state, project.clone()))
+                move |_| () //select_project_details.dispatch((db_state, project.clone()))
               }),
           )
           .child(

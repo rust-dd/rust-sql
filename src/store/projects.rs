@@ -1,5 +1,6 @@
 use std::{borrow::Borrow, collections::BTreeMap};
 
+use common::project::ProjectDetails;
 use leptos::{create_rw_signal, error::Result, RwSignal, SignalGetUntracked, SignalUpdate};
 
 use crate::{
@@ -35,7 +36,7 @@ pub struct Project {
 }
 
 #[derive(Clone, Copy, Debug)]
-pub struct ProjectsStore(RwSignal<BTreeMap<String, Project>>);
+pub struct ProjectsStore(pub RwSignal<BTreeMap<String, Project>>);
 
 impl Default for ProjectsStore {
   fn default() -> Self {
@@ -46,6 +47,31 @@ impl Default for ProjectsStore {
 impl ProjectsStore {
   pub fn new() -> Self {
     Self(create_rw_signal(BTreeMap::default()))
+  }
+
+  pub fn set_projects(&self, projects: Vec<ProjectDetails>) -> Result<()> {
+    let projects = projects
+      .into_iter()
+      .map(|project| {
+        (
+          project.name,
+          Project {
+            host: project.host,
+            port: project.port,
+            user: project.user,
+            password: project.password,
+            schemas: Vec::new(),
+            tables: Vec::new(),
+            status: ProjectStatus::Disconnected,
+            loading_state: LoadingState::Loaded,
+          },
+        )
+      })
+      .collect::<BTreeMap<String, Project>>();
+    self.0.update(|prev| {
+      *prev = projects;
+    });
+    Ok(())
   }
 
   pub fn create_project_connection_string(&self, project_key: &str) -> String {

@@ -10,6 +10,7 @@ mod query_editor;
 mod query_table;
 mod record_view;
 mod sidebar;
+mod sidebar_;
 mod store;
 mod tables;
 mod wasm_functions;

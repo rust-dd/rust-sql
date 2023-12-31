@@ -1,4 +1,4 @@
-use crate::{db_connector::db_connector, footer::footer_layout, sidebar::sidebar};
+use crate::{db_connector::db_connector, footer::footer_layout, sidebar::sidebar::sidebar};
 use leptos::{html::*, *};
 
 pub fn layout(children: Children) -> impl IntoView {

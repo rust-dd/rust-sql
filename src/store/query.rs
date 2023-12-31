@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 
-use leptos::*;
+use leptos::{error::Result, *};
 
 use crate::{
   invoke::{
@@ -34,7 +34,7 @@ impl QueryState {
     }
   }
 
-  pub async fn run_query(&self) {
+  pub async fn run_query(&self) -> Result<()> {
     self.is_loading.update(|prev| {
       *prev = true;
     });
@@ -63,9 +63,10 @@ impl QueryState {
     self.is_loading.update(|prev| {
       *prev = false;
     });
+    Ok(())
   }
 
-  pub async fn select_queries(&self) -> Result<(), ()> {
+  pub async fn select_queries(&self) -> Result<()> {
     let args = serde_wasm_bindgen::to_value(&InvokeSelectQueriesArgs).unwrap_or_default();
     let saved_queries = invoke(&Invoke::select_queries.to_string(), args).await;
     let queries =
@@ -76,7 +77,7 @@ impl QueryState {
     Ok(())
   }
 
-  pub async fn insert_query(&self, key: &str) -> Result<(), ()> {
+  pub async fn insert_query(&self, key: &str) -> Result<()> {
     let editor_state = use_context::<EditorState>().unwrap();
     let sql = editor_state.get_value();
     let args = serde_wasm_bindgen::to_value(&InvokeInsertQueryArgs {
@@ -88,7 +89,7 @@ impl QueryState {
     Ok(())
   }
 
-  pub async fn delete_query(&self, key: &str) -> Result<(), ()> {
+  pub async fn delete_query(&self, key: &str) -> Result<()> {
     let args = serde_wasm_bindgen::to_value(&InvokeDeleteQueryArgs {
       key: key.to_string(),
     });
@@ -97,7 +98,7 @@ impl QueryState {
     Ok(())
   }
 
-  pub fn load_query(&self, key: &str) {
+  pub fn load_query(&self, key: &str) -> () {
     let query = self.saved_queries.get_untracked().get(key).unwrap().clone();
     let editor_state = use_context::<EditorState>().unwrap();
     editor_state.set_value(&query);

@@ -103,6 +103,7 @@ impl DBStore {
     Ok(tables)
   }
 
+  #[deprecated]
   pub async fn select_project_details(&self, project: String) -> Result<(), ()> {
     let args = serde_wasm_bindgen::to_value(&InvokePostgresConnectionArgs {
       project: project.clone(),

@@ -1,11 +1,12 @@
 use leptos::{html::*, *};
 
-use crate::store::projects::ProjectsStore;
+use crate::store::{active_project::ActiveProjectStore, projects::ProjectsStore};
 
 use super::schemas;
 
 pub fn component(project_name: String) -> impl IntoView {
   let projects_store = use_context::<ProjectsStore>().unwrap();
+  let active_project_store = use_context::<ActiveProjectStore>().unwrap();
   let (show_schemas, set_show_schemas) = create_signal(false);
   let delete_project = create_action(move |(project_store, project): &(ProjectsStore, String)| {
     let project_store = *project_store;
@@ -24,7 +25,13 @@ pub fn component(project_name: String) -> impl IntoView {
           button()
             .classes("hover:font-semibold")
             .child(&project_name)
-            .on(ev::click, move |_| set_show_schemas(!show_schemas())),
+            .on(ev::click, {
+              let project_name = project_name.clone();
+              move |_| {
+                active_project_store.0.set(Some(project_name.clone()));
+                set_show_schemas(!show_schemas());
+              }
+            }),
         )
         .child(
           button()

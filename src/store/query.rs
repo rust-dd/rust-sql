@@ -1,4 +1,4 @@
-use std::collections::BTreeMap;
+use std::{collections::BTreeMap, fmt::format};
 
 use leptos::{error::Result, *};
 
@@ -80,11 +80,11 @@ impl QueryStore {
   }
 
   #[allow(dead_code)]
-  pub async fn insert_query(&self, key: &str) -> Result<()> {
+  pub async fn insert_query(&self, key: &str, project_name: &str) -> Result<()> {
     let editor_state = use_context::<EditorStore>().unwrap();
     let sql = editor_state.get_value();
     let args = serde_wasm_bindgen::to_value(&InvokeInsertQueryArgs {
-      key: key.to_string(),
+      key: format!("{}:{}", project_name, key),
       sql,
     });
     invoke(&Invoke::insert_query.to_string(), args.unwrap_or_default()).await;

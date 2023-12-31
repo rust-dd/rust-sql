@@ -18,8 +18,7 @@ pub fn component() -> impl IntoView {
       let args = serde_wasm_bindgen::to_value(&InvokeProjectsArgs).unwrap_or_default();
       let projects = invoke(&Invoke::select_projects.to_string(), args).await;
       let projects = serde_wasm_bindgen::from_value::<Vec<ProjectDetails>>(projects).unwrap();
-      let projects = projects_state.set_projects(projects).unwrap();
-      projects
+      projects_state.set_projects(projects).unwrap()
     },
   );
 

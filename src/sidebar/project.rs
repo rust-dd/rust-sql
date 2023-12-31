@@ -8,7 +8,7 @@ pub fn component(project_name: String) -> impl IntoView {
   let projects_store = use_context::<ProjectsStore>().unwrap();
   let (show_schemas, set_show_schemas) = create_signal(false);
   let delete_project = create_action(move |(project_store, project): &(ProjectsStore, String)| {
-    let project_store = project_store.clone();
+    let project_store = *project_store;
     let project = project.clone();
     async move {
       project_store.delete_project(&project).await.unwrap();

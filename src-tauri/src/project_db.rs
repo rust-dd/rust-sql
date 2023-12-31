@@ -17,8 +17,10 @@ pub async fn select_projects(app_state: State<'_, AppState>) -> Result<Vec<Proje
       let connection_string = String::from_utf8(connection_string).unwrap();
       let connection_string = connection_string.split(' ').collect::<Vec<&str>>();
 
-      let mut project_details = ProjectDetails::default();
-      project_details.name = project_name;
+      let mut project_details = ProjectDetails {
+        name: project_name,
+        ..Default::default()
+      };
 
       for connection_string in connection_string {
         let connection_string = connection_string.split('=').collect::<Vec<&str>>();

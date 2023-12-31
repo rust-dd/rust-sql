@@ -39,7 +39,7 @@ pub fn queries() -> impl IntoView {
               .on(ev::click, {
                 let key = key.clone();
                 move |_| {
-                  query_state.load_query(&key);
+                  query_state.load_query(&key).unwrap();
                 }
               }),
           )

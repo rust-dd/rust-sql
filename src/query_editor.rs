@@ -17,7 +17,7 @@ pub fn query_editor() -> impl IntoView {
   let run_query = create_action(move |query_store: &QueryStore| {
     let query_store = *query_store;
     async move {
-      query_store.run_query().await;
+      query_store.run_query().await.unwrap();
     }
   });
   let editor = use_context::<EditorState>().unwrap().editor;

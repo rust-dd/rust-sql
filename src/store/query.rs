@@ -50,13 +50,12 @@ impl QueryStore {
       .get_position()
       .unwrap();
     let sql = editor_state.get_value();
-    let sql = match self.find_query_for_line(&sql, position.line_number()) {
-      Some(query) => Some(query),
-      None => None,
-    };
+    let sql = self
+      .find_query_for_line(&sql, position.line_number())
+      .unwrap();
     let args = serde_wasm_bindgen::to_value(&InvokeSqlResultArgs {
       project: "".to_string(),
-      sql: sql.unwrap().query,
+      sql: sql.query,
     })
     .unwrap();
     let data = invoke(&Invoke::select_sql_result.to_string(), args).await;
@@ -79,6 +78,7 @@ impl QueryStore {
     Ok(())
   }
 
+  #[allow(dead_code)]
   pub async fn insert_query(&self, key: &str) -> Result<()> {
     let editor_state = use_context::<EditorState>().unwrap();
     let sql = editor_state.get_value();
@@ -100,10 +100,11 @@ impl QueryStore {
     Ok(())
   }
 
-  pub fn load_query(&self, key: &str) -> () {
+  pub fn load_query(&self, key: &str) -> Result<()> {
     let query = self.saved_queries.get_untracked().get(key).unwrap().clone();
     let editor_state = use_context::<EditorState>().unwrap();
     editor_state.set_value(&query);
+    Ok(())
   }
 
   // TODO: improve this

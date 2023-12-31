@@ -1,10 +1,10 @@
 use leptos::{html::*, *};
 use leptos_icons::*;
 
-use crate::store::{projects::ProjectsStore, query::QueryStore};
+use crate::store::query::QueryStore;
 
-pub fn component(table: (String, String), project_name: String, schema: String) -> impl IntoView {
-  let query_store = use_context::<QueryStore>().unwrap();
+pub fn component(table: (String, String), _project_name: String, _schema: String) -> impl IntoView {
+  let _query_store = use_context::<QueryStore>().unwrap();
   //   let query = create_action(move || {
   //     let project_name = project_name.clone();
   //     let schema = schema.clone();

@@ -1,6 +1,6 @@
 use leptos::{html::*, *};
 
-use super::schema_list;
+use super::schemas;
 
 pub fn component(project_name: String) -> impl IntoView {
   let (show_schemas, set_show_schemas) = create_signal(false);
@@ -36,9 +36,7 @@ pub fn component(project_name: String) -> impl IntoView {
             let project_name = project_name.clone();
             ChildrenFn::to_children(move || {
               let project_name = project_name.clone();
-              Fragment::new(vec![
-                schema_list::component(project_name.clone()).into_view()
-              ])
+              Fragment::new(vec![schemas::component(project_name.clone()).into_view()])
             })
           })(),
           when: move || show_schemas(),

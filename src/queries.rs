@@ -1,9 +1,9 @@
-use crate::store::query::QueryState;
+use crate::store::query::QueryStore;
 use leptos::{html::*, *};
 use leptos_icons::*;
 
 pub fn queries() -> impl IntoView {
-  let query_state = use_context::<QueryState>().unwrap();
+  let query_state = use_context::<QueryStore>().unwrap();
   create_resource(
     || {},
     move |_| async move {

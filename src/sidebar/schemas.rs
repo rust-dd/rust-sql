@@ -1,9 +1,11 @@
-use leptos::{html::*, *};
+use leptos::*;
 
+use super::schema;
 use crate::store::projects::ProjectsStore;
 
 pub fn component(project_name: String) -> impl IntoView {
   let projects_store = use_context::<ProjectsStore>().unwrap();
+  let project_name_clone = project_name.clone();
   let schemas = create_resource(
     || {},
     move |_| {
@@ -15,14 +17,9 @@ pub fn component(project_name: String) -> impl IntoView {
   For(ForProps {
     each: move || schemas.get().unwrap_or_default(),
     key: |schema| schema.clone(),
-    children: move |schema| {
-      div()
-        .child(
-          p()
-            .classes("hover:font-semibold cursor-pointer")
-            .child(schema),
-        )
-        .child(div().classes("pl-1").child("tables"))
+    children: move |s| {
+      let project_name = project_name_clone.clone();
+      schema::component(s, project_name)
     },
   })
 }

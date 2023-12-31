@@ -8,13 +8,13 @@ use monaco::{
 };
 use wasm_bindgen::{closure::Closure, JsCast};
 
-use crate::store::{editor::EditorState, query::QueryState};
+use crate::store::{editor::EditorState, query::QueryStore};
 
 pub type ModelCell = Rc<RefCell<Option<CodeEditor>>>;
 
 pub fn query_editor() -> impl IntoView {
-  let query_state = use_context::<QueryState>().unwrap();
-  let run_query = create_action(move |query_store: &QueryState| {
+  let query_state = use_context::<QueryStore>().unwrap();
+  let run_query = create_action(move |query_store: &QueryStore| {
     let query_store = *query_store;
     async move {
       query_store.run_query().await;

@@ -1,9 +1,9 @@
 use leptos::{html::*, leptos_dom::Each, *};
 
-use crate::store::query::QueryState;
+use crate::store::query::QueryStore;
 
 pub fn record_view() -> impl IntoView {
-  let query_state = use_context::<QueryState>().unwrap();
+  let query_state = use_context::<QueryStore>().unwrap();
   let columns = query_state.sql_result.get().unwrap().0.clone();
   let first_row = query_state
     .sql_result

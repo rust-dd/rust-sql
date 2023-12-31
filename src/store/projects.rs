@@ -16,7 +16,7 @@ pub struct Project {
   pub user: String,
   pub password: String,
   pub schemas: Vec<String>,
-  pub tables: Vec<(String, String)>,
+  pub tables: BTreeMap<String, Vec<(String, String)>>,
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -45,7 +45,7 @@ impl ProjectsStore {
             user: project.user,
             password: project.password,
             schemas: Vec::new(),
-            tables: Vec::new(),
+            tables: BTreeMap::new(),
           },
         )
       })
@@ -98,12 +98,18 @@ impl ProjectsStore {
     Ok(schemas)
   }
 
-  pub async fn retrieve_tables(&self, project_name: &str, schema: &str) -> Result<()> {
+  pub async fn retrieve_tables(
+    &self,
+    project_name: &str,
+    schema: &str,
+  ) -> Result<Vec<(String, String)>> {
     let projects = self.0;
     let project = projects.borrow().get_untracked();
     let project = project.get(project_name).unwrap();
-    if !project.tables.is_empty() {
-      return Ok(());
+    if let Some(tables) = project.tables.get(schema) {
+      if !tables.is_empty() {
+        return Ok(tables.clone());
+      }
     }
     let args = serde_wasm_bindgen::to_value(&InvokeTablesArgs {
       schema: schema.to_string(),
@@ -113,9 +119,18 @@ impl ProjectsStore {
     let tables = serde_wasm_bindgen::from_value::<Vec<(String, String)>>(tables).unwrap();
     projects.update(|prev| {
       let project = prev.get_mut(project_name).unwrap();
-      project.tables = tables;
+      project.tables.insert(schema.to_string(), tables.clone());
     });
-    Ok(())
+    let tables = self
+      .0
+      .get_untracked()
+      .get(project_name)
+      .unwrap()
+      .tables
+      .get(schema)
+      .unwrap()
+      .clone();
+    Ok(tables)
   }
 
   pub async fn delete_project(&self, project_name: &str) -> Result<()> {

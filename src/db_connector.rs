@@ -1,4 +1,4 @@
-use crate::store::{db::DBStore, query::QueryState};
+use crate::store::{db::DBStore, query::QueryStore};
 use leptos::{html::*, *};
 use leptos_use::{use_document, use_event_listener};
 use thaw::{Modal, ModalFooter, ModalProps};
@@ -16,12 +16,12 @@ pub fn db_connector() -> impl IntoView {
     let db_clone = *db;
     async move { db_clone.connect().await }
   });
-  let query_state = use_context::<QueryState>().unwrap();
-  let run_query = create_action(move |query_state: &QueryState| {
+  let query_state = use_context::<QueryStore>().unwrap();
+  let run_query = create_action(move |query_state: &QueryStore| {
     let query_state = *query_state;
     async move { query_state.run_query().await }
   });
-  let insert_query = create_action(move |(query_db, key): &(QueryState, String)| {
+  let insert_query = create_action(move |(query_db, key): &(QueryStore, String)| {
     let query_db_clone = *query_db;
     let key = key.clone();
     async move {

@@ -1,9 +1,9 @@
 use leptos::{html::*, leptos_dom::Each, *};
 
-use crate::store::query::QueryState;
+use crate::store::query::QueryStore;
 
 pub fn grid_view() -> impl IntoView {
-  let query_state = use_context::<QueryState>().unwrap();
+  let query_state = use_context::<QueryStore>().unwrap();
 
   table()
     .classes("table-auto w-full")

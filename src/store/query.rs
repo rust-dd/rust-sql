@@ -12,20 +12,20 @@ use crate::{
 use super::editor::EditorState;
 
 #[derive(Clone, Copy, Debug)]
-pub struct QueryState {
+pub struct QueryStore {
   #[allow(clippy::type_complexity)]
   pub sql_result: RwSignal<Option<(Vec<String>, Vec<Vec<String>>)>>,
   pub is_loading: RwSignal<bool>,
   pub saved_queries: RwSignal<BTreeMap<String, String>>,
 }
 
-impl Default for QueryState {
+impl Default for QueryStore {
   fn default() -> Self {
     Self::new()
   }
 }
 
-impl QueryState {
+impl QueryStore {
   pub fn new() -> Self {
     Self {
       sql_result: create_rw_signal(None),

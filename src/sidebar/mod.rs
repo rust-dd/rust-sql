@@ -1,4 +1,6 @@
-pub mod project_item;
-pub mod project_list;
-pub mod schema_list;
+pub mod index;
+pub mod project;
+pub mod schema;
+pub mod schemas;
 pub mod table;
+pub mod tables;

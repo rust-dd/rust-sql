@@ -8,7 +8,7 @@ use crate::{
   wasm_functions::invoke,
 };
 
-use super::project_item;
+use super::project;
 
 pub fn component() -> impl IntoView {
   let projects_state = use_context::<ProjectsStore>().unwrap();
@@ -42,7 +42,7 @@ pub fn component() -> impl IntoView {
           .child(For(ForProps {
             each: move || projects.get().unwrap_or_default(),
             key: |(project, _)| project.clone(),
-            children: |(project_name, _)| project_item::component(project_name),
+            children: |(project_name, _)| project::component(project_name),
           })),
       ),
     )

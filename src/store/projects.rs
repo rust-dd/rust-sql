@@ -8,35 +8,18 @@ use crate::{
   wasm_functions::invoke,
 };
 
-#[derive(Clone, Copy, Debug, Default)]
-pub enum ProjectStatus {
-  Connected,
-  Connecting,
-  #[default]
-  Disconnected,
-}
-
-#[derive(Clone, Debug, Default)]
-pub enum LoadingState {
-  Loading,
-  #[default]
-  Loaded,
-}
-
 #[derive(Clone, Debug)]
 pub struct Project {
-  host: String,
-  port: String,
-  user: String,
-  password: String,
-  schemas: Vec<String>,
-  tables: Vec<(String, String)>,
-  status: ProjectStatus,
-  loading_state: LoadingState,
+  pub host: String,
+  pub port: String,
+  pub user: String,
+  pub password: String,
+  pub schemas: Vec<String>,
+  pub tables: Vec<(String, String)>,
 }
 
 #[derive(Clone, Copy, Debug)]
-pub struct ProjectsStore(pub RwSignal<BTreeMap<String, Project>>);
+pub struct ProjectsStore(pub RwSignal<BTreeMap<String, (Project, bool)>>);
 
 impl Default for ProjectsStore {
   fn default() -> Self {
@@ -55,19 +38,20 @@ impl ProjectsStore {
       .map(|project| {
         (
           project.name,
-          Project {
-            host: project.host,
-            port: project.port,
-            user: project.user,
-            password: project.password,
-            schemas: Vec::new(),
-            tables: Vec::new(),
-            status: ProjectStatus::Disconnected,
-            loading_state: LoadingState::Loaded,
-          },
+          (
+            Project {
+              host: project.host,
+              port: project.port,
+              user: project.user,
+              password: project.password,
+              schemas: Vec::new(),
+              tables: Vec::new(),
+            },
+            false,
+          ),
         )
       })
-      .collect::<BTreeMap<String, Project>>();
+      .collect::<BTreeMap<String, (Project, bool)>>();
     self.0.update(|prev| {
       *prev = projects;
     });
@@ -80,41 +64,34 @@ impl ProjectsStore {
 
     format!(
       "user={} password={} host={} port={}",
-      project.user, project.password, project.host, project.port,
+      project.0.user, project.0.password, project.0.host, project.0.port,
     )
   }
 
-  pub async fn connect(&self, project_key: &str) -> Result<()> {
+  pub async fn connect(&self, project_name: &str) -> Result<Vec<String>> {
     let projects = self.0;
-    projects.update(|prev| {
-      let project = prev.get_mut(project_key).unwrap();
-      project.status = ProjectStatus::Connecting;
-    });
-    let connection_string = self.create_project_connection_string(project_key);
+    let connection_string = self.create_project_connection_string(project_name);
     let args = serde_wasm_bindgen::to_value(&InvokePostgresConnectionArgs {
-      project: project_key.to_string(),
+      project: project_name.to_string(),
       key: connection_string,
     })
     .unwrap();
     let schemas = invoke(&Invoke::pg_connector.to_string(), args).await;
-    let schemas = serde_wasm_bindgen::from_value::<Vec<String>>(schemas).unwrap();
+    let mut schemas = serde_wasm_bindgen::from_value::<Vec<String>>(schemas).unwrap();
+    schemas.sort();
+    let schemas_clone: Vec<String> = schemas.clone();
     projects.update(|prev| {
-      let project = prev.get_mut(project_key).unwrap();
-      project.schemas = schemas;
-      project.status = ProjectStatus::Connected;
+      let project = prev.get_mut(project_name).unwrap();
+      project.0.schemas = schemas_clone;
     });
-    Ok(())
+    Ok(schemas)
   }
 
-  pub async fn retrieve_tables(&self, project_key: &str, schema: &str) -> Result<()> {
+  pub async fn retrieve_tables(&self, project_name: &str, schema: &str) -> Result<()> {
     let projects = self.0;
-    projects.update(|prev| {
-      let project = prev.get_mut(project_key).unwrap();
-      project.loading_state = LoadingState::Loading;
-    });
     let project = projects.borrow().get_untracked();
-    let project = project.get(project_key).unwrap();
-    if !project.tables.is_empty() {
+    let project = project.get(project_name).unwrap();
+    if !project.0.tables.is_empty() {
       return Ok(());
     }
     let args = serde_wasm_bindgen::to_value(&InvokeTablesArgs {
@@ -124,17 +101,16 @@ impl ProjectsStore {
     let tables = invoke(&Invoke::select_schema_tables.to_string(), args).await;
     let tables = serde_wasm_bindgen::from_value::<Vec<(String, String)>>(tables).unwrap();
     projects.update(|prev| {
-      let project = prev.get_mut(project_key).unwrap();
-      project.tables = tables;
-      project.loading_state = LoadingState::Loaded;
+      let project = prev.get_mut(project_name).unwrap();
+      project.0.tables = tables;
     });
     Ok(())
   }
 
-  pub async fn delete_project(&self, project_key: &str) -> Result<()> {
+  pub async fn delete_project(&self, project_name: &str) -> Result<()> {
     let projects = self.0;
     projects.update(|prev| {
-      prev.remove(project_key);
+      prev.remove(project_name);
     });
     Ok(())
   }

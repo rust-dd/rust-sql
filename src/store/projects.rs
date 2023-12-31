@@ -2,13 +2,14 @@ use std::{borrow::Borrow, collections::BTreeMap};
 
 use common::project::ProjectDetails;
 use leptos::{create_rw_signal, error::Result, RwSignal, SignalGetUntracked, SignalUpdate};
+use serde::{Deserialize, Serialize};
 
 use crate::{
   invoke::{Invoke, InvokePostgresConnectionArgs, InvokeTablesArgs},
   wasm_functions::invoke,
 };
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Project {
   pub host: String,
   pub port: String,
@@ -19,7 +20,7 @@ pub struct Project {
 }
 
 #[derive(Clone, Copy, Debug)]
-pub struct ProjectsStore(pub RwSignal<BTreeMap<String, (Project, bool)>>);
+pub struct ProjectsStore(pub RwSignal<BTreeMap<String, Project>>);
 
 impl Default for ProjectsStore {
   fn default() -> Self {
@@ -32,30 +33,27 @@ impl ProjectsStore {
     Self(create_rw_signal(BTreeMap::default()))
   }
 
-  pub fn set_projects(&self, projects: Vec<ProjectDetails>) -> Result<()> {
+  pub fn set_projects(&self, projects: Vec<ProjectDetails>) -> Result<BTreeMap<String, Project>> {
     let projects = projects
       .into_iter()
       .map(|project| {
         (
           project.name,
-          (
-            Project {
-              host: project.host,
-              port: project.port,
-              user: project.user,
-              password: project.password,
-              schemas: Vec::new(),
-              tables: Vec::new(),
-            },
-            false,
-          ),
+          Project {
+            host: project.host,
+            port: project.port,
+            user: project.user,
+            password: project.password,
+            schemas: Vec::new(),
+            tables: Vec::new(),
+          },
         )
       })
-      .collect::<BTreeMap<String, (Project, bool)>>();
+      .collect::<BTreeMap<String, Project>>();
     self.0.update(|prev| {
       *prev = projects;
     });
-    Ok(())
+    Ok(self.0.get_untracked().clone())
   }
 
   pub fn create_project_connection_string(&self, project_key: &str) -> String {
@@ -64,12 +62,19 @@ impl ProjectsStore {
 
     format!(
       "user={} password={} host={} port={}",
-      project.0.user, project.0.password, project.0.host, project.0.port,
+      project.user, project.password, project.host, project.port,
     )
   }
 
   pub async fn connect(&self, project_name: &str) -> Result<Vec<String>> {
     let projects = self.0;
+
+    if let Some(project) = projects.get_untracked().get(project_name) {
+      if !project.schemas.is_empty() {
+        return Ok(project.schemas.clone());
+      }
+    }
+
     let connection_string = self.create_project_connection_string(project_name);
     let args = serde_wasm_bindgen::to_value(&InvokePostgresConnectionArgs {
       project: project_name.to_string(),
@@ -79,11 +84,17 @@ impl ProjectsStore {
     let schemas = invoke(&Invoke::pg_connector.to_string(), args).await;
     let mut schemas = serde_wasm_bindgen::from_value::<Vec<String>>(schemas).unwrap();
     schemas.sort();
-    let schemas_clone: Vec<String> = schemas.clone();
     projects.update(|prev| {
       let project = prev.get_mut(project_name).unwrap();
-      project.0.schemas = schemas_clone;
+      project.schemas = schemas;
     });
+    let schemas = self
+      .0
+      .get_untracked()
+      .get(project_name)
+      .unwrap()
+      .schemas
+      .clone();
     Ok(schemas)
   }
 
@@ -91,7 +102,7 @@ impl ProjectsStore {
     let projects = self.0;
     let project = projects.borrow().get_untracked();
     let project = project.get(project_name).unwrap();
-    if !project.0.tables.is_empty() {
+    if !project.tables.is_empty() {
       return Ok(());
     }
     let args = serde_wasm_bindgen::to_value(&InvokeTablesArgs {
@@ -102,7 +113,7 @@ impl ProjectsStore {
     let tables = serde_wasm_bindgen::from_value::<Vec<(String, String)>>(tables).unwrap();
     projects.update(|prev| {
       let project = prev.get_mut(project_name).unwrap();
-      project.0.tables = tables;
+      project.tables = tables;
     });
     Ok(())
   }

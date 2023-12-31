@@ -14,7 +14,7 @@ pub fn component(project_name: String) -> impl IntoView {
           button()
             .classes("hover:font-semibold")
             .child(&project_name)
-            .on(ev::click, move |_| set_show_schemas(true)),
+            .on(ev::click, move |_| set_show_schemas(!show_schemas())),
         )
         .child(
           button()

@@ -12,13 +12,14 @@ use super::project_item;
 
 pub fn component() -> impl IntoView {
   let projects_state = use_context::<ProjectsStore>().unwrap();
-  create_resource(
+  let projects = create_resource(
     || {},
     move |_| async move {
       let args = serde_wasm_bindgen::to_value(&InvokeProjectsArgs).unwrap_or_default();
       let projects = invoke(&Invoke::select_projects.to_string(), args).await;
       let projects = serde_wasm_bindgen::from_value::<Vec<ProjectDetails>>(projects).unwrap();
-      projects_state.set_projects(projects).unwrap();
+      let projects = projects_state.set_projects(projects).unwrap();
+      projects
     },
   );
 
@@ -39,7 +40,7 @@ pub fn component() -> impl IntoView {
               ),
           )
           .child(For(ForProps {
-            each: move || projects_state.0.get(),
+            each: move || projects.get().unwrap_or_default(),
             key: |(project, _)| project.clone(),
             children: |(project_name, _)| project_item::component(project_name),
           })),

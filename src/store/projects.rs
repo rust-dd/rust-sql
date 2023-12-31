@@ -5,7 +5,7 @@ use leptos::{create_rw_signal, error::Result, RwSignal, SignalGetUntracked, Sign
 use serde::{Deserialize, Serialize};
 
 use crate::{
-  invoke::{Invoke, InvokePostgresConnectionArgs, InvokeTablesArgs},
+  invoke::{Invoke, InvokeDeleteProjectArgs, InvokePostgresConnectionArgs, InvokeSchemaTablesArgs},
   wasm_functions::invoke,
 };
 
@@ -111,7 +111,8 @@ impl ProjectsStore {
         return Ok(tables.clone());
       }
     }
-    let args = serde_wasm_bindgen::to_value(&InvokeTablesArgs {
+    let args = serde_wasm_bindgen::to_value(&InvokeSchemaTablesArgs {
+      project: project_name.to_string(),
       schema: schema.to_string(),
     })
     .unwrap();
@@ -134,6 +135,11 @@ impl ProjectsStore {
   }
 
   pub async fn delete_project(&self, project_name: &str) -> Result<()> {
+    let args = serde_wasm_bindgen::to_value(&InvokeDeleteProjectArgs {
+      project: project_name.to_string(),
+    })
+    .unwrap();
+    invoke(&Invoke::delete_project.to_string(), args).await;
     let projects = self.0;
     projects.update(|prev| {
       prev.remove(project_name);

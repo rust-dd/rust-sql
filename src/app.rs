@@ -5,12 +5,11 @@ use crate::{
   layout::layout,
   query_editor::query_editor,
   query_table::query_table,
-  store::{db::DBStore, editor::EditorState, projects::ProjectsStore, query::QueryStore},
+  store::{editor::EditorState, projects::ProjectsStore, query::QueryStore},
 };
 use leptos::*;
 
 pub fn app() -> impl IntoView {
-  provide_context(DBStore::default());
   provide_context(EditorState::default());
   provide_context(QueryStore::default());
   provide_context(ProjectsStore::default());

@@ -8,7 +8,7 @@ pub fn layout(children: Children) -> impl IntoView {
     .child(
       div()
         .classes("flex flex-col flex-1 overflow-hidden")
-        .child(db_connector())
+        //.child(db_connector())
         .child(main().classes("flex-1 overflow-y-scroll").child(children()))
         .child(footer_layout()),
     )

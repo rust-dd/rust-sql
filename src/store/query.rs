@@ -4,7 +4,8 @@ use leptos::{error::Result, *};
 
 use crate::{
   invoke::{
-    Invoke, InvokeDeleteQueryArgs, InvokeInsertQueryArgs, InvokeQueryArgs, InvokeSelectQueriesArgs,
+    Invoke, InvokeDeleteQueryArgs, InvokeInsertQueryArgs, InvokeSelectQueriesArgs,
+    InvokeSqlResultArgs,
   },
   wasm_functions::invoke,
 };
@@ -53,7 +54,8 @@ impl QueryStore {
       Some(query) => Some(query),
       None => None,
     };
-    let args = serde_wasm_bindgen::to_value(&InvokeQueryArgs {
+    let args = serde_wasm_bindgen::to_value(&InvokeSqlResultArgs {
+      project: "".to_string(),
       sql: sql.unwrap().query,
     })
     .unwrap();

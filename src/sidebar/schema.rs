@@ -18,7 +18,7 @@ pub fn component(schema: String, project_name: String) -> impl IntoView {
         let schema = schema.clone();
         let project_name = project_name.clone();
         Fragment::new(vec![Show(ShowProps {
-          children: (move || {
+          children: {
             let schema = schema.clone();
             let project_name = project_name.clone();
             ChildrenFn::to_children(move || {
@@ -26,8 +26,8 @@ pub fn component(schema: String, project_name: String) -> impl IntoView {
               let project_name = project_name.clone();
               Fragment::new(vec![tables::component(schema, project_name).into_view()])
             })
-          })(),
-          when: move || show_tables(),
+          },
+          when: show_tables,
           fallback: ViewFn::from(div),
         })
         .into_view()])

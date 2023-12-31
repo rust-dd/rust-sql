@@ -8,7 +8,7 @@ use monaco::{
 };
 use wasm_bindgen::{closure::Closure, JsCast};
 
-use crate::store::{editor::EditorState, query::QueryStore};
+use crate::store::{editor::EditorStore, query::QueryStore};
 
 pub type ModelCell = Rc<RefCell<Option<CodeEditor>>>;
 
@@ -20,7 +20,7 @@ pub fn query_editor() -> impl IntoView {
       query_store.run_query().await.unwrap();
     }
   });
-  let editor = use_context::<EditorState>().unwrap().editor;
+  let editor = use_context::<EditorStore>().unwrap().editor;
   let node_ref = create_node_ref();
   let _ = use_event_listener(node_ref, ev::keydown, move |event| {
     if event.key() == "Enter" && event.ctrl_key() {
@@ -55,6 +55,6 @@ pub fn query_editor() -> impl IntoView {
   });
 
   div()
-    .classes("border-b-1 border-neutral-200 sticky")
+    .classes("relative border-b-1 border-neutral-200 sticky")
     .node_ref(node_ref)
 }

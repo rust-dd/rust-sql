@@ -3,17 +3,17 @@ use leptos::{create_rw_signal, RwSignal, SignalGetUntracked};
 use crate::query_editor::ModelCell;
 
 #[derive(Copy, Clone, Debug)]
-pub struct EditorState {
+pub struct EditorStore {
   pub editor: RwSignal<ModelCell>,
 }
 
-impl Default for EditorState {
+impl Default for EditorStore {
   fn default() -> Self {
     Self::new()
   }
 }
 
-impl EditorState {
+impl EditorStore {
   pub fn new() -> Self {
     Self {
       editor: create_rw_signal(ModelCell::default()),

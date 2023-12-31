@@ -7,8 +7,8 @@ pub fn component(schema: String, project_name: String) -> impl IntoView {
 
   div()
     .child(
-      button()
-        .classes("hover:font-semibold cursor-pointer")
+      div()
+        .classes("hover:font-semibold cursor-pointer sticky top-0 z-10 bg-white")
         .child(&schema)
         .on(ev::click, move |_| set_show_tables(!show_tables())),
     )

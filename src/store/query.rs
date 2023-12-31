@@ -10,7 +10,7 @@ use crate::{
   wasm_functions::invoke,
 };
 
-use super::editor::EditorState;
+use super::{active_project::ActiveProjectStore, editor::EditorStore};
 
 #[derive(Clone, Copy, Debug)]
 pub struct QueryStore {
@@ -39,7 +39,7 @@ impl QueryStore {
     self.is_loading.update(|prev| {
       *prev = true;
     });
-    let editor_state = use_context::<EditorState>().unwrap();
+    let editor_state = use_context::<EditorStore>().unwrap();
     let position: monaco::sys::Position = editor_state
       .editor
       .get_untracked()
@@ -53,8 +53,9 @@ impl QueryStore {
     let sql = self
       .find_query_for_line(&sql, position.line_number())
       .unwrap();
+    let active_project = use_context::<ActiveProjectStore>().unwrap();
     let args = serde_wasm_bindgen::to_value(&InvokeSqlResultArgs {
-      project: "".to_string(),
+      project: active_project.0.get_untracked().unwrap(),
       sql: sql.query,
     })
     .unwrap();
@@ -80,7 +81,7 @@ impl QueryStore {
 
   #[allow(dead_code)]
   pub async fn insert_query(&self, key: &str) -> Result<()> {
-    let editor_state = use_context::<EditorState>().unwrap();
+    let editor_state = use_context::<EditorStore>().unwrap();
     let sql = editor_state.get_value();
     let args = serde_wasm_bindgen::to_value(&InvokeInsertQueryArgs {
       key: key.to_string(),
@@ -102,7 +103,7 @@ impl QueryStore {
 
   pub fn load_query(&self, key: &str) -> Result<()> {
     let query = self.saved_queries.get_untracked().get(key).unwrap().clone();
-    let editor_state = use_context::<EditorState>().unwrap();
+    let editor_state = use_context::<EditorStore>().unwrap();
     editor_state.set_value(&query);
     Ok(())
   }

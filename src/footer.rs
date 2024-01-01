@@ -9,16 +9,21 @@ pub fn component() -> impl IntoView {
 
   footer()
     .classes("flex flex-row justify-between items-center h-10 bg-gray-50 px-4")
-    .child(
-      div()
-        .classes("flex flex-row items-center gap-1 text-xs")
-        .child(p().child("Selected project:"))
-        .child(
-          p()
-            .classes("font-semibold")
-            .child(move || acitve_project.0.get().unwrap_or_default()),
-        ),
-    )
+    .child(Show(ShowProps {
+      children: ChildrenFn::to_children(move || {
+        Fragment::new(vec![div()
+          .classes("flex flex-row items-center gap-1 text-xs")
+          .child(p().child("Selected project:"))
+          .child(
+            p()
+              .classes("font-semibold")
+              .child(move || acitve_project.0.get()),
+          )
+          .into_view()])
+      }),
+      when: move || acitve_project.0.get().is_some(),
+      fallback: ViewFn::from(div),
+    }))
     .child(
       div()
         .classes("flex flex-row gap-1")

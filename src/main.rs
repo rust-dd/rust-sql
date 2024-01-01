@@ -2,7 +2,6 @@ mod app;
 mod enums;
 mod footer;
 mod grid_view;
-mod header;
 mod invoke;
 mod layout;
 mod modals;

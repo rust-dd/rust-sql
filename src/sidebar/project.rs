@@ -58,7 +58,7 @@ pub fn component(project: String) -> impl IntoView {
             })
           },
           when: show_schemas,
-          fallback: ViewFn::from(div),
+          fallback: ViewFn::default(),
         })
         .into_view()])
       }),

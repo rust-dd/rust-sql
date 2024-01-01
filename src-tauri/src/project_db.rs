@@ -44,6 +44,22 @@ pub async fn select_projects(app_state: State<'_, AppState>) -> Result<Vec<Proje
 }
 
 #[tauri::command]
+pub async fn insert_project(
+  project: ProjectDetails,
+  app_state: State<'_, AppState>,
+) -> Result<ProjectDetails> {
+  let project_db = app_state.project_db.lock().await;
+  let ref mut db = project_db.clone().unwrap();
+  let connection_string = format!(
+    "user={} password={} host={} port={}",
+    project.user, project.password, project.host, project.port,
+  );
+  db.insert(project.name.clone(), connection_string.as_str())
+    .unwrap();
+  Ok(project)
+}
+
+#[tauri::command]
 pub async fn delete_project(project: String, app_state: State<'_, AppState>) -> Result<()> {
   let db = app_state.project_db.lock().await;
   let db = db.clone().unwrap();

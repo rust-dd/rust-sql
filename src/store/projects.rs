@@ -12,7 +12,7 @@ use crate::{
   wasm_functions::invoke,
 };
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct Project {
   pub host: String,
   pub port: String,
@@ -59,6 +59,24 @@ impl ProjectsStore {
       *prev = projects;
     });
     Ok(self.0.get_untracked().clone())
+  }
+
+  pub fn insert_project(&self, project: ProjectDetails) -> Result<()> {
+    self.0.update(|prev| {
+      prev.insert(
+        project.name.clone(),
+        Project {
+          host: project.host,
+          port: project.port,
+          user: project.user,
+          password: project.password,
+          schemas: Vec::new(),
+          tables: BTreeMap::new(),
+          status: ProjectConnectionStatus::default(),
+        },
+      );
+    });
+    Ok(())
   }
 
   pub fn get_projects(&self) -> Result<Vec<String>> {

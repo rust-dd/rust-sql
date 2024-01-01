@@ -3,7 +3,7 @@ use leptos::{html::*, IntoView, *};
 use leptos_use::{use_document, use_event_listener};
 
 use crate::{
-  invoke::{Invoke, InvokeProjectsArgs},
+  invoke::{Invoke, InvokeSelectProjectsArgs},
   modals,
   store::projects::ProjectsStore,
   wasm_functions::invoke,
@@ -20,9 +20,9 @@ pub fn component() -> impl IntoView {
     }
   });
   let projects = create_resource(
-    || {},
+    move || projects_state.0.get(),
     move |_| async move {
-      let args = serde_wasm_bindgen::to_value(&InvokeProjectsArgs).unwrap_or_default();
+      let args = serde_wasm_bindgen::to_value(&InvokeSelectProjectsArgs).unwrap_or_default();
       let projects = invoke(&Invoke::select_projects.to_string(), args).await;
       let projects = serde_wasm_bindgen::from_value::<Vec<ProjectDetails>>(projects).unwrap();
       projects_state.set_projects(projects).unwrap()

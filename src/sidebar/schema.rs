@@ -28,7 +28,7 @@ pub fn component(schema: String, project: String) -> impl IntoView {
             })
           },
           when: show_tables,
-          fallback: ViewFn::from(div),
+          fallback: ViewFn::default(),
         })
         .into_view()])
       }),

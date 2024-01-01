@@ -1,4 +1,4 @@
-use crate::{footer, header, sidebar};
+use crate::{footer, sidebar};
 use leptos::{html::*, *};
 
 pub fn component(children: Children) -> impl IntoView {
@@ -8,7 +8,6 @@ pub fn component(children: Children) -> impl IntoView {
     .child(
       div()
         .classes("flex flex-col flex-1 overflow-hidden")
-        .child(header::index::component())
         .child(main().classes("flex-1 overflow-y-scroll").child(children()))
         .child(footer::component()),
     )

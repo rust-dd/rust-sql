@@ -9,7 +9,7 @@ mod utils;
 
 use constant::{PROJECT_DB_PATH, QUERY_DB_PATH};
 use postgres::{pg_connector, select_schema_tables, select_sql_result};
-use project_db::{delete_project, select_projects};
+use project_db::{delete_project, insert_project, select_projects};
 use query_db::{delete_query, insert_query, select_queries};
 use sled::Db;
 use std::{collections::BTreeMap, sync::Arc};
@@ -62,6 +62,7 @@ fn main() {
     .invoke_handler(tauri::generate_handler![
       delete_project,
       delete_query,
+      insert_project,
       insert_query,
       pg_connector,
       select_projects,

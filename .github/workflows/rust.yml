@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     # add rust nightly
     container:
-      image: rust:nightly
+      image: rustlang/rust:nightly
 
     steps:
     - uses: actions/checkout@v3

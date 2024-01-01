@@ -30,20 +30,21 @@ pub async fn pg_connector(project: &str, key: &str, app: AppHandle) -> Result<Ve
     .await
     .unwrap();
   let schemas = schemas.iter().map(|r| r.get(0)).collect();
-
-  *app_state.connection_strings.lock().await = key.to_string();
-  *app_state.client.lock().await = Some(client);
+  let mut clients = app_state.client.lock().await;
+  let clients = clients.as_mut().unwrap();
+  clients.insert(project.to_string(), client);
 
   Ok(schemas)
 }
 
 #[tauri::command]
 pub async fn select_schema_tables(
+  project: &str,
   schema: &str,
   app_state: State<'_, AppState>,
 ) -> Result<Vec<(String, String)>> {
-  let client = app_state.client.lock().await;
-  let client = client.as_ref().unwrap();
+  let clients = app_state.client.lock().await;
+  let client = clients.as_ref().unwrap().get(project).unwrap();
   let tables = client
     .query(
       r#"
@@ -70,12 +71,12 @@ pub async fn select_schema_tables(
 
 #[tauri::command]
 pub async fn select_sql_result(
+  project: &str,
   sql: String,
   app_state: State<'_, AppState>,
 ) -> Result<(Vec<String>, Vec<Vec<String>>)> {
-  let client = app_state.client.lock().await;
-  let client = client.as_ref().unwrap();
-
+  let clients = app_state.client.lock().await;
+  let client = clients.as_ref().unwrap().get(project).unwrap();
   let rows = client.query(sql.as_str(), &[]).await.unwrap();
 
   if rows.is_empty() {

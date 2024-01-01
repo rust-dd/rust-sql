@@ -1,15 +1,8 @@
 use std::collections::BTreeMap;
 
-use serde::Serialize;
 use tauri::{AppHandle, Manager, Result, State};
 
 use crate::AppState;
-
-#[derive(Default, Serialize)]
-pub struct QueryDetails {
-  pub title: String,
-  pub sql: String,
-}
 
 #[tauri::command]
 pub async fn insert_query(key: &str, sql: &str, app: AppHandle) -> Result<()> {

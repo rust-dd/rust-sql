@@ -1,15 +1,16 @@
 use std::fmt::Display;
 
+use common::project::ProjectDetails;
 use serde::{Deserialize, Serialize};
 
 #[allow(non_camel_case_types)]
 pub enum Invoke {
   delete_project,
   delete_query,
+  insert_project,
   insert_query,
   pg_connector,
   select_projects,
-  select_project_details,
   select_queries,
   select_schema_tables,
   select_sql_result,
@@ -20,10 +21,10 @@ impl Display for Invoke {
     match self {
       Invoke::delete_project => write!(f, "delete_project"),
       Invoke::delete_query => write!(f, "delete_query"),
+      Invoke::insert_project => write!(f, "insert_project"),
       Invoke::insert_query => write!(f, "insert_query"),
       Invoke::pg_connector => write!(f, "pg_connector"),
       Invoke::select_projects => write!(f, "select_projects"),
-      Invoke::select_project_details => write!(f, "select_project_details"),
       Invoke::select_queries => write!(f, "select_queries"),
       Invoke::select_schema_tables => write!(f, "select_schema_tables"),
       Invoke::select_sql_result => write!(f, "select_sql_result"),
@@ -38,21 +39,23 @@ pub struct InvokePostgresConnectionArgs {
 }
 
 #[derive(Serialize, Deserialize)]
-pub struct InvokeTablesArgs {
+pub struct InvokeSchemaTablesArgs {
+  pub project: String,
   pub schema: String,
 }
 
 #[derive(Serialize, Deserialize)]
-pub struct InvokeQueryArgs {
+pub struct InvokeSqlResultArgs {
+  pub project: String,
   pub sql: String,
 }
 
 #[derive(Serialize, Deserialize)]
-pub struct InvokeProjectsArgs;
+pub struct InvokeSelectProjectsArgs;
 
 #[derive(Serialize, Deserialize)]
-pub struct InvokeProjectDetailsArgs {
-  pub project: String,
+pub struct InvokeInsertProjectArgs {
+  pub project: ProjectDetails,
 }
 
 #[derive(Serialize, Deserialize)]

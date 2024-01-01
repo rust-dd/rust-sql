@@ -9,18 +9,17 @@ mod utils;
 
 use constant::{PROJECT_DB_PATH, QUERY_DB_PATH};
 use postgres::{pg_connector, select_schema_tables, select_sql_result};
-use project_db::{delete_project, select_project_details, select_projects};
+use project_db::{delete_project, insert_project, select_projects};
 use query_db::{delete_query, insert_query, select_queries};
 use sled::Db;
-use std::sync::Arc;
+use std::{collections::BTreeMap, sync::Arc};
 use tauri::Manager;
 use tokio::sync::Mutex;
 use tokio_postgres::Client;
 use utils::create_or_open_local_db;
 
 pub struct AppState {
-  pub connection_strings: Arc<Mutex<String>>,
-  pub client: Arc<Mutex<Option<Client>>>,
+  pub client: Arc<Mutex<Option<BTreeMap<String, Client>>>>,
   pub project_db: Arc<Mutex<Option<Db>>>,
   pub query_db: Arc<Mutex<Option<Db>>>,
 }
@@ -28,8 +27,7 @@ pub struct AppState {
 impl Default for AppState {
   fn default() -> Self {
     Self {
-      connection_strings: Arc::new(Mutex::new(String::new())),
-      client: Arc::new(Mutex::new(None)),
+      client: Arc::new(Mutex::new(Some(BTreeMap::new()))),
       project_db: Arc::new(Mutex::new(None)),
       query_db: Arc::new(Mutex::new(None)),
     }
@@ -64,10 +62,10 @@ fn main() {
     .invoke_handler(tauri::generate_handler![
       delete_project,
       delete_query,
+      insert_project,
       insert_query,
       pg_connector,
       select_projects,
-      select_project_details,
       select_queries,
       select_schema_tables,
       select_sql_result,

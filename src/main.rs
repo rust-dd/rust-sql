@@ -1,17 +1,15 @@
 mod app;
-mod db_connector;
 mod enums;
 mod footer;
 mod grid_view;
 mod invoke;
 mod layout;
-mod queries;
+mod modals;
 mod query_editor;
 mod query_table;
 mod record_view;
 mod sidebar;
 mod store;
-mod tables;
 mod wasm_functions;
 
 use app::*;

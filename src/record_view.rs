@@ -1,9 +1,9 @@
-use leptos::{html::*, leptos_dom::Each, *};
+use leptos::{html::*, *};
 
-use crate::store::query::QueryState;
+use crate::store::query::QueryStore;
 
-pub fn record_view() -> impl IntoView {
-  let query_state = use_context::<QueryState>().unwrap();
+pub fn component() -> impl IntoView {
+  let query_state = use_context::<QueryStore>().unwrap();
   let columns = query_state.sql_result.get().unwrap().0.clone();
   let first_row = query_state
     .sql_result
@@ -13,10 +13,7 @@ pub fn record_view() -> impl IntoView {
     .first()
     .unwrap()
     .clone();
-  let columns_with_values = columns
-    .into_iter()
-    .zip(first_row.into_iter())
-    .collect::<Vec<_>>();
+  let columns_with_values = columns.into_iter().zip(first_row).collect::<Vec<_>>();
 
   // 2 columns table Properties, Values
   table()
@@ -29,10 +26,10 @@ pub fn record_view() -> impl IntoView {
           .child(th().classes("text-xs px-4").child("Values")),
       ),
     )
-    .child(tbody().child(Each::new(
-      move || columns_with_values.clone(),
-      move |n| n.clone(),
-      move |(col, val)| {
+    .child(tbody().child(For(ForProps {
+      each: move || columns_with_values.clone(),
+      key: |(col, _)| col.clone(),
+      children: move |(col, val)| {
         tr()
           .classes("divide-y divide-gray-200")
           .child(
@@ -42,5 +39,5 @@ pub fn record_view() -> impl IntoView {
           )
           .child(td().classes("px-4 text-xs hover:bg-gray-100").child(val))
       },
-    )))
+    })))
 }

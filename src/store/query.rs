@@ -1,31 +1,32 @@
 use std::collections::BTreeMap;
 
-use leptos::*;
+use leptos::{error::Result, *};
 
 use crate::{
   invoke::{
-    Invoke, InvokeDeleteQueryArgs, InvokeInsertQueryArgs, InvokeQueryArgs, InvokeSelectQueriesArgs,
+    Invoke, InvokeDeleteQueryArgs, InvokeInsertQueryArgs, InvokeSelectQueriesArgs,
+    InvokeSqlResultArgs,
   },
   wasm_functions::invoke,
 };
 
-use super::editor::EditorState;
+use super::{active_project::ActiveProjectStore, editor::EditorStore, projects::ProjectsStore};
 
 #[derive(Clone, Copy, Debug)]
-pub struct QueryState {
+pub struct QueryStore {
   #[allow(clippy::type_complexity)]
   pub sql_result: RwSignal<Option<(Vec<String>, Vec<Vec<String>>)>>,
   pub is_loading: RwSignal<bool>,
   pub saved_queries: RwSignal<BTreeMap<String, String>>,
 }
 
-impl Default for QueryState {
+impl Default for QueryStore {
   fn default() -> Self {
     Self::new()
   }
 }
 
-impl QueryState {
+impl QueryStore {
   pub fn new() -> Self {
     Self {
       sql_result: create_rw_signal(None),
@@ -34,11 +35,22 @@ impl QueryState {
     }
   }
 
-  pub async fn run_query(&self) {
+  pub async fn run_query(&self) -> Result<()> {
+    let active_project = use_context::<ActiveProjectStore>().unwrap();
+    let active_project = active_project.0.get_untracked().unwrap();
+    let projects_store = use_context::<ProjectsStore>().unwrap();
+    if projects_store
+      .0
+      .get_untracked()
+      .get(&active_project)
+      .is_none()
+    {
+      projects_store.connect(&active_project).await?;
+    }
     self.is_loading.update(|prev| {
       *prev = true;
     });
-    let editor_state = use_context::<EditorState>().unwrap();
+    let editor_state = use_context::<EditorStore>().unwrap();
     let position: monaco::sys::Position = editor_state
       .editor
       .get_untracked()
@@ -49,12 +61,12 @@ impl QueryState {
       .get_position()
       .unwrap();
     let sql = editor_state.get_value();
-    let sql = match self.find_query_for_line(&sql, position.line_number()) {
-      Some(query) => Some(query),
-      None => None,
-    };
-    let args = serde_wasm_bindgen::to_value(&InvokeQueryArgs {
-      sql: sql.unwrap().query,
+    let sql = self
+      .find_query_for_line(&sql, position.line_number())
+      .unwrap();
+    let args = serde_wasm_bindgen::to_value(&InvokeSqlResultArgs {
+      project: active_project,
+      sql: sql.query,
     })
     .unwrap();
     let data = invoke(&Invoke::select_sql_result.to_string(), args).await;
@@ -63,9 +75,10 @@ impl QueryState {
     self.is_loading.update(|prev| {
       *prev = false;
     });
+    Ok(())
   }
 
-  pub async fn select_queries(&self) -> Result<(), ()> {
+  pub async fn select_queries(&self) -> Result<BTreeMap<String, String>> {
     let args = serde_wasm_bindgen::to_value(&InvokeSelectQueriesArgs).unwrap_or_default();
     let saved_queries = invoke(&Invoke::select_queries.to_string(), args).await;
     let queries =
@@ -73,14 +86,14 @@ impl QueryState {
     self.saved_queries.update(|prev| {
       *prev = queries.into_iter().collect();
     });
-    Ok(())
+    Ok(self.saved_queries.get_untracked().clone())
   }
 
-  pub async fn insert_query(&self, key: &str) -> Result<(), ()> {
-    let editor_state = use_context::<EditorState>().unwrap();
+  pub async fn insert_query(&self, key: &str, project: &str) -> Result<()> {
+    let editor_state = use_context::<EditorStore>().unwrap();
     let sql = editor_state.get_value();
     let args = serde_wasm_bindgen::to_value(&InvokeInsertQueryArgs {
-      key: key.to_string(),
+      key: format!("{}:{}", project, key),
       sql,
     });
     invoke(&Invoke::insert_query.to_string(), args.unwrap_or_default()).await;
@@ -88,7 +101,7 @@ impl QueryState {
     Ok(())
   }
 
-  pub async fn delete_query(&self, key: &str) -> Result<(), ()> {
+  pub async fn delete_query(&self, key: &str) -> Result<()> {
     let args = serde_wasm_bindgen::to_value(&InvokeDeleteQueryArgs {
       key: key.to_string(),
     });
@@ -97,10 +110,14 @@ impl QueryState {
     Ok(())
   }
 
-  pub fn load_query(&self, key: &str) {
+  pub fn load_query(&self, key: &str) -> Result<()> {
+    let active_project = use_context::<ActiveProjectStore>().unwrap();
+    let splitted_key = key.split(':').collect::<Vec<&str>>();
+    active_project.0.set(Some(splitted_key[0].to_string()));
     let query = self.saved_queries.get_untracked().get(key).unwrap().clone();
-    let editor_state = use_context::<EditorState>().unwrap();
+    let editor_state = use_context::<EditorStore>().unwrap();
     editor_state.set_value(&query);
+    Ok(())
   }
 
   // TODO: improve this

@@ -1,7 +1,7 @@
 use crate::{footer, header, sidebar::index};
 use leptos::{html::*, *};
 
-pub fn layout(children: Children) -> impl IntoView {
+pub fn component(children: Children) -> impl IntoView {
   div()
     .classes("flex h-screen")
     .child(index::component())

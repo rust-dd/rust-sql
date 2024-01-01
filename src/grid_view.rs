@@ -2,7 +2,7 @@ use leptos::{html::*, *};
 
 use crate::store::query::QueryStore;
 
-pub fn grid_view() -> impl IntoView {
+pub fn component() -> impl IntoView {
   let query_state = use_context::<QueryStore>().unwrap();
 
   table()

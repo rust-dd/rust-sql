@@ -1,16 +1,14 @@
-use crate::{
-  enums::QueryTableLayout, grid_view::grid_view, record_view::record_view, store::query::QueryStore,
-};
+use crate::{enums::QueryTableLayout, grid_view, record_view, store::query::QueryStore};
 use leptos::{html::*, *};
 
-pub fn query_table() -> impl IntoView {
+pub fn component() -> impl IntoView {
   let query_state = use_context::<QueryStore>().unwrap();
   let table_view = use_context::<RwSignal<QueryTableLayout>>().unwrap();
   let table_layout = move || match query_state.sql_result.get() {
     None => div(),
     Some(_) => match table_view() {
-      QueryTableLayout::Grid => div().child(grid_view()),
-      QueryTableLayout::Records => div().child(record_view()),
+      QueryTableLayout::Grid => div().child(grid_view::component()),
+      QueryTableLayout::Records => div().child(record_view::component()),
     },
   };
   let when = move || !query_state.is_loading.get();

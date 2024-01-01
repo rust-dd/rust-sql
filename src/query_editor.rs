@@ -12,7 +12,7 @@ use crate::store::{editor::EditorStore, query::QueryStore};
 
 pub type ModelCell = Rc<RefCell<Option<CodeEditor>>>;
 
-pub fn query_editor() -> impl IntoView {
+pub fn component() -> impl IntoView {
   let query_state = use_context::<QueryStore>().unwrap();
   let run_query = create_action(move |query_store: &QueryStore| {
     let query_store = *query_store;

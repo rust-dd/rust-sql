@@ -2,7 +2,7 @@ use leptos::{html::*, *};
 
 use crate::store::query::QueryStore;
 
-pub fn record_view() -> impl IntoView {
+pub fn component() -> impl IntoView {
   let query_state = use_context::<QueryStore>().unwrap();
   let columns = query_state.sql_result.get().unwrap().0.clone();
   let first_row = query_state

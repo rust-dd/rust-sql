@@ -40,7 +40,7 @@ pub fn component() -> impl IntoView {
           .child(For(ForProps {
             each: move || projects.get().unwrap_or_default(),
             key: |(project, _)| project.clone(),
-            children: |(project_name, _)| project::component(project_name),
+            children: |(project, _)| project::component(project),
           })),
       ),
     )

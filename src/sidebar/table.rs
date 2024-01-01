@@ -3,15 +3,15 @@ use leptos_icons::*;
 
 use crate::store::{active_project::ActiveProjectStore, editor::EditorStore, query::QueryStore};
 
-pub fn component(table: (String, String), project_name: String, schema: String) -> impl IntoView {
+pub fn component(table: (String, String), project: String, schema: String) -> impl IntoView {
   let query_store = use_context::<QueryStore>().unwrap();
   let editor_store = use_context::<EditorStore>().unwrap();
   let active_project = use_context::<ActiveProjectStore>().unwrap();
   let query = create_action(move |(schema, table): &(String, String)| {
-    let project_name = project_name.clone();
+    let project = project.clone();
     let schema = schema.clone();
     let table = table.clone();
-    active_project.0.set(Some(project_name.clone()));
+    active_project.0.set(Some(project.clone()));
     editor_store.set_value(&format!("SELECT * FROM {}.{} LIMIT 100;", schema, table));
     async move { query_store.run_query().await.unwrap() }
   });

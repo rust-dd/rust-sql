@@ -1,8 +1,8 @@
 mod app;
-mod db_connector;
 mod enums;
 mod footer;
 mod grid_view;
+mod header;
 mod invoke;
 mod layout;
 mod query_editor;

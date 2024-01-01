@@ -3,7 +3,7 @@ use leptos_icons::*;
 
 use crate::{enums::QueryTableLayout, store::active_project::ActiveProjectStore};
 
-pub fn footer_layout() -> impl IntoView {
+pub fn component() -> impl IntoView {
   let table_view = use_context::<RwSignal<QueryTableLayout>>().unwrap();
   let acitve_project = use_context::<ActiveProjectStore>().unwrap();
 

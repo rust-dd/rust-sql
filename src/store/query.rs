@@ -80,11 +80,11 @@ impl QueryStore {
   }
 
   #[allow(dead_code)]
-  pub async fn insert_query(&self, key: &str, project_name: &str) -> Result<()> {
+  pub async fn insert_query(&self, key: &str, project: &str) -> Result<()> {
     let editor_state = use_context::<EditorStore>().unwrap();
     let sql = editor_state.get_value();
     let args = serde_wasm_bindgen::to_value(&InvokeInsertQueryArgs {
-      key: format!("{}:{}", project_name, key),
+      key: format!("{}:{}", project, key),
       sql,
     });
     invoke(&Invoke::insert_query.to_string(), args.unwrap_or_default()).await;

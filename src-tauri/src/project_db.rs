@@ -11,14 +11,14 @@ pub async fn select_projects(app_state: State<'_, AppState>) -> Result<Vec<Proje
     .unwrap()
     .iter()
     .map(|r| {
-      let (project_name, connection_string) = r.unwrap();
-      let project_name = String::from_utf8(project_name.to_vec()).unwrap();
+      let (project, connection_string) = r.unwrap();
+      let project = String::from_utf8(project.to_vec()).unwrap();
       let connection_string = connection_string.to_vec();
       let connection_string = String::from_utf8(connection_string).unwrap();
       let connection_string = connection_string.split(' ').collect::<Vec<&str>>();
 
       let mut project_details = ProjectDetails {
-        name: project_name,
+        name: project,
         ..Default::default()
       };
 

@@ -2,7 +2,7 @@ use leptos::{html::*, *};
 
 use super::tables;
 
-pub fn component(schema: String, project_name: String) -> impl IntoView {
+pub fn component(schema: String, project: String) -> impl IntoView {
   let (show_tables, set_show_tables) = create_signal(false);
 
   div()
@@ -16,15 +16,15 @@ pub fn component(schema: String, project_name: String) -> impl IntoView {
       fallback: ViewFn::from(|| "Loading..."),
       children: ChildrenFn::to_children(move || {
         let schema = schema.clone();
-        let project_name = project_name.clone();
+        let project = project.clone();
         Fragment::new(vec![Show(ShowProps {
           children: {
             let schema = schema.clone();
-            let project_name = project_name.clone();
+            let project = project.clone();
             ChildrenFn::to_children(move || {
               let schema = schema.clone();
-              let project_name = project_name.clone();
-              Fragment::new(vec![tables::component(schema, project_name).into_view()])
+              let project = project.clone();
+              Fragment::new(vec![tables::component(schema, project).into_view()])
             })
           },
           when: show_tables,

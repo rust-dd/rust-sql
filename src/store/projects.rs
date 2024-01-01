@@ -66,18 +66,18 @@ impl ProjectsStore {
     )
   }
 
-  pub async fn connect(&self, project_name: &str) -> Result<Vec<String>> {
+  pub async fn connect(&self, project: &str) -> Result<Vec<String>> {
     let projects = self.0;
 
-    if let Some(project) = projects.get_untracked().get(project_name) {
+    if let Some(project) = projects.get_untracked().get(project) {
       if !project.schemas.is_empty() {
         return Ok(project.schemas.clone());
       }
     }
 
-    let connection_string = self.create_project_connection_string(project_name);
+    let connection_string = self.create_project_connection_string(project);
     let args = serde_wasm_bindgen::to_value(&InvokePostgresConnectionArgs {
-      project: project_name.to_string(),
+      project: project.to_string(),
       key: connection_string,
     })
     .unwrap();
@@ -85,47 +85,41 @@ impl ProjectsStore {
     let mut schemas = serde_wasm_bindgen::from_value::<Vec<String>>(schemas).unwrap();
     schemas.sort();
     projects.update(|prev| {
-      let project = prev.get_mut(project_name).unwrap();
+      let project = prev.get_mut(project).unwrap();
       project.schemas = schemas;
     });
-    let schemas = self
-      .0
-      .get_untracked()
-      .get(project_name)
-      .unwrap()
-      .schemas
-      .clone();
+    let schemas = self.0.get_untracked().get(project).unwrap().schemas.clone();
     Ok(schemas)
   }
 
   pub async fn retrieve_tables(
     &self,
-    project_name: &str,
+    project: &str,
     schema: &str,
   ) -> Result<Vec<(String, String)>> {
     let projects = self.0;
-    let project = projects.borrow().get_untracked();
-    let project = project.get(project_name).unwrap();
-    if let Some(tables) = project.tables.get(schema) {
+    let p = projects.borrow().get_untracked();
+    let p = p.get(project).unwrap();
+    if let Some(tables) = p.tables.get(schema) {
       if !tables.is_empty() {
         return Ok(tables.clone());
       }
     }
     let args = serde_wasm_bindgen::to_value(&InvokeSchemaTablesArgs {
-      project: project_name.to_string(),
+      project: project.to_string(),
       schema: schema.to_string(),
     })
     .unwrap();
     let tables = invoke(&Invoke::select_schema_tables.to_string(), args).await;
     let tables = serde_wasm_bindgen::from_value::<Vec<(String, String)>>(tables).unwrap();
     projects.update(|prev| {
-      let project = prev.get_mut(project_name).unwrap();
+      let project = prev.get_mut(project).unwrap();
       project.tables.insert(schema.to_string(), tables.clone());
     });
     let tables = self
       .0
       .get_untracked()
-      .get(project_name)
+      .get(project)
       .unwrap()
       .tables
       .get(schema)
@@ -134,15 +128,15 @@ impl ProjectsStore {
     Ok(tables)
   }
 
-  pub async fn delete_project(&self, project_name: &str) -> Result<()> {
+  pub async fn delete_project(&self, project: &str) -> Result<()> {
     let args = serde_wasm_bindgen::to_value(&InvokeDeleteProjectArgs {
-      project: project_name.to_string(),
+      project: project.to_string(),
     })
     .unwrap();
     invoke(&Invoke::delete_project.to_string(), args).await;
     let projects = self.0;
     projects.update(|prev| {
-      prev.remove(project_name);
+      prev.remove(project);
     });
     Ok(())
   }

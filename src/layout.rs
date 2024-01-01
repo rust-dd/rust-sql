@@ -1,8 +1,4 @@
-use crate::{
-  //db_connector::db_connector,
-  footer::footer_layout,
-  sidebar::index,
-};
+use crate::{footer, header, sidebar::index};
 use leptos::{html::*, *};
 
 pub fn layout(children: Children) -> impl IntoView {
@@ -12,8 +8,8 @@ pub fn layout(children: Children) -> impl IntoView {
     .child(
       div()
         .classes("flex flex-col flex-1 overflow-hidden")
-        //.child(db_connector())
+        .child(header::component())
         .child(main().classes("flex-1 overflow-y-scroll").child(children()))
-        .child(footer_layout()),
+        .child(footer::component()),
     )
 }

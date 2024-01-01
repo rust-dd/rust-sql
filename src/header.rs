@@ -36,10 +36,7 @@ pub fn component() -> impl IntoView {
       let key = key.clone();
       let project = project.clone();
       async move {
-        query_db_clone
-          .insert_query(&key, &project)
-          .await
-          .unwrap();
+        query_db_clone.insert_query(&key, &project).await.unwrap();
       }
     },
   );
@@ -105,8 +102,8 @@ pub fn component() -> impl IntoView {
                           .prop("type", "text")
                           .prop("value", db_user)
                           .prop("placeholder", "username")
-                          .on(ev::input, move |e| set_db_user(event_target_value(&e)),
-                  ))
+                          .on(ev::input, move |e| set_db_user(event_target_value(&e)))
+                )
                   .child(
                       input()
                           .classes( "border-1 border-neutral-200 p-1 rounded-md")
@@ -121,8 +118,7 @@ pub fn component() -> impl IntoView {
                           .prop("type", "text")
                           .prop("value", db_host)
                           .prop("placeholder", "host")
-                          .on(ev::input, move |e|   set_db_host(event_target_value(&e))
-                          ),
+                          .on(ev::input, move |e|   set_db_host(event_target_value(&e)))
                   )
                   .child(
                       input()
@@ -130,10 +126,7 @@ pub fn component() -> impl IntoView {
                           .prop("type", "text")
                           .prop("value", db_port)
                           .prop("placeholder", "port")
-                          .on(ev::input, move |e| 
-                          
-                              set_db_port(event_target_value(&e))
-                          ),
+                          .on(ev::input, move |e| set_db_port(event_target_value(&e)))
                   ))
           .child(
               div()

@@ -3,12 +3,11 @@ use leptos::{html::*, IntoView, *};
 
 use crate::{
   invoke::{Invoke, InvokeProjectsArgs},
-  queries::queries,
   store::projects::ProjectsStore,
   wasm_functions::invoke,
 };
 
-use super::project;
+use super::{project, queries};
 
 pub fn component() -> impl IntoView {
   let projects_state = use_context::<ProjectsStore>().unwrap();
@@ -49,6 +48,6 @@ pub fn component() -> impl IntoView {
       div()
         .classes("py-2")
         .child(p().classes("font-semibold text-lg").child("Saved Queries"))
-        .child(div().classes("text-sm").child(queries().into_view())),
+        .child(div().classes("text-sm").child(queries::component())),
     )
 }

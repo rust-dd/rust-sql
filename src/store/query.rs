@@ -1,4 +1,4 @@
-use std::{collections::BTreeMap, fmt::format};
+use std::collections::BTreeMap;
 
 use leptos::{error::Result, *};
 
@@ -68,7 +68,7 @@ impl QueryStore {
     Ok(())
   }
 
-  pub async fn select_queries(&self) -> Result<()> {
+  pub async fn select_queries(&self) -> Result<BTreeMap<String, String>> {
     let args = serde_wasm_bindgen::to_value(&InvokeSelectQueriesArgs).unwrap_or_default();
     let saved_queries = invoke(&Invoke::select_queries.to_string(), args).await;
     let queries =
@@ -76,7 +76,7 @@ impl QueryStore {
     self.saved_queries.update(|prev| {
       *prev = queries.into_iter().collect();
     });
-    Ok(())
+    Ok(self.saved_queries.get_untracked().clone())
   }
 
   #[allow(dead_code)]
@@ -102,6 +102,9 @@ impl QueryStore {
   }
 
   pub fn load_query(&self, key: &str) -> Result<()> {
+    let active_project = use_context::<ActiveProjectStore>().unwrap();
+    let splitted_key = key.split(':').collect::<Vec<&str>>();
+    active_project.0.set(Some(splitted_key[0].to_string()));
     let query = self.saved_queries.get_untracked().get(key).unwrap().clone();
     let editor_state = use_context::<EditorStore>().unwrap();
     editor_state.set_value(&query);

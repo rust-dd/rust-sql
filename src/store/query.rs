@@ -10,7 +10,7 @@ use crate::{
   wasm_functions::invoke,
 };
 
-use super::{active_project::ActiveProjectStore, editor::EditorStore};
+use super::{active_project::ActiveProjectStore, editor::EditorStore, projects::ProjectsStore};
 
 #[derive(Clone, Copy, Debug)]
 pub struct QueryStore {
@@ -36,6 +36,17 @@ impl QueryStore {
   }
 
   pub async fn run_query(&self) -> Result<()> {
+    let active_project = use_context::<ActiveProjectStore>().unwrap();
+    let active_project = active_project.0.get_untracked().unwrap();
+    let projects_store = use_context::<ProjectsStore>().unwrap();
+    if projects_store
+      .0
+      .get_untracked()
+      .get(&active_project)
+      .is_none()
+    {
+      projects_store.connect(&active_project).await?;
+    }
     self.is_loading.update(|prev| {
       *prev = true;
     });
@@ -53,9 +64,8 @@ impl QueryStore {
     let sql = self
       .find_query_for_line(&sql, position.line_number())
       .unwrap();
-    let active_project = use_context::<ActiveProjectStore>().unwrap();
     let args = serde_wasm_bindgen::to_value(&InvokeSqlResultArgs {
-      project: active_project.0.get_untracked().unwrap(),
+      project: active_project,
       sql: sql.query,
     })
     .unwrap();
@@ -79,7 +89,6 @@ impl QueryStore {
     Ok(self.saved_queries.get_untracked().clone())
   }
 
-  #[allow(dead_code)]
   pub async fn insert_query(&self, key: &str, project: &str) -> Result<()> {
     let editor_state = use_context::<EditorStore>().unwrap();
     let sql = editor_state.get_value();

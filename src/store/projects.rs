@@ -1,10 +1,13 @@
 use std::{borrow::Borrow, collections::BTreeMap};
 
 use common::project::ProjectDetails;
-use leptos::{create_rw_signal, error::Result, RwSignal, SignalGetUntracked, SignalUpdate};
+use leptos::{
+  create_rw_signal, error::Result, RwSignal, SignalGet, SignalGetUntracked, SignalUpdate,
+};
 use serde::{Deserialize, Serialize};
 
 use crate::{
+  enums::ProjectConnectionStatus,
   invoke::{Invoke, InvokeDeleteProjectArgs, InvokePostgresConnectionArgs, InvokeSchemaTablesArgs},
   wasm_functions::invoke,
 };
@@ -17,6 +20,7 @@ pub struct Project {
   pub password: String,
   pub schemas: Vec<String>,
   pub tables: BTreeMap<String, Vec<(String, String)>>,
+  pub status: ProjectConnectionStatus,
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -46,6 +50,7 @@ impl ProjectsStore {
             password: project.password,
             schemas: Vec::new(),
             tables: BTreeMap::new(),
+            status: ProjectConnectionStatus::default(),
           },
         )
       })
@@ -54,6 +59,12 @@ impl ProjectsStore {
       *prev = projects;
     });
     Ok(self.0.get_untracked().clone())
+  }
+
+  pub fn get_projects(&self) -> Result<Vec<String>> {
+    let projects = self.0.get();
+    let projects = projects.keys().cloned().collect::<Vec<String>>();
+    Ok(projects)
   }
 
   pub fn create_project_connection_string(&self, project_key: &str) -> String {
@@ -87,6 +98,7 @@ impl ProjectsStore {
     projects.update(|prev| {
       let project = prev.get_mut(project).unwrap();
       project.schemas = schemas;
+      project.status = ProjectConnectionStatus::Connected;
     });
     let schemas = self.0.get_untracked().get(project).unwrap().schemas.clone();
     Ok(schemas)

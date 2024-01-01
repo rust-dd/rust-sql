@@ -1,8 +1,10 @@
 use common::project::ProjectDetails;
 use leptos::{html::*, IntoView, *};
+use leptos_use::{use_document, use_event_listener};
 
 use crate::{
   invoke::{Invoke, InvokeProjectsArgs},
+  modals,
   store::projects::ProjectsStore,
   wasm_functions::invoke,
 };
@@ -11,6 +13,12 @@ use super::{project, queries};
 
 pub fn component() -> impl IntoView {
   let projects_state = use_context::<ProjectsStore>().unwrap();
+  let show = create_rw_signal(false);
+  let _ = use_event_listener(use_document(), ev::keydown, move |event| {
+    if event.key() == "Escape" {
+      show.set(false);
+    }
+  });
   let projects = create_resource(
     || {},
     move |_| async move {
@@ -23,6 +31,7 @@ pub fn component() -> impl IntoView {
 
   div()
     .classes("flex border-r-1 min-w-[320px] justify-between border-neutral-200 flex-col p-4")
+    .child(modals::connection::component(show))
     .child(
       div().classes("flex flex-col overflow-auto").child(
         div()
@@ -34,7 +43,7 @@ pub fn component() -> impl IntoView {
                 button()
                   .classes("px-2 rounded-full hover:bg-gray-200")
                   .child("+")
-                  .on(ev::click, move |_| {}),
+                  .on(ev::click, move |_| show.set(true)),
               ),
           )
           .child(For(ForProps {

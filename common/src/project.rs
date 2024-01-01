@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-#[derive(Default, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Default, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub struct ProjectDetails {
   pub name: String,
   pub user: String,

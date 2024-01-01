@@ -5,6 +5,7 @@ mod grid_view;
 mod header;
 mod invoke;
 mod layout;
+mod modals;
 mod query_editor;
 mod query_table;
 mod record_view;

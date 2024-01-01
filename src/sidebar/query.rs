@@ -9,12 +9,13 @@ pub fn component(key: String) -> impl IntoView {
   let splitted_key = create_memo(move |_| {
     let key = key_clone.clone();
 
-    if !key.contains(":") {
+    // TODO: add dropdown to modal
+    if !key.contains(':') {
       return vec![String::from(""), key];
     }
 
     key
-      .split(":")
+      .split(':')
       .map(|s| s.to_string())
       .collect::<Vec<String>>()
   });

@@ -1,6 +1,6 @@
 use std::fmt::Display;
 
-use common::project::ProjectDetails;
+use common::drivers::Postgresql;
 use serde::{Deserialize, Serialize};
 
 #[allow(non_camel_case_types)]
@@ -55,7 +55,7 @@ pub struct InvokeSelectProjectsArgs;
 
 #[derive(Serialize, Deserialize)]
 pub struct InvokeInsertProjectArgs {
-  pub project: ProjectDetails,
+  pub project: Postgresql,
 }
 
 #[derive(Serialize, Deserialize)]

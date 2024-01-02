@@ -1,6 +1,6 @@
 use std::{borrow::Borrow, collections::BTreeMap};
 
-use common::project::ProjectDetails;
+use common::drivers::Postgresql;
 use leptos::{
   create_rw_signal, error::Result, RwSignal, SignalGet, SignalGetUntracked, SignalUpdate,
 };
@@ -37,7 +37,7 @@ impl ProjectsStore {
     Self(create_rw_signal(BTreeMap::default()))
   }
 
-  pub fn set_projects(&self, projects: Vec<ProjectDetails>) -> Result<BTreeMap<String, Project>> {
+  pub fn set_projects(&self, projects: Vec<Postgresql>) -> Result<BTreeMap<String, Project>> {
     let projects = projects
       .into_iter()
       .map(|project| {
@@ -61,7 +61,7 @@ impl ProjectsStore {
     Ok(self.0.get_untracked().clone())
   }
 
-  pub fn insert_project(&self, project: ProjectDetails) -> Result<()> {
+  pub fn insert_project(&self, project: Postgresql) -> Result<()> {
     self.0.update(|prev| {
       prev.insert(
         project.name.clone(),

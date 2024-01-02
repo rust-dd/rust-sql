@@ -1,10 +1,10 @@
-use common::project::ProjectDetails;
+use common::drivers::Postgresql;
 use tauri::{Result, State};
 
 use crate::AppState;
 
 #[tauri::command]
-pub async fn select_projects(app_state: State<'_, AppState>) -> Result<Vec<ProjectDetails>> {
+pub async fn select_projects(app_state: State<'_, AppState>) -> Result<Vec<Postgresql>> {
   let project_db = app_state.project_db.lock().await;
   let mut projects = project_db
     .clone()
@@ -17,7 +17,7 @@ pub async fn select_projects(app_state: State<'_, AppState>) -> Result<Vec<Proje
       let connection_string = String::from_utf8(connection_string).unwrap();
       let connection_string = connection_string.split(' ').collect::<Vec<&str>>();
 
-      let mut project_details = ProjectDetails {
+      let mut project_details = Postgresql {
         name: project,
         ..Default::default()
       };
@@ -38,16 +38,16 @@ pub async fn select_projects(app_state: State<'_, AppState>) -> Result<Vec<Proje
 
       project_details
     })
-    .collect::<Vec<ProjectDetails>>();
+    .collect::<Vec<Postgresql>>();
   projects.sort_by(|a, b| a.name.cmp(&b.name));
   Ok(projects)
 }
 
 #[tauri::command]
 pub async fn insert_project(
-  project: ProjectDetails,
+  project: Postgresql,
   app_state: State<'_, AppState>,
-) -> Result<ProjectDetails> {
+) -> Result<Postgresql> {
   let project_db = app_state.project_db.lock().await;
   let ref mut db = project_db.clone().unwrap();
   let connection_string = format!(

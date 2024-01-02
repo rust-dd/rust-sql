@@ -1,4 +1,4 @@
-use common::project::ProjectDetails;
+use common::drivers::Postgresql;
 use leptos::{html::*, *};
 use thaw::{Modal, ModalFooter, ModalProps};
 
@@ -15,7 +15,7 @@ pub fn component(show: RwSignal<bool>) -> impl IntoView {
   let (db_password, set_db_password) = create_signal(String::new());
   let (db_host, set_db_host) = create_signal(String::new());
   let (db_port, set_db_port) = create_signal(String::new());
-  let save_project = create_action(move |project_details: &ProjectDetails| {
+  let save_project = create_action(move |project_details: &Postgresql| {
     let project_details = project_details.clone();
     async move {
       let args = serde_wasm_bindgen::to_value(&InvokeInsertProjectArgs {
@@ -23,7 +23,7 @@ pub fn component(show: RwSignal<bool>) -> impl IntoView {
       })
       .unwrap();
       let project = invoke(&Invoke::insert_project.to_string(), args).await;
-      let project = serde_wasm_bindgen::from_value::<ProjectDetails>(project).unwrap();
+      let project = serde_wasm_bindgen::from_value::<Postgresql>(project).unwrap();
       projects_store.insert_project(project).unwrap();
       show.set(false);
     }
@@ -93,7 +93,7 @@ pub fn component(show: RwSignal<bool>) -> impl IntoView {
                   || db_port().is_empty()
               })
               .on(ev::click, move |_| {
-                let project_details = ProjectDetails {
+                let project_details = Postgresql {
                   name: project(),
                   user: db_user(),
                   password: db_password(),

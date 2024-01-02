@@ -2,6 +2,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 mod constant;
+mod enums;
 mod postgres;
 mod project_db;
 mod query_db;

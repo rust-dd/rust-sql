@@ -1,27 +1,14 @@
 use std::{borrow::Borrow, collections::BTreeMap};
 
-use common::drivers::Postgresql;
+use common::{enums::Project, utils::project_matcher};
 use leptos::{
   create_rw_signal, error::Result, RwSignal, SignalGet, SignalGetUntracked, SignalUpdate,
 };
-use serde::{Deserialize, Serialize};
 
 use crate::{
-  enums::ProjectConnectionStatus,
   invoke::{Invoke, InvokeDeleteProjectArgs, InvokePostgresConnectionArgs, InvokeSchemaTablesArgs},
   wasm_functions::invoke,
 };
-
-#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
-pub struct Project {
-  pub host: String,
-  pub port: String,
-  pub user: String,
-  pub password: String,
-  pub schemas: Vec<String>,
-  pub tables: BTreeMap<String, Vec<(String, String)>>,
-  pub status: ProjectConnectionStatus,
-}
 
 #[derive(Clone, Copy, Debug)]
 pub struct ProjectsStore(pub RwSignal<BTreeMap<String, Project>>);
@@ -37,23 +24,10 @@ impl ProjectsStore {
     Self(create_rw_signal(BTreeMap::default()))
   }
 
-  pub fn set_projects(&self, projects: Vec<Postgresql>) -> Result<BTreeMap<String, Project>> {
+  pub fn set_projects(&self, projects: Vec<Project>) -> Result<BTreeMap<String, Project>> {
     let projects = projects
       .into_iter()
-      .map(|project| {
-        (
-          project.name,
-          Project {
-            host: project.host,
-            port: project.port,
-            user: project.user,
-            password: project.password,
-            schemas: Vec::new(),
-            tables: BTreeMap::new(),
-            status: ProjectConnectionStatus::default(),
-          },
-        )
-      })
+      .map(|project| project_matcher(project))
       .collect::<BTreeMap<String, Project>>();
     self.0.update(|prev| {
       *prev = projects;
@@ -61,20 +35,13 @@ impl ProjectsStore {
     Ok(self.0.get_untracked().clone())
   }
 
-  pub fn insert_project(&self, project: Postgresql) -> Result<()> {
+  pub fn insert_project(&self, project: Project) -> Result<()> {
     self.0.update(|prev| {
-      prev.insert(
-        project.name.clone(),
-        Project {
-          host: project.host,
-          port: project.port,
-          user: project.user,
-          password: project.password,
-          schemas: Vec::new(),
-          tables: BTreeMap::new(),
-          status: ProjectConnectionStatus::default(),
-        },
-      );
+      let project = match project {
+        Project::POSTGRESQL(project) => (project.name.clone(), Project::POSTGRESQL(project)),
+        _ => unreachable!(),
+      };
+      prev.insert(project.0, project.1);
     });
     Ok(())
   }

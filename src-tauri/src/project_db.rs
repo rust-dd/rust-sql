@@ -17,11 +17,10 @@ pub async fn select_projects(app_state: State<'_, AppState>) -> Result<Vec<(Stri
     .map(|r| {
       let (project, connection_string) = r.unwrap();
       let project = String::from_utf8(project.to_vec()).unwrap();
-      let connection_string = connection_string.to_vec();
-      let connection_string = String::from_utf8(connection_string).unwrap();
+      let connection_string = String::from_utf8(connection_string.to_vec()).unwrap();
       let connection_string = connection_string.split(':').collect::<Vec<&str>>();
       let _driver = connection_string[0].to_string();
-      let driver = match _driver {
+      let project_details = match _driver {
         d if d == Drivers::POSTGRESQL.to_string() => {
           let mut driver = PostgresqlDriver::default();
 
@@ -39,14 +38,13 @@ pub async fn select_projects(app_state: State<'_, AppState>) -> Result<Vec<(Stri
             }
           }
 
-          driver
+          Project::POSTGRESQL(Postgresql {
+            driver,
+            ..Postgresql::default()
+          })
         }
         _ => unreachable!(),
       };
-      let project_details = Project::POSTGRESQL(Postgresql {
-        driver,
-        ..Postgresql::default()
-      });
       (project, project_details)
     })
     .collect::<Vec<(String, Project)>>();

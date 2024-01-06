@@ -33,15 +33,15 @@ impl Display for Invoke {
 }
 
 #[derive(Serialize, Deserialize)]
-pub struct InvokePostgresConnectionArgs {
-  pub project: String,
-  pub key: String,
+pub struct InvokePostgresConnectionArgs<'a> {
+  pub project_name: &'a str,
+  pub key: &'a str,
 }
 
 #[derive(Serialize, Deserialize)]
-pub struct InvokeSchemaTablesArgs {
-  pub project: String,
-  pub schema: String,
+pub struct InvokeSchemaTablesArgs<'a> {
+  pub project_name: &'a str,
+  pub schema: &'a str,
 }
 
 #[derive(Serialize, Deserialize)]

@@ -54,12 +54,9 @@ pub async fn select_projects(app_state: State<'_, AppState>) -> Result<Vec<(Stri
 }
 
 #[tauri::command(rename_all = "snake_case")]
-pub async fn insert_project<'a, 'b>(
-  project: Project,
-  app_state: State<'a, AppState>,
-) -> Result<Project> {
+pub async fn insert_project(project: Project, app_state: State<'_, AppState>) -> Result<Project> {
   let project_db = app_state.project_db.lock().await;
-  let ref mut db = project_db.clone().unwrap();
+  let db = project_db.clone().unwrap();
   match project {
     Project::POSTGRESQL(project) => {
       let driver = &project.driver;

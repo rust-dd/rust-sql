@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use super::projects::postgresql::Postgresql;
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, PartialEq, Serialize, Deserialize)]
 pub enum Project {
   POSTGRESQL(Postgresql),
 }
@@ -22,7 +22,7 @@ impl Display for Drivers {
   }
 }
 
-#[derive(Clone, Default, Serialize, Deserialize)]
+#[derive(Clone, Default, PartialEq, Serialize, Deserialize)]
 pub enum ProjectConnectionStatus {
   Connected,
   #[default]

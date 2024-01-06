@@ -1,3 +1,4 @@
+use common::enums::Project;
 use leptos::{html::*, IntoView, *};
 use leptos_use::{use_document, use_event_listener};
 
@@ -23,7 +24,7 @@ pub fn component() -> impl IntoView {
     move |_| async move {
       let args = serde_wasm_bindgen::to_value(&InvokeSelectProjectsArgs).unwrap_or_default();
       let projects = invoke(&Invoke::select_projects.to_string(), args).await;
-      let projects = serde_wasm_bindgen::from_value::<Vec<Postgresql>>(projects).unwrap();
+      let projects = serde_wasm_bindgen::from_value::<Vec<Project>>(projects).unwrap();
       projects_state.set_projects(projects).unwrap()
     },
   );

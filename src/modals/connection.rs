@@ -1,4 +1,8 @@
-use common::enums::Project;
+use common::{
+  drivers::postgresql::Postgresql as PostgresqlDriver,
+  enums::{Drivers, Project},
+  projects::postgresql::Postgresql,
+};
 use leptos::{html::*, *};
 use thaw::{Modal, ModalFooter, ModalProps};
 
@@ -10,12 +14,13 @@ use crate::{
 
 pub fn component(show: RwSignal<bool>) -> impl IntoView {
   let projects_store = use_context::<ProjectsStore>().unwrap();
+  let (driver, _set_driver) = create_signal(Drivers::POSTGRESQL);
   let (project, set_project) = create_signal(String::new());
   let (db_user, set_db_user) = create_signal(String::new());
   let (db_password, set_db_password) = create_signal(String::new());
   let (db_host, set_db_host) = create_signal(String::new());
   let (db_port, set_db_port) = create_signal(String::new());
-  let save_project = create_action(move |project_details: &Postgresql| {
+  let save_project = create_action(move |project_details: &Project| {
     let project_details = project_details.clone();
     async move {
       let args = serde_wasm_bindgen::to_value(&InvokeInsertProjectArgs {
@@ -23,7 +28,7 @@ pub fn component(show: RwSignal<bool>) -> impl IntoView {
       })
       .unwrap();
       let project = invoke(&Invoke::insert_project.to_string(), args).await;
-      let project = serde_wasm_bindgen::from_value::<(String, Project)>(project).unwrap();
+      let project = serde_wasm_bindgen::from_value::<Project>(project).unwrap();
       projects_store.insert_project(project).unwrap();
       show.set(false);
     }
@@ -93,12 +98,12 @@ pub fn component(show: RwSignal<bool>) -> impl IntoView {
                   || db_port().is_empty()
               })
               .on(ev::click, move |_| {
-                let project_details = Postgresql {
-                  name: project(),
-                  user: db_user(),
-                  password: db_password(),
-                  host: db_host(),
-                  port: db_port(),
+                let project_details = match driver() {
+                  Drivers::POSTGRESQL => Project::POSTGRESQL(Postgresql {
+                    name: project(),
+                    driver: PostgresqlDriver::new(db_user(), db_password(), db_host(), db_port()),
+                    ..Postgresql::default()
+                  }),
                 };
                 save_project.dispatch(project_details);
               }),

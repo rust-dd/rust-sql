@@ -27,6 +27,8 @@ jobs:
           toolchain: nightly-2023-12-10 # 1.76.0-nightly-2021-12-10
           target: wasm32-unknown-unknown
           default: true
+      - name: install Tauri cli
+        run: cargo install tauri-cli
       - uses: jetli/trunk-action@v0.1.0
         with:
           # Optional version of trunk to install(eg. 'v0.8.1', 'latest')

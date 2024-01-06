@@ -4,14 +4,14 @@ use tokio_postgres::{connect, NoTls};
 use crate::{utils::reflective_get, AppState};
 
 #[tauri::command(rename_all = "snake_case")]
-pub async fn postgresql_connector(project: &str, key: &str, app: AppHandle) -> Result<Vec<String>> {
+pub async fn postgresql_connector(
+  project_name: &str,
+  key: &str,
+  app: AppHandle,
+) -> Result<Vec<String>> {
   let app_state = app.state::<AppState>();
-  let mut db = app_state.project_db.lock().await;
-  if let Some(ref mut db_instance) = *db {
-    db_instance.insert(project, key).unwrap();
-  }
-
   let (client, connection) = connect(key, NoTls).await.expect("connection error");
+
   tokio::spawn(async move {
     if let Err(e) = connection.await {
       eprintln!("connection error: {}", e);
@@ -32,7 +32,7 @@ pub async fn postgresql_connector(project: &str, key: &str, app: AppHandle) -> R
   let schemas = schemas.iter().map(|r| r.get(0)).collect();
   let mut clients = app_state.client.lock().await;
   let clients = clients.as_mut().unwrap();
-  clients.insert(project.to_string(), client);
+  clients.insert(project_name.to_string(), client);
 
   Ok(schemas)
 }
@@ -66,6 +66,7 @@ pub async fn select_schema_tables(
     .iter()
     .map(|r| (r.get(0), r.get(1)))
     .collect::<Vec<(String, String)>>();
+
   Ok(tables)
 }
 

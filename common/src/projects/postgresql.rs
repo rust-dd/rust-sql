@@ -3,11 +3,11 @@ use std::collections::BTreeMap;
 
 use crate::{drivers::postgresql::Postgresql as PostgresqlDriver, enums::ProjectConnectionStatus};
 
-#[derive(Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Postgresql {
   pub name: String,
   pub driver: PostgresqlDriver,
-  pub schmemas: Option<Vec<String>>,
+  pub schemas: Option<Vec<String>>,
   pub tables: Option<BTreeMap<String, Vec<(String, String)>>>,
   pub connection_status: ProjectConnectionStatus,
 }
@@ -17,7 +17,7 @@ impl Default for Postgresql {
     Self {
       name: String::default(),
       driver: PostgresqlDriver::default(),
-      schmemas: None,
+      schemas: None,
       tables: None,
       connection_status: ProjectConnectionStatus::Disconnected,
     }

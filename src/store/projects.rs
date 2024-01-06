@@ -27,10 +27,13 @@ impl ProjectsStore {
     Self(create_rw_signal(BTreeMap::default()))
   }
 
-  pub fn set_projects(&self, projects: Vec<Project>) -> Result<BTreeMap<String, Project>> {
+  pub fn set_projects(
+    &self,
+    projects: Vec<(String, Project)>,
+  ) -> Result<BTreeMap<String, Project>> {
     let projects = projects
       .into_iter()
-      .map(project_matcher)
+      .map(|(_, project)| project_matcher(project))
       .collect::<BTreeMap<String, Project>>();
     self.0.update(|prev| {
       *prev = projects;
@@ -62,7 +65,7 @@ impl ProjectsStore {
       Project::POSTGRESQL(project) => {
         let driver = project.driver.clone();
         format!(
-          "user={}:password={}:host={}:port={}",
+          "user={} password={} host={} port={}",
           driver.user, driver.password, driver.host, driver.port,
         )
       }
@@ -77,15 +80,14 @@ impl ProjectsStore {
     match project {
       Project::POSTGRESQL(project) => {
         if project.connection_status == ProjectConnectionStatus::Connected {
-          return Ok(project.schmemas.clone().unwrap());
+          return Ok(project.schemas.clone().unwrap());
         }
-
         let schemas = self.postgresql_schema_selector(&project.name).await?;
         projects.update(|prev| {
           let project = prev.get_mut(project_name).unwrap();
           match project {
             Project::POSTGRESQL(project) => {
-              project.schmemas = Some(schemas.clone());
+              project.schemas = Some(schemas.clone());
               project.connection_status = ProjectConnectionStatus::Connected;
             }
           }
@@ -106,7 +108,8 @@ impl ProjectsStore {
 
     match project {
       Project::POSTGRESQL(project) => {
-        if let Some(tables) = project.tables.as_ref().unwrap().get(schema) {
+        if let Some(tables) = &project.tables {
+          let tables = tables.get(schema).unwrap();
           if !tables.is_empty() {
             return Ok(tables.clone());
           }
@@ -121,19 +124,9 @@ impl ProjectsStore {
           let project = prev.get_mut(project_name).unwrap();
           match project {
             Project::POSTGRESQL(project) => {
-              let _tables = project.tables.as_mut().unwrap();
+              let _tables = project.tables.get_or_insert_with(BTreeMap::new);
               _tables.insert(schema.to_string(), tables.clone());
               project.tables = Some(_tables.clone());
-            }
-          }
-        });
-
-        let schemas = self.postgresql_schema_selector(&project.name).await?;
-        projects.update(|prev| {
-          let project = prev.get_mut(project_name).unwrap();
-          match project {
-            Project::POSTGRESQL(project) => {
-              project.schmemas = Some(schemas.clone());
             }
           }
         });
@@ -143,15 +136,12 @@ impl ProjectsStore {
     }
   }
 
-  pub async fn delete_project(&self, project: &str) -> Result<()> {
-    let args = serde_wasm_bindgen::to_value(&InvokeDeleteProjectArgs {
-      project: project.to_string(),
-    })
-    .unwrap();
+  pub async fn delete_project(&self, project_name: &str) -> Result<()> {
+    let args = serde_wasm_bindgen::to_value(&InvokeDeleteProjectArgs { project_name }).unwrap();
     invoke(&Invoke::delete_project.to_string(), args).await;
     let projects = self.0;
     projects.update(|prev| {
-      prev.remove(project);
+      prev.remove(project_name);
     });
     Ok(())
   }

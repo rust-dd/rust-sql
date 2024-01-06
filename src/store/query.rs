@@ -39,14 +39,7 @@ impl QueryStore {
     let active_project = use_context::<ActiveProjectStore>().unwrap();
     let active_project = active_project.0.get_untracked().unwrap();
     let projects_store = use_context::<ProjectsStore>().unwrap();
-    if projects_store
-      .0
-      .get_untracked()
-      .get(&active_project)
-      .is_none()
-    {
-      projects_store.connect(&active_project).await?;
-    }
+    projects_store.connect(&active_project).await?;
     self.is_loading.update(|prev| {
       *prev = true;
     });
@@ -65,8 +58,8 @@ impl QueryStore {
       .find_query_for_line(&sql, position.line_number())
       .unwrap();
     let args = serde_wasm_bindgen::to_value(&InvokeSqlResultArgs {
-      project: active_project,
-      sql: sql.query,
+      project_name: &active_project,
+      sql: &sql.query,
     })
     .unwrap();
     let data = invoke(&Invoke::select_sql_result.to_string(), args).await;
@@ -89,12 +82,12 @@ impl QueryStore {
     Ok(self.saved_queries.get_untracked().clone())
   }
 
-  pub async fn insert_query(&self, key: &str, project: &str) -> Result<()> {
+  pub async fn insert_query(&self, key: &str, project_name: &str) -> Result<()> {
     let editor_state = use_context::<EditorStore>().unwrap();
     let sql = editor_state.get_value();
     let args = serde_wasm_bindgen::to_value(&InvokeInsertQueryArgs {
-      key: format!("{}:{}", project, key),
-      sql,
+      key: &format!("{}:{}", project_name, key),
+      sql: sql.as_str(),
     });
     invoke(&Invoke::insert_query.to_string(), args.unwrap_or_default()).await;
     self.select_queries().await?;
@@ -102,9 +95,7 @@ impl QueryStore {
   }
 
   pub async fn delete_query(&self, key: &str) -> Result<()> {
-    let args = serde_wasm_bindgen::to_value(&InvokeDeleteQueryArgs {
-      key: key.to_string(),
-    });
+    let args = serde_wasm_bindgen::to_value(&InvokeDeleteQueryArgs { key });
     invoke(&Invoke::delete_query.to_string(), args.unwrap_or_default()).await;
     self.select_queries().await?;
     Ok(())

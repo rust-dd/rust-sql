@@ -20,6 +20,7 @@ pub async fn select_projects(app_state: State<'_, AppState>) -> Result<Vec<(Stri
       let connection_string = String::from_utf8(connection_string.to_vec()).unwrap();
       let connection_string = connection_string.split(':').collect::<Vec<&str>>();
       let _driver = connection_string[0].to_string();
+      let _driver = _driver.split('=').collect::<Vec<&str>>()[1];
       let project_details = match _driver {
         d if d == Drivers::POSTGRESQL.to_string() => {
           let mut driver = PostgresqlDriver::default();

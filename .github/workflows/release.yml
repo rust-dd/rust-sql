@@ -29,6 +29,10 @@ jobs:
           default: true
       - name: install Tauri cli
         run: cargo install tauri-cli
+      - name: install Tailwind CSS
+        run: npm i -g tailwindcss
+      - name: generate Tailwind CSS
+        run: npx tailwindcss -i ./input.css -o ./style/output.css
       - uses: jetli/trunk-action@v0.1.0
         with:
           # Optional version of trunk to install(eg. 'v0.8.1', 'latest')

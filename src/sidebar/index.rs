@@ -20,7 +20,7 @@ pub fn component() -> impl IntoView {
     }
   });
   let projects = create_resource(
-    move || projects_state.0.get_untracked(),
+    move || projects_state.0.get(),
     move |_| async move {
       let args = serde_wasm_bindgen::to_value(&InvokeSelectProjectsArgs).unwrap_or_default();
       let projects = invoke(&Invoke::select_projects.to_string(), args).await;

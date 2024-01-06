@@ -1,9 +1,6 @@
 use std::collections::BTreeMap;
 
-use common::{
-  enums::{Project, ProjectConnectionStatus},
-  utils::project_matcher,
-};
+use common::enums::{Project, ProjectConnectionStatus};
 use leptos::{
   create_rw_signal, error::Result, RwSignal, SignalGet, SignalGetUntracked, SignalUpdate,
 };
@@ -31,12 +28,13 @@ impl ProjectsStore {
     &self,
     projects: Vec<(String, Project)>,
   ) -> Result<BTreeMap<String, Project>> {
-    let projects = projects
-      .into_iter()
-      .map(|(_, project)| project_matcher(project))
-      .collect::<BTreeMap<String, Project>>();
     self.0.update(|prev| {
-      *prev = projects;
+      // insert only if project does not exist
+      for (name, project) in projects.iter() {
+        if !prev.contains_key(name) {
+          prev.insert(name.clone(), project.clone());
+        }
+      }
     });
     Ok(self.0.get_untracked().clone())
   }

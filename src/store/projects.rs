@@ -77,7 +77,7 @@ impl ProjectsStore {
       key: connection_string,
     })
     .unwrap();
-    let schemas = invoke(&Invoke::pg_connector.to_string(), args).await;
+    let schemas = invoke(&Invoke::postgresql_connector.to_string(), args).await;
     let mut schemas = serde_wasm_bindgen::from_value::<Vec<String>>(schemas).unwrap();
     schemas.sort();
     projects.update(|prev| {

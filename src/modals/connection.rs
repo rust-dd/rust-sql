@@ -1,4 +1,3 @@
-use common::drivers::Postgresql;
 use leptos::{html::*, *};
 use thaw::{Modal, ModalFooter, ModalProps};
 

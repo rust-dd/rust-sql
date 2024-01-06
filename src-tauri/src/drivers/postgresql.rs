@@ -3,8 +3,8 @@ use tokio_postgres::{connect, NoTls};
 
 use crate::{utils::reflective_get, AppState};
 
-#[tauri::command]
-pub async fn connector(project: &str, key: &str, app: AppHandle) -> Result<Vec<String>> {
+#[tauri::command(rename_all = "snake_case")]
+pub async fn postgresql_connector(project: &str, key: &str, app: AppHandle) -> Result<Vec<String>> {
   let app_state = app.state::<AppState>();
   let mut db = app_state.project_db.lock().await;
   if let Some(ref mut db_instance) = *db {
@@ -37,7 +37,7 @@ pub async fn connector(project: &str, key: &str, app: AppHandle) -> Result<Vec<S
   Ok(schemas)
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn select_schema_tables(
   project: &str,
   schema: &str,
@@ -69,7 +69,7 @@ pub async fn select_schema_tables(
   Ok(tables)
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn select_sql_result(
   project: &str,
   sql: String,

@@ -1,4 +1,3 @@
-use common::drivers::Postgresql;
 use leptos::{html::*, IntoView, *};
 use leptos_use::{use_document, use_event_listener};
 

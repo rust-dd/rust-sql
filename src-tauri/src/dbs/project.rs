@@ -7,7 +7,7 @@ use tauri::{Result, State};
 
 use crate::AppState;
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn select_projects(app_state: State<'_, AppState>) -> Result<Vec<(String, Project)>> {
   let project_db = app_state.project_db.lock().await;
   let mut projects = project_db
@@ -52,7 +52,7 @@ pub async fn select_projects(app_state: State<'_, AppState>) -> Result<Vec<(Stri
   Ok(projects)
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn insert_project<'a, 'b>(
   project_name: &str,
   project: Project,
@@ -80,7 +80,7 @@ pub async fn insert_project<'a, 'b>(
   }
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn delete_project(project_name: &str, app_state: State<'_, AppState>) -> Result<()> {
   let db = app_state.project_db.lock().await;
   let db = db.clone().unwrap();

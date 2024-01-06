@@ -63,7 +63,7 @@ fn main() {
       dbs::query::delete_query,
       dbs::query::insert_query,
       dbs::query::select_queries,
-      drivers::postgresql::connector,
+      drivers::postgresql::postgresql_connector,
       drivers::postgresql::select_schema_tables,
       drivers::postgresql::select_sql_result,
     ])

@@ -4,7 +4,7 @@ use tauri::{AppHandle, Manager, Result, State};
 
 use crate::AppState;
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn insert_query(key: &str, sql: &str, app: AppHandle) -> Result<()> {
   let app_state = app.state::<AppState>();
   let db = app_state.query_db.lock().await;
@@ -14,7 +14,7 @@ pub async fn insert_query(key: &str, sql: &str, app: AppHandle) -> Result<()> {
   Ok(())
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn select_queries(app_state: State<'_, AppState>) -> Result<BTreeMap<String, String>> {
   let query_db = app_state.query_db.lock().await;
   let mut queries = BTreeMap::new();
@@ -29,7 +29,7 @@ pub async fn select_queries(app_state: State<'_, AppState>) -> Result<BTreeMap<S
   Ok(queries)
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn delete_query(key: &str, app_state: State<'_, AppState>) -> Result<()> {
   let query_db = app_state.query_db.lock().await;
   if let Some(ref query_db) = *query_db {

@@ -4,7 +4,7 @@ use tokio_postgres::{connect, NoTls};
 use crate::{utils::reflective_get, AppState};
 
 #[tauri::command]
-pub async fn pg_connector(project: &str, key: &str, app: AppHandle) -> Result<Vec<String>> {
+pub async fn connector(project: &str, key: &str, app: AppHandle) -> Result<Vec<String>> {
   let app_state = app.state::<AppState>();
   let mut db = app_state.project_db.lock().await;
   if let Some(ref mut db_instance) = *db {

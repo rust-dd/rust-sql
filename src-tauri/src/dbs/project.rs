@@ -53,22 +53,37 @@ pub async fn select_projects(app_state: State<'_, AppState>) -> Result<Vec<(Stri
 }
 
 #[tauri::command]
-pub async fn insert_project(project: Project, app_state: State<'_, AppState>) -> Result<Project> {
+pub async fn insert_project<'a, 'b>(
+  project_name: &str,
+  project: Project,
+  app_state: State<'a, AppState>,
+) -> Result<(String, Project)> {
   let project_db = app_state.project_db.lock().await;
   let ref mut db = project_db.clone().unwrap();
-  let connection_string = format!(
-    "user={}:password={}:host={}:port={}",
-    project.user, project.password, project.host, project.port,
-  );
-  db.insert(project.name.clone(), connection_string.as_str())
-    .unwrap();
-  Ok(project)
+  match project {
+    Project::POSTGRESQL(project) => {
+      let driver = project.driver;
+      let connection_string = format!(
+        "driver=POSTGRESQL:user={}:password={}:host={}:port={}",
+        driver.user, driver.password, driver.host, driver.port,
+      );
+
+      db.insert(project_name, &*connection_string).unwrap();
+      Ok((
+        project_name.to_owned(),
+        Project::POSTGRESQL(Postgresql {
+          driver,
+          ..Postgresql::default()
+        }),
+      ))
+    }
+  }
 }
 
 #[tauri::command]
-pub async fn delete_project(project: String, app_state: State<'_, AppState>) -> Result<()> {
+pub async fn delete_project(project_name: &str, app_state: State<'_, AppState>) -> Result<()> {
   let db = app_state.project_db.lock().await;
   let db = db.clone().unwrap();
-  db.remove(project).unwrap();
+  db.remove(project_name).unwrap();
   Ok(())
 }

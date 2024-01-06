@@ -1,3 +1,4 @@
+use common::enums::Project;
 use leptos::{html::*, *};
 use thaw::{Modal, ModalFooter, ModalProps};
 
@@ -22,7 +23,7 @@ pub fn component(show: RwSignal<bool>) -> impl IntoView {
       })
       .unwrap();
       let project = invoke(&Invoke::insert_project.to_string(), args).await;
-      let project = serde_wasm_bindgen::from_value::<Postgresql>(project).unwrap();
+      let project = serde_wasm_bindgen::from_value::<(String, Project)>(project).unwrap();
       projects_store.insert_project(project).unwrap();
       show.set(false);
     }

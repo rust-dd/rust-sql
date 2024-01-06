@@ -5,6 +5,7 @@ use crate::{drivers::postgresql::Postgresql as PostgresqlDriver, enums::ProjectC
 
 #[derive(Clone, Default, Serialize, Deserialize)]
 pub struct Postgresql {
+  pub name: String,
   pub driver: PostgresqlDriver,
   pub schmeas: Vec<String>,
   pub tables: BTreeMap<String, Vec<(String, String)>>,

@@ -1,16 +1,13 @@
 // Prevents additional console window on Windows in release, DO NOT REMOVE!!
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-mod constant;
-mod postgres;
-mod project_db;
-mod query_db;
+mod dbs;
+mod drivers;
 mod utils;
 
-use constant::{PROJECT_DB_PATH, QUERY_DB_PATH};
-use postgres::{pg_connector, select_schema_tables, select_sql_result};
-use project_db::{delete_project, insert_project, select_projects};
-use query_db::{delete_query, insert_query, select_queries};
+const PROJECT_DB_PATH: &str = "project_db";
+const QUERY_DB_PATH: &str = "query_db";
+
 use sled::Db;
 use std::{collections::BTreeMap, sync::Arc};
 use tauri::Manager;
@@ -60,15 +57,15 @@ fn main() {
       Ok(())
     })
     .invoke_handler(tauri::generate_handler![
-      delete_project,
-      delete_query,
-      insert_project,
-      insert_query,
-      pg_connector,
-      select_projects,
-      select_queries,
-      select_schema_tables,
-      select_sql_result,
+      dbs::project::delete_project,
+      dbs::project::insert_project,
+      dbs::project::select_projects,
+      dbs::query::delete_query,
+      dbs::query::insert_query,
+      dbs::query::select_queries,
+      drivers::postgresql::postgresql_connector,
+      drivers::postgresql::select_schema_tables,
+      drivers::postgresql::select_sql_result,
     ])
     .run(tauri::generate_context!())
     .expect("error while running tauri application");

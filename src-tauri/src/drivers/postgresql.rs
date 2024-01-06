@@ -3,14 +3,13 @@ use tokio_postgres::{connect, NoTls};
 
 use crate::{utils::reflective_get, AppState};
 
-#[tauri::command]
-pub async fn pg_connector(project: &str, key: &str, app: AppHandle) -> Result<Vec<String>> {
+#[tauri::command(rename_all = "snake_case")]
+pub async fn postgresql_connector(
+  project_name: &str,
+  key: &str,
+  app: AppHandle,
+) -> Result<Vec<String>> {
   let app_state = app.state::<AppState>();
-  let mut db = app_state.project_db.lock().await;
-  if let Some(ref mut db_instance) = *db {
-    db_instance.insert(project, key).unwrap();
-  }
-
   let (client, connection) = connect(key, NoTls).await.expect("connection error");
   tokio::spawn(async move {
     if let Err(e) = connection.await {
@@ -32,19 +31,18 @@ pub async fn pg_connector(project: &str, key: &str, app: AppHandle) -> Result<Ve
   let schemas = schemas.iter().map(|r| r.get(0)).collect();
   let mut clients = app_state.client.lock().await;
   let clients = clients.as_mut().unwrap();
-  clients.insert(project.to_string(), client);
-
+  clients.insert(project_name.to_string(), client);
   Ok(schemas)
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn select_schema_tables(
-  project: &str,
+  project_name: &str,
   schema: &str,
   app_state: State<'_, AppState>,
 ) -> Result<Vec<(String, String)>> {
   let clients = app_state.client.lock().await;
-  let client = clients.as_ref().unwrap().get(project).unwrap();
+  let client = clients.as_ref().unwrap().get(project_name).unwrap();
   let tables = client
     .query(
       r#"
@@ -69,14 +67,14 @@ pub async fn select_schema_tables(
   Ok(tables)
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn select_sql_result(
-  project: &str,
+  project_name: &str,
   sql: String,
   app_state: State<'_, AppState>,
 ) -> Result<(Vec<String>, Vec<Vec<String>>)> {
   let clients = app_state.client.lock().await;
-  let client = clients.as_ref().unwrap().get(project).unwrap();
+  let client = clients.as_ref().unwrap().get(project_name).unwrap();
   let rows = client.query(sql.as_str(), &[]).await.unwrap();
 
   if rows.is_empty() {

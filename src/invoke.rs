@@ -1,6 +1,6 @@
 use std::fmt::Display;
 
-use common::project::ProjectDetails;
+use common::enums::Project;
 use serde::{Deserialize, Serialize};
 
 #[allow(non_camel_case_types)]
@@ -9,7 +9,7 @@ pub enum Invoke {
   delete_query,
   insert_project,
   insert_query,
-  pg_connector,
+  postgresql_connector,
   select_projects,
   select_queries,
   select_schema_tables,
@@ -23,7 +23,7 @@ impl Display for Invoke {
       Invoke::delete_query => write!(f, "delete_query"),
       Invoke::insert_project => write!(f, "insert_project"),
       Invoke::insert_query => write!(f, "insert_query"),
-      Invoke::pg_connector => write!(f, "pg_connector"),
+      Invoke::postgresql_connector => write!(f, "postgresql_connector"),
       Invoke::select_projects => write!(f, "select_projects"),
       Invoke::select_queries => write!(f, "select_queries"),
       Invoke::select_schema_tables => write!(f, "select_schema_tables"),
@@ -33,21 +33,21 @@ impl Display for Invoke {
 }
 
 #[derive(Serialize, Deserialize)]
-pub struct InvokePostgresConnectionArgs {
-  pub project: String,
-  pub key: String,
+pub struct InvokePostgresConnectionArgs<'a> {
+  pub project_name: &'a str,
+  pub key: &'a str,
 }
 
 #[derive(Serialize, Deserialize)]
-pub struct InvokeSchemaTablesArgs {
-  pub project: String,
-  pub schema: String,
+pub struct InvokeSchemaTablesArgs<'a> {
+  pub project_name: &'a str,
+  pub schema: &'a str,
 }
 
 #[derive(Serialize, Deserialize)]
-pub struct InvokeSqlResultArgs {
-  pub project: String,
-  pub sql: String,
+pub struct InvokeSqlResultArgs<'a> {
+  pub project_name: &'a str,
+  pub sql: &'a str,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -55,24 +55,24 @@ pub struct InvokeSelectProjectsArgs;
 
 #[derive(Serialize, Deserialize)]
 pub struct InvokeInsertProjectArgs {
-  pub project: ProjectDetails,
+  pub project: Project,
 }
 
 #[derive(Serialize, Deserialize)]
-pub struct InvokeDeleteProjectArgs {
-  pub project: String,
+pub struct InvokeDeleteProjectArgs<'a> {
+  pub project_name: &'a str,
 }
 
 #[derive(Serialize, Deserialize)]
-pub struct InvokeInsertQueryArgs {
-  pub key: String,
-  pub sql: String,
+pub struct InvokeInsertQueryArgs<'a> {
+  pub key: &'a str,
+  pub sql: &'a str,
 }
 
 #[derive(Serialize, Deserialize)]
 pub struct InvokeSelectQueriesArgs;
 
 #[derive(Serialize, Deserialize)]
-pub struct InvokeDeleteQueryArgs {
-  pub key: String,
+pub struct InvokeDeleteQueryArgs<'a> {
+  pub key: &'a str,
 }

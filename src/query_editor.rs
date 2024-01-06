@@ -16,18 +16,24 @@ use crate::{
 pub type ModelCell = Rc<RefCell<Option<CodeEditor>>>;
 
 pub fn component() -> impl IntoView {
-  let query_state = use_context::<QueryStore>().unwrap();
+  let query_store = use_context::<QueryStore>().unwrap();
   let run_query = create_action(move |query_store: &QueryStore| {
     let query_store = *query_store;
     async move {
       query_store.run_query().await.unwrap();
     }
   });
+  let show = create_rw_signal(false);
+  let _ = use_event_listener(use_document(), ev::keydown, move |event| {
+    if event.key() == "Escape" {
+      show.set(false);
+    }
+  });
   let editor = use_context::<EditorStore>().unwrap().editor;
   let node_ref = create_node_ref();
   let _ = use_event_listener(node_ref, ev::keydown, move |event| {
     if event.key() == "Enter" && event.ctrl_key() {
-      run_query.dispatch(query_state);
+      run_query.dispatch(query_store);
     }
   });
 
@@ -55,18 +61,6 @@ pub fn component() -> impl IntoView {
     editor.update(|prev| {
       prev.replace(Some(e));
     });
-  });
-
-  let show = create_rw_signal(false);
-  let _ = use_event_listener(use_document(), ev::keydown, move |event| {
-    if event.key() == "Escape" {
-      show.set(false);
-    }
-  });
-  let query_store = use_context::<QueryStore>().unwrap();
-  let run_query = create_action(move |query_store: &QueryStore| {
-    let query_store = *query_store;
-    async move { query_store.run_query().await }
   });
 
   div()

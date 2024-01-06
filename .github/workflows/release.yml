@@ -21,10 +21,10 @@ jobs:
         uses: actions/setup-node@v1
         with:
           node-version: 16
-      - name: install Rust stable
+      - name: install Rust nightly
         uses: actions-rs/toolchain@v1
         with:
-          toolchain: stable
+          toolchain: nightly
           target: wasm32-unknown-unknown
       - uses: jetli/trunk-action@v0.1.0
         with:

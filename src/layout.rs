@@ -11,7 +11,7 @@ use tauri_sys::{event::listen, tauri::invoke};
 
 pub fn component(children: Children) -> impl IntoView {
   spawn_local(async move {
-    let mut evt = listen::<String>("my_first_item").await.unwrap();
+    let mut evt = listen::<String>("my_first_item").await.expect("error");
     while let Some(event) = evt.next().await {
       logging::log!("{:?}", event.payload);
     }
@@ -31,6 +31,7 @@ pub fn component(children: Children) -> impl IntoView {
           items: Some(vec![InvokeContextMenuItem {
             label: Some("test"),
             event: Some("my_first_item"),
+            payload: Some("test"),
             ..Default::default()
           }]),
         },

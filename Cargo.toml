@@ -19,6 +19,7 @@ monaco = "0.4.0"
 tauri-sys = { git = "https://github.com/JonasKruckenberg/tauri-sys", features = ["all"] }
 thaw = "0.1.3"
 common = { path = "common" }
+futures = "0.3.30"
 
 
 

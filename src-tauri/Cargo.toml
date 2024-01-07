@@ -14,7 +14,7 @@ tauri-build = { version = "1.5", features = [] }
 
 [dependencies]
 common = { path = "../common" }
-tauri = { version = "1.5.2", features = [ "shell-open", "fs-all"] }
+tauri = { version = "2.0.0-alpha", features = [] }
 serde = { version = "1.0.193", features = ["derive"] }
 serde_json = "1.0.108"
 tokio = "1.34.0"
@@ -28,3 +28,7 @@ sled = "0.34.7"
 # this feature is used for production builds or when `devPath` points to the filesystem
 # DO NOT REMOVE!!
 custom-protocol = ["tauri/custom-protocol"]
+
+[lib]
+name = "app_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]

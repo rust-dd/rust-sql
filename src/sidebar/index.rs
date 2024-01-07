@@ -27,7 +27,8 @@ pub fn component() -> impl IntoView {
         &InvokeSelectProjectsArgs,
       )
       .await
-      .unwrap();
+      .unwrap_or_default();
+      logging::log!("projects: {:?}", projects);
       projects_state.set_projects(projects).unwrap()
     },
   );

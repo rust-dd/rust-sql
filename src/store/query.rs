@@ -75,7 +75,8 @@ impl QueryStore {
       &Invoke::select_queries.to_string(),
       &InvokeSelectQueriesArgs,
     )
-    .await?;
+    .await
+    .unwrap_or_default();
 
     self.saved_queries.update(|prev| {
       *prev = saved_queries.into_iter().collect();

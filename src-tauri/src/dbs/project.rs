@@ -9,6 +9,7 @@ use crate::AppState;
 
 #[tauri::command(rename_all = "snake_case")]
 pub async fn select_projects(app_state: State<'_, AppState>) -> Result<Vec<(String, Project)>> {
+  println!("select_projects");
   let project_db = app_state.project_db.lock().await;
   let mut projects = project_db
     .clone()

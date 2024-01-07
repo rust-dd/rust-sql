@@ -1,13 +1,11 @@
 use std::collections::BTreeMap;
 
 use leptos::{error::Result, *};
+use tauri_sys::tauri::invoke;
 
-use crate::{
-  invoke::{
-    Invoke, InvokeDeleteQueryArgs, InvokeInsertQueryArgs, InvokeSelectQueriesArgs,
-    InvokeSqlResultArgs,
-  },
-  wasm_functions::invoke,
+use crate::invoke::{
+  Invoke, InvokeDeleteQueryArgs, InvokeInsertQueryArgs, InvokeSelectQueriesArgs,
+  InvokeSqlResultArgs,
 };
 
 use super::{active_project::ActiveProjectStore, editor::EditorStore, projects::ProjectsStore};
@@ -57,13 +55,14 @@ impl QueryStore {
     let sql = self
       .find_query_for_line(&sql, position.line_number())
       .unwrap();
-    let args = serde_wasm_bindgen::to_value(&InvokeSqlResultArgs {
-      project_name: &active_project,
-      sql: &sql.query,
-    })
-    .unwrap();
-    let data = invoke(&Invoke::select_sql_result.to_string(), args).await;
-    let data = serde_wasm_bindgen::from_value::<(Vec<String>, Vec<Vec<String>>)>(data).unwrap();
+    let data = invoke::<_, (Vec<String>, Vec<Vec<String>>)>(
+      &Invoke::select_sql_result.to_string(),
+      &InvokeSqlResultArgs {
+        project_name: &active_project,
+        sql: &sql.query,
+      },
+    )
+    .await?;
     self.sql_result.set(Some(data));
     self.is_loading.update(|prev| {
       *prev = false;
@@ -72,12 +71,14 @@ impl QueryStore {
   }
 
   pub async fn select_queries(&self) -> Result<BTreeMap<String, String>> {
-    let args = serde_wasm_bindgen::to_value(&InvokeSelectQueriesArgs).unwrap_or_default();
-    let saved_queries = invoke(&Invoke::select_queries.to_string(), args).await;
-    let queries =
-      serde_wasm_bindgen::from_value::<BTreeMap<String, String>>(saved_queries).unwrap();
+    let saved_queries = invoke::<_, BTreeMap<String, String>>(
+      &Invoke::select_queries.to_string(),
+      &InvokeSelectQueriesArgs,
+    )
+    .await?;
+
     self.saved_queries.update(|prev| {
-      *prev = queries.into_iter().collect();
+      *prev = saved_queries.into_iter().collect();
     });
     Ok(self.saved_queries.get_untracked().clone())
   }
@@ -85,18 +86,24 @@ impl QueryStore {
   pub async fn insert_query(&self, key: &str, project_name: &str) -> Result<()> {
     let editor_state = use_context::<EditorStore>().unwrap();
     let sql = editor_state.get_value();
-    let args = serde_wasm_bindgen::to_value(&InvokeInsertQueryArgs {
-      key: &format!("{}:{}", project_name, key),
-      sql: sql.as_str(),
-    });
-    invoke(&Invoke::insert_query.to_string(), args.unwrap_or_default()).await;
+    invoke(
+      &Invoke::insert_query.to_string(),
+      &InvokeInsertQueryArgs {
+        key: &format!("{}:{}", project_name, key),
+        sql: sql.as_str(),
+      },
+    )
+    .await?;
     self.select_queries().await?;
     Ok(())
   }
 
   pub async fn delete_query(&self, key: &str) -> Result<()> {
-    let args = serde_wasm_bindgen::to_value(&InvokeDeleteQueryArgs { key });
-    invoke(&Invoke::delete_query.to_string(), args.unwrap_or_default()).await;
+    invoke(
+      &Invoke::delete_query.to_string(),
+      &InvokeDeleteQueryArgs { key },
+    )
+    .await?;
     self.select_queries().await?;
     Ok(())
   }

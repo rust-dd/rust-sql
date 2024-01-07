@@ -10,7 +10,6 @@ mod query_table;
 mod record_view;
 mod sidebar;
 mod store;
-mod wasm_functions;
 
 use app::*;
 use leptos::*;

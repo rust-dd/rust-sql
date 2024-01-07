@@ -4,10 +4,10 @@ use common::enums::{Project, ProjectConnectionStatus};
 use leptos::{
   create_rw_signal, error::Result, RwSignal, SignalGet, SignalGetUntracked, SignalUpdate,
 };
+use tauri_sys::tauri::invoke;
 
-use crate::{
-  invoke::{Invoke, InvokeDeleteProjectArgs, InvokePostgresConnectionArgs, InvokeSchemaTablesArgs},
-  wasm_functions::invoke,
+use crate::invoke::{
+  Invoke, InvokeDeleteProjectArgs, InvokePostgresConnectionArgs, InvokeSchemaTablesArgs,
 };
 
 #[derive(Clone, Copy, Debug)]
@@ -134,8 +134,11 @@ impl ProjectsStore {
   }
 
   pub async fn delete_project(&self, project_name: &str) -> Result<()> {
-    let args = serde_wasm_bindgen::to_value(&InvokeDeleteProjectArgs { project_name }).unwrap();
-    invoke(&Invoke::delete_project.to_string(), args).await;
+    invoke(
+      &Invoke::delete_project.to_string(),
+      &InvokeDeleteProjectArgs { project_name },
+    )
+    .await?;
     let projects = self.0;
     projects.update(|prev| {
       prev.remove(project_name);
@@ -145,13 +148,14 @@ impl ProjectsStore {
 
   async fn postgresql_schema_selector(&self, project_name: &str) -> Result<Vec<String>> {
     let connection_string = self.create_project_connection_string(project_name);
-    let args = serde_wasm_bindgen::to_value(&InvokePostgresConnectionArgs {
-      project_name,
-      key: &connection_string,
-    })
-    .unwrap();
-    let schemas = invoke(&Invoke::postgresql_connector.to_string(), args).await;
-    let mut schemas = serde_wasm_bindgen::from_value::<Vec<String>>(schemas).unwrap();
+    let mut schemas = invoke::<_, Vec<String>>(
+      &Invoke::postgresql_connector.to_string(),
+      &InvokePostgresConnectionArgs {
+        project_name,
+        key: &connection_string,
+      },
+    )
+    .await?;
     schemas.sort();
     Ok(schemas)
   }
@@ -161,13 +165,14 @@ impl ProjectsStore {
     project_name: &str,
     schema: &str,
   ) -> Result<Vec<(String, String)>> {
-    let args = serde_wasm_bindgen::to_value(&InvokeSchemaTablesArgs {
-      project_name,
-      schema,
-    })
-    .unwrap();
-    let tables = invoke(&Invoke::select_schema_tables.to_string(), args).await;
-    let tables = serde_wasm_bindgen::from_value::<Vec<(String, String)>>(tables).unwrap();
+    let tables = invoke::<_, Vec<(String, String)>>(
+      &Invoke::select_schema_tables.to_string(),
+      &InvokeSchemaTablesArgs {
+        project_name,
+        schema,
+      },
+    )
+    .await?;
     Ok(tables)
   }
 }

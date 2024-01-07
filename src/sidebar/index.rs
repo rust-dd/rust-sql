@@ -1,12 +1,12 @@
 use common::enums::Project;
 use leptos::{html::*, IntoView, *};
 use leptos_use::{use_document, use_event_listener};
+use tauri_sys::tauri::invoke;
 
 use crate::{
   invoke::{Invoke, InvokeSelectProjectsArgs},
   modals,
   store::projects::ProjectsStore,
-  wasm_functions::invoke,
 };
 
 use super::{project, queries};
@@ -22,9 +22,12 @@ pub fn component() -> impl IntoView {
   let projects = create_resource(
     move || projects_state.0.get(),
     move |_| async move {
-      let args = serde_wasm_bindgen::to_value(&InvokeSelectProjectsArgs).unwrap_or_default();
-      let projects = invoke(&Invoke::select_projects.to_string(), args).await;
-      let projects = serde_wasm_bindgen::from_value::<Vec<(String, Project)>>(projects).unwrap();
+      let projects = invoke::<_, Vec<(String, Project)>>(
+        &Invoke::select_projects.to_string(),
+        &InvokeSelectProjectsArgs,
+      )
+      .await
+      .unwrap();
       projects_state.set_projects(projects).unwrap()
     },
   );

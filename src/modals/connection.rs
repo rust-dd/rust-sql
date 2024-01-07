@@ -4,12 +4,12 @@ use common::{
   projects::postgresql::Postgresql,
 };
 use leptos::{html::*, *};
+use tauri_sys::tauri::invoke;
 use thaw::{Modal, ModalFooter, ModalProps};
 
 use crate::{
   invoke::{Invoke, InvokeInsertProjectArgs},
   store::projects::ProjectsStore,
-  wasm_functions::invoke,
 };
 
 pub fn component(show: RwSignal<bool>) -> impl IntoView {
@@ -23,12 +23,14 @@ pub fn component(show: RwSignal<bool>) -> impl IntoView {
   let save_project = create_action(move |project_details: &Project| {
     let project_details = project_details.clone();
     async move {
-      let args = serde_wasm_bindgen::to_value(&InvokeInsertProjectArgs {
-        project: project_details,
-      })
+      let project = invoke::<_, Project>(
+        &Invoke::insert_project.to_string(),
+        &InvokeInsertProjectArgs {
+          project: project_details,
+        },
+      )
+      .await
       .unwrap();
-      let project = invoke(&Invoke::insert_project.to_string(), args).await;
-      let project = serde_wasm_bindgen::from_value::<Project>(project).unwrap();
       projects_store.insert_project(project).unwrap();
       show.set(false);
     }

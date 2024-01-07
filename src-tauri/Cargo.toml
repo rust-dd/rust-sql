@@ -1,6 +1,6 @@
 [package]
 name = "rust-sql-gui"
-version = "1.0.0-alpha.4"
+version = "1.0.0-alpha.5"
 description = "PostgreSQL GUI written in Rust"
 authors = ["Daniel Boros"]
 license = ""

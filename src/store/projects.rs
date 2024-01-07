@@ -107,8 +107,7 @@ impl ProjectsStore {
     match project {
       Project::POSTGRESQL(project) => {
         if let Some(tables) = &project.tables {
-          let tables = tables.get(schema).unwrap();
-          if !tables.is_empty() {
+          if let Some(tables) = tables.get(schema) {
             return Ok(tables.clone());
           }
         }

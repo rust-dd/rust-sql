@@ -31,7 +31,7 @@ pub fn component(children: Children) -> impl IntoView {
           items: Some(vec![InvokeContextMenuItem {
             label: Some("test"),
             event: Some("my_first_item"),
-            payload: Some("test"),
+            payload: Some("test2"),
             ..Default::default()
           }]),
         },

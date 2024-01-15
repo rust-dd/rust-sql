@@ -17,19 +17,7 @@ pub fn create_or_open_local_db(path: &str, app_dir: &Path) -> sled::Db {
 /// types: row.get is generic and without a type assignment the FromSql-Trait cannot be inferred.
 /// This function matches over the current column-type and does a manual conversion
 pub fn reflective_get(row: &Row, index: usize) -> String {
-  let column_type = row
-    .columns()
-    .get(index)
-    .map(|c| {
-      let c = c.type_();
-      println!("column type: {:?}", c);
-      println!("column name: {:?}", c.name());
-      println!("column oid: {:?}", c.oid());
-      println!("column category: {:?}", c.kind());
-
-      c.name()
-    })
-    .unwrap();
+  let column_type = row.columns().get(index).map(|c| c.type_().name()).unwrap();
   // see https://docs.rs/sqlx/0.4.0-beta.1/sqlx/postgres/types/index.html
 
   let value = match column_type {

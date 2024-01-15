@@ -1,7 +1,9 @@
 mod app;
+mod context_menu;
 mod enums;
 mod footer;
 mod grid_view;
+mod hooks;
 mod invoke;
 mod layout;
 mod modals;

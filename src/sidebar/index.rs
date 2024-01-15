@@ -4,6 +4,8 @@ use leptos_use::{use_document, use_event_listener};
 use tauri_sys::tauri::invoke;
 
 use crate::{
+  context_menu::siderbar::context_menu,
+  hooks::use_context_menu,
   invoke::{Invoke, InvokeSelectProjectsArgs},
   modals,
   store::projects::ProjectsStore,
@@ -13,6 +15,7 @@ use super::{project, queries};
 
 pub fn component() -> impl IntoView {
   let projects_state = use_context::<ProjectsStore>().unwrap();
+  let node_ref = use_context_menu::use_context_menu(context_menu);
   let show = create_rw_signal(false);
   let _ = use_event_listener(use_document(), ev::keydown, move |event| {
     if event.key() == "Escape" {
@@ -33,6 +36,7 @@ pub fn component() -> impl IntoView {
   );
 
   div()
+    .node_ref(node_ref)
     .classes("flex border-r-1 min-w-[320px] justify-between border-neutral-200 flex-col p-4")
     .child(modals::connection::component(show))
     .child(

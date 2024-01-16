@@ -1,5 +1,6 @@
-use crate::{footer, sidebar};
 use leptos::{html::*, *};
+
+use crate::{footer, sidebar};
 
 pub fn component(children: Children) -> impl IntoView {
   div()

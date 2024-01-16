@@ -1,5 +1,6 @@
-use std::path::Path;
+use std::{path::Path, time::SystemTime};
 
+use chrono::DateTime;
 use tokio_postgres::Row;
 
 pub fn create_or_open_local_db(path: &str, app_dir: &Path) -> sled::Db {
@@ -25,10 +26,11 @@ pub fn reflective_get(row: &Row, index: usize) -> String {
       v.map(|v| v.to_string())
     }
     "varchar" | "char(n)" | "text" | "name" => row.get(index),
-    // "char" => {
-    //     let v: i8 = row.get(index);
-    // }
-    "int2" | "smallserial" | "smallint" => {
+    "char" => {
+      let v = row.get::<_, i8>(index);
+      Some(v.to_string())
+    }
+    "smallserial" | "smallint" => {
       let v = row.get::<_, Option<i16>>(index);
       v.map(|v| v.to_string())
     }
@@ -48,11 +50,12 @@ pub fn reflective_get(row: &Row, index: usize) -> String {
       let v = row.get::<_, Option<f64>>(index);
       v.map(|v| v.to_string())
     }
-    // "timestamp" | "timestamptz" => {
-    //     // with-chrono feature is needed for this
-    //     let v: Option<chrono::DateTime<chrono::Utc>> = row.get(index);
-    //     v.map(|v| v.to_string())
-    // }
+    "timestamp" | "timestamptz" => {
+      // with-chrono feature is needed for this
+      let v: Option<SystemTime> = row.get(index);
+      let v = DateTime::<chrono::Utc>::from(v.unwrap());
+      Some(v.to_string())
+    }
     &_ => Some("CANNOT PARSE".to_string()),
   };
   value.unwrap_or("null".to_string())

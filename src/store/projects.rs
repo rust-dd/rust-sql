@@ -1,13 +1,17 @@
 use std::collections::BTreeMap;
 
-use common::enums::{Project, ProjectConnectionStatus};
+use common::{
+  enums::{Project, ProjectConnectionStatus},
+  projects::postgresql::PostgresqlRelation,
+};
 use leptos::{
-  create_rw_signal, error::Result, RwSignal, SignalGet, SignalGetUntracked, SignalUpdate,
+  create_rw_signal, error::Result, logging, RwSignal, SignalGet, SignalGetUntracked, SignalUpdate,
 };
 use tauri_sys::tauri::invoke;
 
 use crate::invoke::{
-  Invoke, InvokeDeleteProjectArgs, InvokePostgresConnectionArgs, InvokeSchemaTablesArgs,
+  Invoke, InvokeDeleteProjectArgs, InvokePostgresConnectionArgs, InvokeSchemaRelationsArgs,
+  InvokeSchemaTablesArgs,
 };
 
 #[derive(Clone, Copy, Debug)]
@@ -112,7 +116,7 @@ impl ProjectsStore {
           }
         }
 
-        let tables = self
+        let (tables, relations) = self
           .postgresql_table_selector(&project.name, schema)
           .await
           .unwrap();
@@ -121,9 +125,12 @@ impl ProjectsStore {
           let project = prev.get_mut(project_name).unwrap();
           match project {
             Project::POSTGRESQL(project) => {
-              let _tables = project.tables.get_or_insert_with(BTreeMap::new);
-              _tables.insert(schema.to_string(), tables.clone());
-              project.tables = Some(_tables.clone());
+              project
+                .tables
+                .as_mut()
+                .unwrap_or(&mut BTreeMap::<String, Vec<(String, String)>>::new())
+                .insert(schema.to_string(), tables.clone());
+              project.relations = Some(relations.clone());
             }
           }
         });
@@ -164,7 +171,7 @@ impl ProjectsStore {
     &self,
     project_name: &str,
     schema: &str,
-  ) -> Result<Vec<(String, String)>> {
+  ) -> Result<(Vec<(String, String)>, Vec<PostgresqlRelation>)> {
     let tables = invoke::<_, Vec<(String, String)>>(
       &Invoke::select_schema_tables.to_string(),
       &InvokeSchemaTablesArgs {
@@ -173,6 +180,16 @@ impl ProjectsStore {
       },
     )
     .await?;
-    Ok(tables)
+
+    let relations = invoke::<_, Vec<PostgresqlRelation>>(
+      &Invoke::select_schema_relations.to_string(),
+      &InvokeSchemaRelationsArgs {
+        project_name,
+        schema,
+      },
+    )
+    .await?;
+
+    Ok((tables, relations))
   }
 }

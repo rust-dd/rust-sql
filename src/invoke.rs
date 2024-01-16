@@ -13,6 +13,7 @@ pub enum Invoke {
   postgresql_connector,
   select_projects,
   select_queries,
+  select_schema_relations,
   select_schema_tables,
   select_sql_result,
 }
@@ -28,6 +29,7 @@ impl Display for Invoke {
       Invoke::plugin_context_menu => write!(f, "plugin:context_menu|show_context_menu"),
       Invoke::select_projects => write!(f, "select_projects"),
       Invoke::select_queries => write!(f, "select_queries"),
+      Invoke::select_schema_relations => write!(f, "select_schema_relations"),
       Invoke::select_schema_tables => write!(f, "select_schema_tables"),
       Invoke::select_sql_result => write!(f, "select_sql_result"),
     }
@@ -38,6 +40,12 @@ impl Display for Invoke {
 pub struct InvokePostgresConnectionArgs<'a> {
   pub project_name: &'a str,
   pub key: &'a str,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct InvokeSchemaRelationsArgs<'a> {
+  pub project_name: &'a str,
+  pub schema: &'a str,
 }
 
 #[derive(Serialize, Deserialize)]

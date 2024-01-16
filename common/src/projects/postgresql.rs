@@ -10,6 +10,7 @@ pub struct Postgresql {
   pub schemas: Option<Vec<String>>,
   pub tables: Option<BTreeMap<String, Vec<(String, String)>>>,
   pub connection_status: ProjectConnectionStatus,
+  pub relations: Option<Vec<PostgresqlRelation>>,
 }
 
 impl Default for Postgresql {
@@ -20,6 +21,16 @@ impl Default for Postgresql {
       schemas: None,
       tables: None,
       connection_status: ProjectConnectionStatus::Disconnected,
+      relations: None,
     }
   }
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct PostgresqlRelation {
+  pub constraint_name: String,
+  pub table_name: String,
+  pub column_name: String,
+  pub foreign_table_name: String,
+  pub foreign_column_name: String,
 }

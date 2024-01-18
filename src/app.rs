@@ -1,14 +1,13 @@
-use std::vec;
+use leptos::*;
 
 use crate::{
   enums::QueryTableLayout,
-  layout, query_editor, query_table,
+  layout,
   store::{
     active_project::ActiveProjectStore, editor::EditorStore, projects::ProjectsStore,
-    query::QueryStore,
+    query::QueryStore, tabs::Tabs,
   },
 };
-use leptos::*;
 
 pub fn app() -> impl IntoView {
   provide_context(EditorStore::default());
@@ -16,11 +15,7 @@ pub fn app() -> impl IntoView {
   provide_context(ProjectsStore::default());
   provide_context(create_rw_signal(QueryTableLayout::Grid));
   provide_context(ActiveProjectStore::default());
+  provide_context(Tabs::default());
 
-  layout::component(Children::to_children(move || {
-    Fragment::new(vec![
-      query_editor::component().into_view(),
-      query_table::component().into_view(),
-    ])
-  }))
+  layout::component()
 }

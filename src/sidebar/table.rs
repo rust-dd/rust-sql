@@ -22,11 +22,11 @@ pub fn component(table: (String, String), project: String, schema: String) -> im
       div()
         .classes("flex flex-row items-center gap-1")
         .child(Icon(IconProps {
-          icon: MaybeSignal::derive(|| Icon::from(HiIcon::HiTableCellsOutlineLg)),
-          width: Some(MaybeSignal::derive(|| String::from("12"))),
-          height: Some(MaybeSignal::derive(|| String::from("12"))),
-          class: None,
-          style: None,
+          icon: MaybeSignal::Static(icondata::HiTableCellsOutlineLg),
+          width: MaybeProp::from(String::from("12")),
+          height: MaybeProp::from(String::from("12")),
+          class: MaybeProp::default(),
+          style: MaybeProp::default(),
         }))
         .child(p().child(table.clone().0)),
     )

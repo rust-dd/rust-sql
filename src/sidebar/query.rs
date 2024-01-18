@@ -24,11 +24,11 @@ pub fn component(key: String) -> impl IntoView {
           div()
             .classes("flex flex-row items-center gap-1")
             .child(Icon(IconProps {
-              icon: MaybeSignal::derive(|| Icon::from(HiIcon::HiCircleStackOutlineLg)),
-              width: Some(MaybeSignal::derive(|| String::from("12"))),
-              height: Some(MaybeSignal::derive(|| String::from("12"))),
-              class: None,
-              style: None,
+              icon: MaybeSignal::Static(icondata::HiCircleStackOutlineLg),
+              width: MaybeProp::from(String::from("12")),
+              height: MaybeProp::from(String::from("12")),
+              class: MaybeProp::default(),
+              style: MaybeProp::default(),
             }))
             .child(splitted_key.clone().get()[1].clone()),
         )

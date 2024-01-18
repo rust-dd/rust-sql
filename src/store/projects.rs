@@ -5,7 +5,7 @@ use common::{
   projects::postgresql::PostgresqlRelation,
 };
 use leptos::{
-  create_rw_signal, error::Result, logging, RwSignal, SignalGet, SignalGetUntracked, SignalUpdate,
+  create_rw_signal, error::Result, RwSignal, SignalGet, SignalGetUntracked, SignalUpdate,
 };
 use tauri_sys::tauri::invoke;
 

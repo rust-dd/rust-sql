@@ -32,11 +32,11 @@ pub fn component() -> impl IntoView {
             Fragment::new(vec![button()
               .classes("p-1 bg-gray-300 rounded-full")
               .child(Icon(IconProps {
-                icon: MaybeSignal::derive(|| Icon::from(HiIcon::HiBars4OutlineLg)),
-                width: Some(MaybeSignal::derive(|| String::from("16"))),
-                height: Some(MaybeSignal::derive(|| String::from("16"))),
-                class: None,
-                style: None,
+                icon: MaybeSignal::Static(icondata::HiBars4OutlineLg),
+                width: MaybeProp::from(String::from("16")),
+                height: MaybeProp::from(String::from("16")),
+                class: MaybeProp::default(),
+                style: MaybeProp::default(),
               }))
               .into_view()])
           }),
@@ -48,11 +48,11 @@ pub fn component() -> impl IntoView {
                 table_view.set(QueryTableLayout::Records)
               })
               .child(Icon(IconProps {
-                icon: MaybeSignal::derive(|| Icon::from(HiIcon::HiBars4OutlineLg)),
-                width: Some(MaybeSignal::derive(|| String::from("16"))),
-                height: Some(MaybeSignal::derive(|| String::from("16"))),
-                class: None,
-                style: None,
+                icon: MaybeSignal::Static(icondata::HiBars4OutlineLg),
+                width: MaybeProp::from(String::from("16")),
+                height: MaybeProp::from(String::from("16")),
+                class: MaybeProp::default(),
+                style: MaybeProp::default(),
               }))
           }),
         }))
@@ -61,11 +61,11 @@ pub fn component() -> impl IntoView {
             Fragment::new(vec![button()
               .classes("p-1 bg-gray-300 rounded-full")
               .child(Icon(IconProps {
-                icon: MaybeSignal::derive(|| Icon::from(HiIcon::HiTableCellsOutlineLg)),
-                width: Some(MaybeSignal::derive(|| String::from("16"))),
-                height: Some(MaybeSignal::derive(|| String::from("16"))),
-                class: None,
-                style: None,
+                icon: MaybeSignal::Static(icondata::HiTableCellsOutlineLg),
+                width: MaybeProp::from(String::from("16")),
+                height: MaybeProp::from(String::from("16")),
+                class: MaybeProp::default(),
+                style: MaybeProp::default(),
               }))
               .into_view()])
           }),
@@ -75,11 +75,11 @@ pub fn component() -> impl IntoView {
               .classes("p-1 hover:bg-gray-300 rounded-full")
               .on(ev::click, move |_| table_view.set(QueryTableLayout::Grid))
               .child(Icon(IconProps {
-                icon: MaybeSignal::derive(|| Icon::from(HiIcon::HiTableCellsOutlineLg)),
-                width: Some(MaybeSignal::derive(|| String::from("16"))),
-                height: Some(MaybeSignal::derive(|| String::from("16"))),
-                class: None,
-                style: None,
+                icon: MaybeSignal::Static(icondata::HiTableCellsOutlineLg),
+                width: MaybeProp::from(String::from("16")),
+                height: MaybeProp::from(String::from("16")),
+                class: MaybeProp::default(),
+                style: MaybeProp::default(),
               }))
           }),
         })),

@@ -15,7 +15,8 @@ use crate::{
 
 pub type ModelCell = Rc<RefCell<Option<CodeEditor>>>;
 
-pub fn component() -> impl IntoView {
+pub fn component(index: usize) -> impl IntoView {
+  logging::log!("{:?}", index);
   let query_store = use_context::<QueryStore>().unwrap();
   let run_query = create_action(move |query_store: &QueryStore| {
     let query_store = *query_store;
@@ -29,7 +30,7 @@ pub fn component() -> impl IntoView {
       show.set(false);
     }
   });
-  let editor = use_context::<EditorStore>().unwrap().editor;
+  let mut editors = use_context::<EditorStore>().unwrap().editors;
   let node_ref = create_node_ref();
   let _ = use_event_listener(node_ref, ev::keydown, move |event| {
     if event.key() == "Enter" && event.ctrl_key() {
@@ -58,9 +59,11 @@ pub fn component() -> impl IntoView {
       Closure::<dyn Fn()>::new(|| ()).as_ref().unchecked_ref(),
       None,
     );
-    editor.update(|prev| {
-      prev.replace(Some(e));
-    });
+
+    // TODO: Fix this
+    let e = Rc::new(RefCell::new(Some(e)));
+    let e = create_rw_signal(e);
+    editors.push(e);
   });
 
   div()

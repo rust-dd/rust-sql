@@ -15,7 +15,7 @@ impl Default for Tabs {
 impl Tabs {
   pub fn new() -> Self {
     Self {
-      active_tabs: create_rw_signal(1),
+      active_tabs: create_rw_signal(2),
       selected_tab: create_rw_signal(String::from("0")),
     }
   }

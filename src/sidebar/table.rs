@@ -12,7 +12,7 @@ pub fn component(table: (String, String), project: String, schema: String) -> im
     let schema = schema.clone();
     let table = table.clone();
     active_project.0.set(Some(project.clone()));
-    editor_store.set_value(&format!("SELECT * FROM {}.{} LIMIT 100;", schema, table));
+    editor_store.set_editor_value(&format!("SELECT * FROM {}.{} LIMIT 100;", schema, table));
     async move { query_store.run_query().await.unwrap() }
   });
 

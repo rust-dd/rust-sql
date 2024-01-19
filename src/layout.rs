@@ -28,7 +28,7 @@ pub fn component() -> impl IntoView {
                         class: MaybeSignal::Static(String::from("flex-1")),
                         children: Children::to_children(move || {
                           Fragment::new(vec![div()
-                            .child(query_editor::component())
+                            .child(query_editor::component(index))
                             .child(query_table::component())
                             .into_view()])
                         }),

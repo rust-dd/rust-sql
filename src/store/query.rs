@@ -42,8 +42,8 @@ impl QueryStore {
       *prev = true;
     });
     let editor_state = use_context::<EditorStore>().unwrap();
-    let position: monaco::sys::Position = editor_state
-      .editor
+    let active_editor = editor_state.get_active_editor();
+    let position: monaco::sys::Position = active_editor
       .get_untracked()
       .borrow()
       .as_ref()
@@ -51,7 +51,7 @@ impl QueryStore {
       .as_ref()
       .get_position()
       .unwrap();
-    let sql = editor_state.get_value();
+    let sql = editor_state.get_editor_value();
     let sql = self
       .find_query_for_line(&sql, position.line_number())
       .unwrap();
@@ -85,7 +85,7 @@ impl QueryStore {
 
   pub async fn insert_query(&self, key: &str, project_name: &str) -> Result<()> {
     let editor_state = use_context::<EditorStore>().unwrap();
-    let sql = editor_state.get_value();
+    let sql = editor_state.get_editor_value();
     invoke(
       &Invoke::insert_query.to_string(),
       &InvokeInsertQueryArgs {
@@ -114,7 +114,7 @@ impl QueryStore {
     active_project.0.set(Some(splitted_key[0].to_string()));
     let query = self.saved_queries.get_untracked().get(key).unwrap().clone();
     let editor_state = use_context::<EditorStore>().unwrap();
-    editor_state.set_value(&query);
+    editor_state.set_editor_value(&query);
     Ok(())
   }
 

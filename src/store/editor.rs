@@ -1,10 +1,12 @@
-use leptos::{create_rw_signal, RwSignal, SignalGetUntracked};
+use leptos::{create_rw_signal, use_context, RwSignal, SignalGetUntracked};
 
 use crate::query_editor::ModelCell;
 
-#[derive(Copy, Clone, Debug)]
+use super::tabs::Tabs;
+
+#[derive(Clone, Debug)]
 pub struct EditorStore {
-  pub editor: RwSignal<ModelCell>,
+  pub editors: Vec<RwSignal<ModelCell>>,
 }
 
 impl Default for EditorStore {
@@ -16,13 +18,30 @@ impl Default for EditorStore {
 impl EditorStore {
   pub fn new() -> Self {
     Self {
-      editor: create_rw_signal(ModelCell::default()),
+      editors: vec![create_rw_signal(ModelCell::default())],
     }
   }
 
-  pub fn get_value(&self) -> String {
-    self
-      .editor
+  pub fn add_editor(&mut self) {
+    self.editors.push(create_rw_signal(ModelCell::default()));
+  }
+
+  pub fn remove_editor(&mut self, index: usize) {
+    self.editors.remove(index);
+  }
+
+  pub fn get_active_editor(&self) -> RwSignal<ModelCell> {
+    let selected_tab = use_context::<Tabs>().unwrap().selected_tab.get_untracked();
+    let selected_tab = selected_tab.parse::<usize>().unwrap();
+
+    self.editors[selected_tab].clone()
+  }
+
+  pub fn get_editor_value(&self) -> String {
+    let selected_tab = use_context::<Tabs>().unwrap().selected_tab.get_untracked();
+    let selected_tab = selected_tab.parse::<usize>().unwrap();
+
+    self.editors[selected_tab]
       .get_untracked()
       .borrow()
       .as_ref()
@@ -32,9 +51,11 @@ impl EditorStore {
       .get_value()
   }
 
-  pub fn set_value(&self, value: &str) {
-    self
-      .editor
+  pub fn set_editor_value(&self, value: &str) {
+    let selected_tab = use_context::<Tabs>().unwrap().selected_tab.get_untracked();
+    let selected_tab = selected_tab.parse::<usize>().unwrap();
+
+    self.editors[selected_tab]
       .get_untracked()
       .borrow()
       .as_ref()

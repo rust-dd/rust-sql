@@ -1,4 +1,4 @@
-use leptos::{create_rw_signal, use_context, RwSignal, SignalGetUntracked};
+use leptos::{create_rw_signal, logging, use_context, RwSignal, SignalGetUntracked};
 
 use crate::query_editor::ModelCell;
 
@@ -32,14 +32,12 @@ impl EditorStore {
 
   pub fn get_active_editor(&self) -> RwSignal<ModelCell> {
     let selected_tab = use_context::<Tabs>().unwrap().selected_tab.get_untracked();
-    let selected_tab = selected_tab.parse::<usize>().unwrap();
 
     self.editors[selected_tab].clone()
   }
 
   pub fn get_editor_value(&self) -> String {
     let selected_tab = use_context::<Tabs>().unwrap().selected_tab.get_untracked();
-    let selected_tab = selected_tab.parse::<usize>().unwrap();
 
     self.editors[selected_tab]
       .get_untracked()
@@ -53,7 +51,6 @@ impl EditorStore {
 
   pub fn set_editor_value(&self, value: &str) {
     let selected_tab = use_context::<Tabs>().unwrap().selected_tab.get_untracked();
-    let selected_tab = selected_tab.parse::<usize>().unwrap();
 
     self.editors[selected_tab]
       .get_untracked()

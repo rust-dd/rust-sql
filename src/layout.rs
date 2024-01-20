@@ -1,10 +1,13 @@
 use leptos::{html::*, *};
-use thaw::{Tab, TabProps, Tabs, TabsProps};
 
-use crate::{footer, query_editor, query_table, sidebar, store};
+use crate::{
+  footer, query_editor, query_table, sidebar,
+  store::{self, editor::EditorStore},
+};
 
 pub fn component() -> impl IntoView {
   let tabs = use_context::<store::tabs::Tabs>().unwrap();
+  let mut editors = use_context::<EditorStore>().unwrap();
 
   div()
     .classes("flex h-screen")
@@ -15,30 +18,40 @@ pub fn component() -> impl IntoView {
         .child(
           main()
             .classes("flex-1 overflow-y-scroll")
-            .child(Tabs(TabsProps {
-              value: tabs.selected_tab,
-              class: MaybeSignal::Static(String::from("flex flex-col")),
-              children: Children::to_children(move || {
-                Fragment::new(
-                  (0..tabs.active_tabs.get())
-                    .map(|index| {
-                      Tab(TabProps {
-                        key: index.to_string(),
-                        label: (index + 1).to_string(),
-                        class: MaybeSignal::Static(String::from("flex-1")),
-                        children: Children::to_children(move || {
-                          Fragment::new(vec![div()
-                            .child(query_editor::component(index))
-                            .child(query_table::component())
-                            .into_view()])
-                        }),
+            .child(
+              div()
+                .classes("flex")
+                .child(For(ForProps {
+                  each: move || (0..tabs.active_tabs.get()),
+                  key: |index| *index,
+                  children: move |index| {
+                    button()
+                      .classes("px-8 h-10 hover:bg-gray-200 border-b-2")
+                      .class("border-indigo-500", move || {
+                        index == tabs.selected_tab.get()
                       })
-                      .into_view()
+                      .on(ev::click, move |_| {
+                        tabs.selected_tab.update(|prev| *prev = index);
+                      })
+                      .child((index + 1).to_string())
+                  },
+                }))
+                .child(
+                  button()
+                    .classes("px-8 h-10 border-b-2 hover:bg-gray-200")
+                    .on(ev::click, move |_| {
+                      tabs.active_tabs.update(|prev| *prev += 1);
+                      tabs.selected_tab.update(|prev| *prev += 1);
+                      editors.add_editor();
                     })
-                    .collect::<Vec<_>>(),
-                )
-              }),
-            })),
+                    .child("+"),
+                ),
+            )
+            .child(
+              div()
+                .child(query_editor::component(tabs.selected_tab.get()))
+                .child(query_table::component()),
+            ),
         )
         .child(footer::component()),
     )

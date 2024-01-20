@@ -49,7 +49,7 @@ pub fn component() -> impl IntoView {
             )
             .child(
               div()
-                .child(query_editor::component(tabs.selected_tab.get()))
+                .child(query_editor::component(move || tabs.selected_tab.get()))
                 .child(query_table::component()),
             ),
         )

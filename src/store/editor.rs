@@ -32,8 +32,9 @@ impl EditorStore {
 
   pub fn get_active_editor(&self) -> RwSignal<ModelCell> {
     let selected_tab = use_context::<Tabs>().unwrap().selected_tab.get_untracked();
+    logging::log!("{:?}", selected_tab);
 
-    self.editors[selected_tab].clone()
+    self.editors[selected_tab]
   }
 
   pub fn get_editor_value(&self) -> String {

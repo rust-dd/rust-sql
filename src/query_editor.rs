@@ -15,8 +15,10 @@ use crate::{
 
 pub type ModelCell = Rc<RefCell<Option<CodeEditor>>>;
 
-pub fn component(index: usize) -> impl IntoView {
-  logging::log!("{:?}", index);
+pub fn component<F>(index: F) -> impl IntoView
+where
+  F: Fn() -> usize,
+{
   let query_store = use_context::<QueryStore>().unwrap();
   let run_query = create_action(move |query_store: &QueryStore| {
     let query_store = *query_store;

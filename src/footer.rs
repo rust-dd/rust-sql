@@ -27,61 +27,37 @@ pub fn component() -> impl IntoView {
     .child(
       div()
         .classes("flex flex-row gap-1")
-        .child(Show(ShowProps {
-          children: ChildrenFn::to_children(move || {
-            Fragment::new(vec![button()
-              .classes("p-1 bg-gray-300 rounded-full")
-              .child(Icon(IconProps {
-                icon: MaybeSignal::Static(icondata::HiBars4OutlineLg),
-                width: MaybeProp::from(String::from("16")),
-                height: MaybeProp::from(String::from("16")),
-                class: MaybeProp::default(),
-                style: MaybeProp::default(),
-              }))
-              .into_view()])
-          }),
-          when: move || table_view() == QueryTableLayout::Records,
-          fallback: ViewFn::from(move || {
-            div()
-              .classes("p-1 hover:bg-gray-300 rounded-full")
-              .on(ev::click, move |_| {
-                table_view.set(QueryTableLayout::Records)
-              })
-              .child(Icon(IconProps {
-                icon: MaybeSignal::Static(icondata::HiBars4OutlineLg),
-                width: MaybeProp::from(String::from("16")),
-                height: MaybeProp::from(String::from("16")),
-                class: MaybeProp::default(),
-                style: MaybeProp::default(),
-              }))
-          }),
-        }))
-        .child(Show(ShowProps {
-          children: ChildrenFn::to_children(move || {
-            Fragment::new(vec![button()
-              .classes("p-1 bg-gray-300 rounded-full")
-              .child(Icon(IconProps {
-                icon: MaybeSignal::Static(icondata::HiTableCellsOutlineLg),
-                width: MaybeProp::from(String::from("16")),
-                height: MaybeProp::from(String::from("16")),
-                class: MaybeProp::default(),
-                style: MaybeProp::default(),
-              }))
-              .into_view()])
-          }),
-          when: move || table_view() == QueryTableLayout::Grid,
-          fallback: ViewFn::from(move || {
-            div()
-              .classes("p-1 hover:bg-gray-300 rounded-full")
-              .on(ev::click, move |_| table_view.set(QueryTableLayout::Grid))
-              .child(Icon(IconProps {
-                icon: MaybeSignal::Static(icondata::HiTableCellsOutlineLg),
-                width: MaybeProp::from(String::from("16")),
-                height: MaybeProp::from(String::from("16")),
-                class: MaybeProp::default(),
-                style: MaybeProp::default(),
-              }))
-          }),
-        })),
+        .child(
+          button()
+            .classes("p-1 hover:bg-gray-300 rounded-full")
+            .class("bg-gray-300", move || {
+              table_view() == QueryTableLayout::Records
+            })
+            .on(ev::click, move |_| {
+              table_view.set(QueryTableLayout::Records)
+            })
+            .child(Icon(IconProps {
+              icon: MaybeSignal::Static(icondata::HiBars4OutlineLg),
+              width: MaybeProp::from(String::from("16")),
+              height: MaybeProp::from(String::from("16")),
+              class: MaybeProp::default(),
+              style: MaybeProp::default(),
+            })),
+        )
+        .child(
+          button()
+            .classes("p-1 hover:bg-gray-300 rounded-full")
+            .class("bg-gray-300", move || {
+              table_view() == QueryTableLayout::Grid
+            })
+            .on(ev::click, move |_| table_view.set(QueryTableLayout::Grid))
+            .child(Icon(IconProps {
+              icon: MaybeSignal::Static(icondata::HiTableCellsOutlineLg),
+              width: MaybeProp::from(String::from("16")),
+              height: MaybeProp::from(String::from("16")),
+              class: MaybeProp::default(),
+              style: MaybeProp::default(),
+            })),
+        ),
     )
 }

@@ -15,10 +15,7 @@ use crate::{
 
 pub type ModelCell = Rc<RefCell<Option<CodeEditor>>>;
 
-pub fn component<F>(index: F) -> impl IntoView
-where
-  F: Fn() -> usize,
-{
+pub fn component() -> impl IntoView {
   let query_store = use_context::<QueryStore>().unwrap();
   let run_query = create_action(move |query_store: &QueryStore| {
     let query_store = *query_store;
@@ -32,7 +29,7 @@ where
       show.set(false);
     }
   });
-  let mut editors = use_context::<EditorStore>().unwrap().editors;
+  let mut editors = use_context::<EditorStore>().unwrap();
   let node_ref = create_node_ref();
   let _ = use_event_listener(node_ref, ev::keydown, move |event| {
     if event.key() == "Enter" && event.ctrl_key() {
@@ -64,12 +61,11 @@ where
 
     // TODO: Fix this
     let e = Rc::new(RefCell::new(Some(e)));
-    let e = create_rw_signal(e);
-    editors.push(e);
+    editors.add_editor(e);
   });
 
   div()
-    .classes("relative border-b-1 border-neutral-200 sticky")
+    .classes("border-b-1 border-neutral-200 h-72 sticky")
     .node_ref(node_ref)
     .child(div().child(modals::custom_query::component(show)))
     .child(

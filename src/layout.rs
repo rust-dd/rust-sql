@@ -1,13 +1,16 @@
 use leptos::{html::*, *};
-
-use crate::{
-  footer, query_editor, query_table, sidebar,
-  store::{self, editor::EditorStore},
+use thaw::{
+  Button,
+  Tab,
+  //TabProps,
+  Tabs,
+  // TabsProps
 };
 
+use crate::{footer, query_editor, query_table, sidebar, store::tabs};
+
 pub fn component() -> impl IntoView {
-  let tabs = use_context::<store::tabs::Tabs>().unwrap();
-  let mut editors = use_context::<EditorStore>().unwrap();
+  let tabs = use_context::<tabs::Tabs>().unwrap();
 
   div()
     .classes("flex h-screen")
@@ -19,39 +22,55 @@ pub fn component() -> impl IntoView {
           main()
             .classes("flex-1 overflow-y-scroll")
             .child(
-              div()
-                .classes("flex")
-                .child(For(ForProps {
-                  each: move || (0..tabs.active_tabs.get()),
-                  key: |index| *index,
-                  children: move |index| {
-                    button()
-                      .classes("px-8 h-10 hover:bg-gray-200 border-b-2")
-                      .class("border-indigo-500", move || {
-                        index == tabs.selected_tab.get()
-                      })
-                      .on(ev::click, move |_| {
-                        tabs.selected_tab.update(|prev| *prev = index);
-                      })
-                      .child((index + 1).to_string())
-                  },
-                }))
-                .child(
-                  button()
-                    .classes("px-8 h-10 border-b-2 hover:bg-gray-200")
-                    .on(ev::click, move |_| {
-                      tabs.active_tabs.update(|prev| *prev += 1);
-                      tabs.selected_tab.update(|prev| *prev += 1);
-                      editors.add_editor();
-                    })
-                    .child("+"),
-                ),
-            )
-            .child(
-              div()
-                .child(query_editor::component(move || tabs.selected_tab.get()))
-                .child(query_table::component()),
-            ),
+              view! {
+                <Tabs value=tabs.selected_tab>
+                    <For each=move || (0..tabs.active_tabs.get()) key=|index| index.to_string() let:index>
+                        <Tab key=index.to_string() label=(index + 1).to_string()>
+                            {query_editor::component()}
+                            {query_table::component()}
+                        </Tab>
+                    </For>
+                  </Tabs>
+                  <Button on_click=move |_| {
+                    tabs.active_tabs.update(|prev| *prev += 1);
+                    tabs.selected_tab.update(|prev| *prev = (tabs.active_tabs.get() - 1).to_string());
+                  }>"+1"</Button>
+            }),
+            // .child(Tabs(TabsProps {
+            //   value: tabs.selected_tab,
+            //   class: MaybeSignal::Static(String::new()),
+            //   children: Children::to_children(move || {
+            //     Fragment::new(vec![
+            //       For(ForProps {
+            //         each: move || (0..tabs.active_tabs.get()),
+            //         key: |index| index.to_string(),
+            //         children: move |index| {
+            //           Tab(TabProps {
+            //             class: MaybeSignal::Static(String::new()),
+            //             key: index.to_string(),
+            //             label: (index + 1).to_string(),
+            //             children: Children::to_children(move || {
+            //               Fragment::new(vec![
+            //                 query_editor::component().into_view(),
+            //                 query_table::component().into_view(),
+            //               ])
+            //             }),
+            //           })
+            //         },
+            //       })
+            //       .into_view(),
+            //       button()
+            //         .on(ev::click, move |_| {
+            //           tabs.active_tabs.update(|prev| *prev += 1);
+            //           tabs
+            //             .selected_tab
+            //             .update(|prev| *prev = (tabs.active_tabs.get() - 1).to_string());
+            //         })
+            //         .child("+")
+            //         .into_view(),
+            //     ])
+            //   }),
+            // })),
         )
         .child(footer::component()),
     )

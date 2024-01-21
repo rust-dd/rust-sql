@@ -12,6 +12,7 @@ Welcome to the Tauri-Leptos PostgreSQL GUI, a fully Rust-based application for e
 - [x] **Multi-Connection Support:** Enable the GUI to handle multiple database connections simultaneously.
 - [x] **SQL Query Saving:** Allow users to save and manage their frequently used SQL queries.
 - [x] **Grid and Record View:** Provide a grid view for query results, as well as a record view for individual records.
+- [ ] **Multi Tab Support:** Allow users to open multiple tabs for SQL queries.
 - [ ] **BigQuery Support:** Add support for BigQuery databases.
 
 ## Key Features

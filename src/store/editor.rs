@@ -21,7 +21,7 @@ impl Default for EditorStore {
 impl EditorStore {
   pub fn new() -> Self {
     Self {
-      editors: create_rw_signal(vec![create_rw_signal(ModelCell::default())]),
+      editors: create_rw_signal(Vec::new()),
     }
   }
 
@@ -31,6 +31,7 @@ impl EditorStore {
     });
   }
 
+  #[allow(dead_code)]
   pub fn remove_editor(&mut self, index: usize) {
     self.editors.update(|prev| {
       prev.remove(index);

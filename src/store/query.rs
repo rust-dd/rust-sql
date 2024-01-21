@@ -11,12 +11,7 @@ use crate::invoke::{
 use super::{active_project::ActiveProjectStore, editor::EditorStore, projects::ProjectsStore};
 
 #[derive(Clone, Copy, Debug)]
-pub struct QueryStore {
-  #[allow(clippy::type_complexity)]
-  pub sql_result: RwSignal<Option<(Vec<String>, Vec<Vec<String>>)>>,
-  pub is_loading: RwSignal<bool>,
-  pub saved_queries: RwSignal<BTreeMap<String, String>>,
-}
+pub struct QueryStore(RwSignal<BTreeMap<String, String>>);
 
 impl Default for QueryStore {
   fn default() -> Self {
@@ -26,11 +21,7 @@ impl Default for QueryStore {
 
 impl QueryStore {
   pub fn new() -> Self {
-    Self {
-      sql_result: create_rw_signal(None),
-      is_loading: create_rw_signal(false),
-      saved_queries: create_rw_signal(BTreeMap::new()),
-    }
+    Self(create_rw_signal(BTreeMap::new()))
   }
 
   pub async fn run_query(&self) -> Result<()> {
@@ -38,9 +29,6 @@ impl QueryStore {
     let active_project = active_project.0.get_untracked().unwrap();
     let projects_store = use_context::<ProjectsStore>().unwrap();
     projects_store.connect(&active_project).await?;
-    self.is_loading.update(|prev| {
-      *prev = true;
-    });
     let editor_state = use_context::<EditorStore>().unwrap();
     let active_editor = editor_state.get_active_editor();
     let position: monaco::sys::Position = active_editor
@@ -64,9 +52,6 @@ impl QueryStore {
     )
     .await?;
     self.sql_result.set(Some(data));
-    self.is_loading.update(|prev| {
-      *prev = false;
-    });
     Ok(())
   }
 
@@ -77,10 +62,10 @@ impl QueryStore {
     )
     .await?;
 
-    self.saved_queries.update(|prev| {
+    self.0.update(|prev| {
       *prev = saved_queries.into_iter().collect();
     });
-    Ok(self.saved_queries.get_untracked().clone())
+    Ok(self.0.get_untracked())
   }
 
   pub async fn insert_query(&self, key: &str, project_name: &str) -> Result<()> {
@@ -112,7 +97,7 @@ impl QueryStore {
     let active_project = use_context::<ActiveProjectStore>().unwrap();
     let splitted_key = key.split(':').collect::<Vec<&str>>();
     active_project.0.set(Some(splitted_key[0].to_string()));
-    let query = self.saved_queries.get_untracked().get(key).unwrap().clone();
+    let query = self.0.get_untracked().get(key).unwrap().clone();
     let editor_state = use_context::<EditorStore>().unwrap();
     editor_state.set_editor_value(&query);
     Ok(())

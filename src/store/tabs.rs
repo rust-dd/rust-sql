@@ -1,7 +1,7 @@
 use std::{cell::RefCell, collections::BTreeMap, rc::Rc};
 
 use leptos::{
-  create_rw_signal, error::Result, use_context, RwSignal, SignalGetUntracked, SignalSet,
+  create_rw_signal, error::Result, use_context, RwSignal, SignalGet, SignalGetUntracked, SignalSet,
   SignalUpdate,
 };
 use monaco::api::CodeEditor;
@@ -89,17 +89,12 @@ impl TabsStore {
     let query_store = use_context::<QueryStore>().unwrap();
     let query_store = query_store.0.get_untracked();
     let query = query_store.get(key).unwrap();
-
     self.set_editor_value(&query);
     Ok(())
   }
 
   pub fn select_active_editor_sql_result(&self) -> Option<(Vec<String>, Vec<Vec<String>>)> {
-    match self
-      .sql_results
-      .get_untracked()
-      .get(&self.selected_tab.get_untracked())
-    {
+    match self.sql_results.get().get(&self.selected_tab.get()) {
       Some(result) => Some(result.clone()),
       None => None,
     }

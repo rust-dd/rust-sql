@@ -107,7 +107,7 @@ impl TabsStore {
 
   pub fn add_editor(&mut self, editor: Rc<RefCell<Option<CodeEditor>>>) {
     self.editors.update(|prev| {
-      prev.insert((self.active_tabs.get_untracked() + 1).to_string(), editor);
+      prev.insert((self.active_tabs.get_untracked() - 1).to_string(), editor);
     });
   }
 

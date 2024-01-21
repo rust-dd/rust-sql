@@ -1,13 +1,12 @@
 use leptos::{html::*, *};
 
-use crate::store::query::QueryStore;
+use crate::store::tabs::TabsStore;
 
 pub fn component() -> impl IntoView {
-  let query_state = use_context::<QueryStore>().unwrap();
-  let columns = query_state.sql_result.get().unwrap().0.clone();
-  let first_row = query_state
-    .sql_result
-    .get()
+  let tabs_store = use_context::<TabsStore>().unwrap();
+  let columns = tabs_store.select_active_editor_sql_result().unwrap().0;
+  let first_row = tabs_store
+    .select_active_editor_sql_result()
     .unwrap()
     .1
     .first()

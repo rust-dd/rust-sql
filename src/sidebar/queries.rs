@@ -6,7 +6,7 @@ use super::query;
 pub fn component() -> impl IntoView {
   let query_state = use_context::<QueryStore>().unwrap();
   let queries = create_resource(
-    move || query_state.saved_queries.get(),
+    move || query_state.0.get(),
     move |_| async move { query_state.select_queries().await.unwrap() },
   );
 

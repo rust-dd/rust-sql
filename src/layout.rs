@@ -4,7 +4,7 @@ use thaw::{Button, ButtonProps, Tab, TabProps, Tabs, TabsProps};
 use crate::{footer, query_editor, query_table, sidebar, store::tabs};
 
 pub fn component() -> impl IntoView {
-  let tabs = use_context::<tabs::Tabs>().unwrap();
+  let tabs = use_context::<tabs::TabsStore>().unwrap();
 
   div()
     .classes("flex h-screen")

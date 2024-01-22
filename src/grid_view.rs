@@ -1,9 +1,9 @@
 use leptos::{html::*, *};
 
-use crate::store::query::QueryStore;
+use crate::store::tabs::TabsStore;
 
 pub fn component() -> impl IntoView {
-  let query_state = use_context::<QueryStore>().unwrap();
+  let tabs_store = use_context::<TabsStore>().unwrap();
 
   table()
     .classes("table-auto w-full")
@@ -11,13 +11,13 @@ pub fn component() -> impl IntoView {
       thead()
         .classes("sticky top-0 bg-white")
         .child(tr().classes("bg-gray-100").child(For(ForProps {
-          each: move || query_state.sql_result.get().unwrap().0.clone(),
+          each: move || tabs_store.select_active_editor_sql_result().unwrap().0,
           key: |n| n.clone(),
           children: move |col| th().classes("text-xs px-4").child(col),
         }))),
     )
     .child(tbody().child(For(ForProps {
-      each: move || query_state.sql_result.get().unwrap().1.clone(),
+      each: move || tabs_store.select_active_editor_sql_result().unwrap().1,
       key: |n| n.clone(),
       children: move |row| {
         tr()

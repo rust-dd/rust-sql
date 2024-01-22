@@ -1,20 +1,31 @@
+use std::sync::Arc;
+
+use futures::lock::Mutex;
 use leptos::{html::*, *};
 use leptos_icons::*;
 
-use crate::store::{active_project::ActiveProjectStore, editor::EditorStore, query::QueryStore};
+use crate::store::{active_project::ActiveProjectStore, tabs::TabsStore};
 
 pub fn component(table: (String, String), project: String, schema: String) -> impl IntoView {
-  let query_store = use_context::<QueryStore>().unwrap();
-  let editor_store = use_context::<EditorStore>().unwrap();
+  let tabs_store = Arc::new(Mutex::new(use_context::<TabsStore>().unwrap()));
   let active_project = use_context::<ActiveProjectStore>().unwrap();
-  let query = create_action(move |(schema, table): &(String, String)| {
-    let project = project.clone();
-    let schema = schema.clone();
-    let table = table.clone();
-    active_project.0.set(Some(project.clone()));
-    editor_store.set_editor_value(&format!("SELECT * FROM {}.{} LIMIT 100;", schema, table));
-    async move { query_store.run_query().await.unwrap() }
-  });
+  let query = create_action(
+    move |(schema, table, tabs_store): &(String, String, Arc<Mutex<TabsStore>>)| {
+      let tabs_store = tabs_store.clone();
+      let project = project.clone();
+      let schema = schema.clone();
+      let table = table.clone();
+      active_project.0.set(Some(project.clone()));
+
+      async move {
+        tabs_store
+          .lock()
+          .await
+          .set_editor_value(&format!("SELECT * FROM {}.{} LIMIT 100;", schema, table));
+        tabs_store.lock().await.run_query().await.unwrap()
+      }
+    },
+  );
 
   div()
     .classes("flex flex-row justify-between items-center hover:font-semibold cursor-pointer")
@@ -33,6 +44,6 @@ pub fn component(table: (String, String), project: String, schema: String) -> im
     .child(p().child(table.clone().1))
     .on(ev::click, {
       let table = table.clone();
-      move |_| query.dispatch((schema.clone(), table.0.clone()))
+      move |_| query.dispatch((schema.clone(), table.0.clone(), tabs_store.clone()))
     })
 }

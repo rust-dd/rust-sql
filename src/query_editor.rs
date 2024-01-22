@@ -1,5 +1,6 @@
-use std::{cell::RefCell, rc::Rc};
+use std::{cell::RefCell, rc::Rc, sync::Arc};
 
+use futures::lock::Mutex;
 use leptos::{html::*, *};
 use leptos_use::{use_document, use_event_listener};
 use monaco::{
@@ -8,35 +9,21 @@ use monaco::{
 };
 use wasm_bindgen::{closure::Closure, JsCast};
 
-use crate::{
-  modals,
-  store::{editor::EditorStore, query::QueryStore},
-};
+use crate::{modals, store::tabs::TabsStore};
 
 pub type ModelCell = Rc<RefCell<Option<CodeEditor>>>;
 
 pub fn component() -> impl IntoView {
-  let query_store = use_context::<QueryStore>().unwrap();
-  let run_query = create_action(move |query_store: &QueryStore| {
-    let query_store = *query_store;
-    async move {
-      query_store.run_query().await.unwrap();
-    }
-  });
+  let tabs_store = Rc::new(RefCell::new(use_context::<TabsStore>().unwrap()));
   let show = create_rw_signal(false);
   let _ = use_event_listener(use_document(), ev::keydown, move |event| {
     if event.key() == "Escape" {
       show.set(false);
     }
   });
-  let mut editors = use_context::<EditorStore>().unwrap();
   let node_ref = create_node_ref();
-  let _ = use_event_listener(node_ref, ev::keydown, move |event| {
-    if event.key() == "Enter" && event.ctrl_key() {
-      run_query.dispatch(query_store);
-    }
-  });
 
+  let tabs_store_clone = tabs_store.clone();
   node_ref.on_load(move |node| {
     let div_element: &web_sys::HtmlDivElement = &node;
     let html_element = div_element.unchecked_ref::<web_sys::HtmlElement>();
@@ -61,7 +48,20 @@ pub fn component() -> impl IntoView {
 
     // TODO: Fix this
     let e = Rc::new(RefCell::new(Some(e)));
-    editors.add_editor(e);
+    tabs_store_clone.borrow_mut().add_editor(e);
+  });
+  let tabs_store = Arc::new(Mutex::new(use_context::<TabsStore>().unwrap()));
+  let run_query = create_action(move |tabs_store: &Arc<Mutex<TabsStore>>| {
+    let tabs_store = tabs_store.clone();
+    async move {
+      tabs_store.lock().await.run_query().await.unwrap();
+    }
+  });
+  let tabs_store_clone = tabs_store.clone();
+  let _ = use_event_listener(node_ref, ev::keydown, move |event| {
+    if event.key() == "Enter" && event.ctrl_key() {
+      run_query.dispatch(tabs_store_clone.clone());
+    }
   });
 
   div()
@@ -85,7 +85,7 @@ pub fn component() -> impl IntoView {
             .child(
               button()
                 .classes("p-1 border-1 border-neutral-200 bg-white hover:bg-neutral-200 rounded-md")
-                .on(ev::click, move |_| run_query.dispatch(query_store))
+                .on(ev::click, move |_| run_query.dispatch(tabs_store.clone()))
                 .child("Query"),
             ),
         ),

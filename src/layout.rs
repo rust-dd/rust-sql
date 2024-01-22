@@ -4,7 +4,7 @@ use thaw::{Button, ButtonProps, Tab, TabProps, Tabs, TabsProps};
 use crate::{footer, query_editor, query_table, sidebar, store::tabs};
 
 pub fn component() -> impl IntoView {
-  let tabs = use_context::<tabs::Tabs>().unwrap();
+  let tabs = use_context::<tabs::TabsStore>().unwrap();
 
   div()
     .classes("flex h-screen")
@@ -55,7 +55,7 @@ pub fn component() -> impl IntoView {
                 tabs.active_tabs.update(|prev| *prev += 1);
                 tabs
                   .selected_tab
-                  .update(|prev| *prev = (tabs.active_tabs.get() - 1).to_string());
+                  .update(|prev| *prev = (prev.parse::<usize>().unwrap() + 1).to_string());
               })),
               children: Some(Box::new(move || {
                 Fragment::new(vec![p().child("+").into_view()])

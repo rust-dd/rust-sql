@@ -1,5 +1,6 @@
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
+use futures::lock::Mutex;
 use leptos::{html::*, *};
 use leptos_icons::*;
 
@@ -10,16 +11,19 @@ pub fn component(table: (String, String), project: String, schema: String) -> im
   let active_project = use_context::<ActiveProjectStore>().unwrap();
   let query = create_action(
     move |(schema, table, tabs_store): &(String, String, Arc<Mutex<TabsStore>>)| {
+      let tabs_store = tabs_store.clone();
       let project = project.clone();
       let schema = schema.clone();
       let table = table.clone();
       active_project.0.set(Some(project.clone()));
-      tabs_store
-        .lock()
-        .unwrap()
-        .set_editor_value(&format!("SELECT * FROM {}.{} LIMIT 100;", schema, table));
-      let tabs_store = tabs_store.clone();
-      async move { tabs_store.lock().unwrap().run_query().await.unwrap() }
+
+      async move {
+        tabs_store
+          .lock()
+          .await
+          .set_editor_value(&format!("SELECT * FROM {}.{} LIMIT 100;", schema, table));
+        tabs_store.lock().await.run_query().await.unwrap()
+      }
     },
   );
 

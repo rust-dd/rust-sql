@@ -28,9 +28,13 @@ pub struct TabsStore {
   pub active_tabs: RwSignal<usize>,
   pub selected_tab: RwSignal<String>,
   pub editors: RwSignal<BTreeMap<String, ModelCell>>,
+  #[allow(clippy::type_complexity)]
   pub sql_results: RwSignal<BTreeMap<String, (Vec<String>, Vec<Vec<String>>)>>,
   pub is_loading: RwSignal<bool>,
 }
+
+unsafe impl Send for TabsStore {}
+unsafe impl Sync for TabsStore {}
 
 impl Default for TabsStore {
   fn default() -> Self {
@@ -89,15 +93,16 @@ impl TabsStore {
     let query_store = use_context::<QueryStore>().unwrap();
     let query_store = query_store.0.get_untracked();
     let query = query_store.get(key).unwrap();
-    self.set_editor_value(&query);
+    self.set_editor_value(query);
     Ok(())
   }
 
   pub fn select_active_editor_sql_result(&self) -> Option<(Vec<String>, Vec<Vec<String>>)> {
-    match self.sql_results.get().get(&self.selected_tab.get()) {
-      Some(result) => Some(result.clone()),
-      None => None,
-    }
+    self
+      .sql_results
+      .get()
+      .get(&self.selected_tab.get())
+      .cloned()
   }
 
   pub fn add_editor(&mut self, editor: Rc<RefCell<Option<CodeEditor>>>) {

@@ -1,4 +1,4 @@
-use std::{cell::RefCell, collections::BTreeMap, rc::Rc};
+use std::{cell::RefCell, rc::Rc};
 
 use leptos::{
   create_rw_signal, error::Result, use_context, RwSignal, SignalGet, SignalGetUntracked, SignalSet,
@@ -27,9 +27,9 @@ struct QueryInfo {
 pub struct TabsStore {
   pub active_tabs: RwSignal<usize>,
   pub selected_tab: RwSignal<String>,
-  pub editors: RwSignal<BTreeMap<String, ModelCell>>,
+  pub editors: RwSignal<Vec<ModelCell>>,
   #[allow(clippy::type_complexity)]
-  pub sql_results: RwSignal<BTreeMap<String, (Vec<String>, Vec<Vec<String>>)>>,
+  pub sql_results: RwSignal<Vec<(Vec<String>, Vec<Vec<String>>)>>,
   pub is_loading: RwSignal<bool>,
 }
 
@@ -47,8 +47,8 @@ impl TabsStore {
     Self {
       active_tabs: create_rw_signal(1),
       selected_tab: create_rw_signal(String::from("0")),
-      editors: create_rw_signal(BTreeMap::new()),
-      sql_results: create_rw_signal(BTreeMap::new()),
+      editors: create_rw_signal(Vec::new()),
+      sql_results: create_rw_signal(Vec::new()),
       is_loading: create_rw_signal(false),
     }
   }
@@ -80,7 +80,11 @@ impl TabsStore {
     )
     .await?;
     self.sql_results.update(|prev| {
-      prev.insert(self.selected_tab.get_untracked(), data);
+      let index = self.convert_selected_tab_to_index();
+      match prev.get_mut(index) {
+        Some(sql_result) => *sql_result = data,
+        None => prev.push(data),
+      }
     });
     self.is_loading.set(false);
     Ok(())
@@ -101,20 +105,23 @@ impl TabsStore {
     self
       .sql_results
       .get()
-      .get(&self.selected_tab.get())
+      .get(self.convert_selected_tab_to_index())
       .cloned()
   }
 
   pub fn add_editor(&mut self, editor: Rc<RefCell<Option<CodeEditor>>>) {
     self.editors.update(|prev| {
-      prev.insert((self.active_tabs.get_untracked() - 1).to_string(), editor);
+      prev.push(editor);
+    });
+    self.sql_results.update(|prev| {
+      prev.push((Vec::new(), Vec::new()));
     });
   }
 
   #[allow(dead_code)]
-  pub fn remove_editor(&mut self, tab_key: &str) {
+  pub fn remove_editor(&mut self, index: usize) {
     self.editors.update(|prev| {
-      prev.remove(tab_key);
+      prev.remove(index);
     });
   }
 
@@ -122,7 +129,7 @@ impl TabsStore {
     self
       .editors
       .get_untracked()
-      .get(&self.selected_tab.get_untracked())
+      .get(self.convert_selected_tab_to_index())
       .unwrap()
       .clone()
   }
@@ -131,7 +138,7 @@ impl TabsStore {
     self
       .editors
       .get_untracked()
-      .get(&self.selected_tab.get_untracked())
+      .get(self.convert_selected_tab_to_index())
       .unwrap()
       .borrow()
       .as_ref()
@@ -145,7 +152,7 @@ impl TabsStore {
     self
       .editors
       .get_untracked()
-      .get(&self.selected_tab.get_untracked())
+      .get(self.convert_selected_tab_to_index())
       .unwrap()
       .borrow()
       .as_ref()
@@ -153,6 +160,10 @@ impl TabsStore {
       .get_model()
       .unwrap()
       .set_value(value);
+  }
+
+  pub(self) fn convert_selected_tab_to_index(&self) -> usize {
+    self.selected_tab.get().parse::<usize>().unwrap()
   }
 
   // TODO: improve this

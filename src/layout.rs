@@ -53,9 +53,13 @@ pub fn component() -> impl IntoView {
               disabled: MaybeSignal::default(),
               on_click: Some(Callback::from(move |_| {
                 tabs.active_tabs.update(|prev| *prev += 1);
-                tabs
-                  .selected_tab
-                  .update(|prev| *prev = (prev.parse::<usize>().unwrap() + 1).to_string());
+                tabs.selected_tab.update(|prev| {
+                  *prev = if *prev == "0" {
+                    "1".to_string()
+                  } else {
+                    (tabs.active_tabs.get() - 1).to_string()
+                  }
+                });
               })),
               children: Some(Box::new(move || {
                 Fragment::new(vec![p().child("+").into_view()])

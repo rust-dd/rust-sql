@@ -11,8 +11,7 @@ pub fn component(show: RwSignal<bool>) -> impl IntoView {
   let (query_title, set_query_title) = create_signal(String::new());
   let projects = create_memo(move |_| projects_store.get_projects().unwrap());
   let active_project = use_context::<ActiveProjectStore>().unwrap();
-  let (project_name, set_project_name) =
-    create_signal(active_project.0.get_untracked().unwrap_or_default());
+  let (project_name, set_project_name) = create_signal(active_project.0.get().unwrap_or_default());
   create_effect(move |_| {
     if !projects.get().is_empty() {
       set_project_name(projects.get()[0].clone());

@@ -33,7 +33,7 @@ impl QueryStore {
     self.0.update(|prev| {
       *prev = saved_queries.into_iter().collect();
     });
-    Ok(self.0.get_untracked())
+    Ok(self.0.get())
   }
 
   pub async fn insert_query(&self, key: &str, project_name: &str) -> Result<()> {

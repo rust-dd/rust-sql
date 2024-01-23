@@ -4,9 +4,7 @@ use common::{
   enums::{Project, ProjectConnectionStatus},
   projects::postgresql::PostgresqlRelation,
 };
-use leptos::{
-  create_rw_signal, error::Result, RwSignal, SignalGet, SignalGetUntracked, SignalUpdate,
-};
+use leptos::{create_rw_signal, error::Result, RwSignal, SignalGet, SignalUpdate};
 use tauri_sys::tauri::invoke;
 
 use crate::invoke::{
@@ -40,7 +38,7 @@ impl ProjectsStore {
         }
       }
     });
-    Ok(self.0.get_untracked().clone())
+    Ok(self.0.get().clone())
   }
 
   pub fn insert_project(&self, project: Project) -> Result<()> {
@@ -60,7 +58,7 @@ impl ProjectsStore {
   }
 
   pub fn create_project_connection_string(&self, project_name: &str) -> String {
-    let projects = self.0.get_untracked();
+    let projects = self.0.get();
     let (_, project) = projects.get_key_value(project_name).unwrap();
 
     match project {
@@ -76,7 +74,7 @@ impl ProjectsStore {
 
   pub async fn connect(&self, project_name: &str) -> Result<Vec<String>> {
     let projects = self.0;
-    let _projects = projects.get_untracked();
+    let _projects = projects.get();
     let project = _projects.get(project_name).unwrap();
 
     match project {
@@ -105,7 +103,7 @@ impl ProjectsStore {
     schema: &str,
   ) -> Result<Vec<(String, String)>> {
     let projects = self.0;
-    let _projects = projects.get_untracked();
+    let _projects = projects.get();
     let project = _projects.get(project_name).unwrap();
 
     match project {

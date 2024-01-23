@@ -1,8 +1,7 @@
 use std::{cell::RefCell, rc::Rc};
 
 use leptos::{
-  create_rw_signal, error::Result, use_context, RwSignal, SignalGet, SignalGetUntracked, SignalSet,
-  SignalUpdate,
+  create_rw_signal, error::Result, use_context, RwSignal, SignalGet, SignalSet, SignalUpdate,
 };
 use monaco::api::CodeEditor;
 use tauri_sys::tauri::invoke;
@@ -56,7 +55,7 @@ impl TabsStore {
   pub async fn run_query(&self) -> Result<()> {
     self.is_loading.set(true);
     let active_project = use_context::<ActiveProjectStore>().unwrap();
-    let active_project = active_project.0.get_untracked().unwrap();
+    let active_project = active_project.0.get().unwrap();
     let projects_store = use_context::<ProjectsStore>().unwrap();
     projects_store.connect(&active_project).await?;
     let active_editor = self.select_active_editor();
@@ -95,7 +94,7 @@ impl TabsStore {
     let splitted_key = key.split(':').collect::<Vec<&str>>();
     active_project.0.set(Some(splitted_key[0].to_string()));
     let query_store = use_context::<QueryStore>().unwrap();
-    let query_store = query_store.0.get_untracked();
+    let query_store = query_store.0.get();
     let query = query_store.get(key).unwrap();
     self.set_editor_value(query);
     Ok(())
@@ -128,7 +127,7 @@ impl TabsStore {
   pub fn select_active_editor(&self) -> ModelCell {
     self
       .editors
-      .get_untracked()
+      .get()
       .get(self.convert_selected_tab_to_index())
       .unwrap()
       .clone()
@@ -137,7 +136,7 @@ impl TabsStore {
   pub fn select_active_editor_value(&self) -> String {
     self
       .editors
-      .get_untracked()
+      .get()
       .get(self.convert_selected_tab_to_index())
       .unwrap()
       .borrow()
@@ -151,7 +150,7 @@ impl TabsStore {
   pub fn set_editor_value(&self, value: &str) {
     self
       .editors
-      .get_untracked()
+      .get()
       .get(self.convert_selected_tab_to_index())
       .unwrap()
       .borrow()

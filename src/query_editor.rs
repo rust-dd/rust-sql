@@ -6,15 +6,16 @@ use leptos_use::{use_document, use_event_listener};
 use monaco::{
   api::{CodeEditor, CodeEditorOptions, TextModel},
   sys::{
-    editor::{IDimension, IEditorMinimapOptions, IEditorOptionsTabCompletion},
+    editor::{IDimension, IEditorMinimapOptions},
     KeyCode, KeyMod,
   },
 };
 use wasm_bindgen::{closure::Closure, JsCast};
 
-use crate::{modals, store::tabs::TabsStore, MODE_ID};
+use crate::{modals, store::tabs::TabsStore};
 
 pub type ModelCell = Rc<RefCell<Option<CodeEditor>>>;
+pub const MODE_ID: &str = "pgsql";
 
 pub fn component() -> impl IntoView {
   let tabs_store = Rc::new(RefCell::new(use_context::<TabsStore>().unwrap()));

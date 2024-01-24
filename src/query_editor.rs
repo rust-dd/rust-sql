@@ -4,12 +4,15 @@ use futures::lock::Mutex;
 use leptos::{html::*, *};
 use leptos_use::{use_document, use_event_listener};
 use monaco::{
-  api::{CodeEditor, CodeEditorOptions},
-  sys::editor::{IDimension, IEditorMinimapOptions},
+  api::{CodeEditor, CodeEditorOptions, TextModel},
+  sys::{
+    editor::{IDimension, IEditorMinimapOptions, IEditorOptionsTabCompletion},
+    KeyCode, KeyMod,
+  },
 };
 use wasm_bindgen::{closure::Closure, JsCast};
 
-use crate::{modals, store::tabs::TabsStore};
+use crate::{modals, store::tabs::TabsStore, MODE_ID};
 
 pub type ModelCell = Rc<RefCell<Option<CodeEditor>>>;
 
@@ -28,17 +31,18 @@ pub fn component() -> impl IntoView {
     let div_element: &web_sys::HtmlDivElement = &node;
     let html_element = div_element.unchecked_ref::<web_sys::HtmlElement>();
     let options = CodeEditorOptions::default().to_sys_options();
-    options.set_value(Some("SELECT * FROM users LIMIT 100;"));
-    options.set_language(Some("sql"));
+    let text_model =
+      TextModel::create("SELECT * FROM users LIMIT 100;", Some(MODE_ID), None).unwrap();
+    options.set_model(Some(text_model.as_ref()));
+    options.set_language(Some(MODE_ID));
     options.set_automatic_layout(Some(true));
     options.set_dimension(Some(&IDimension::new(0, 240)));
-
     let minimap_settings = IEditorMinimapOptions::default();
     minimap_settings.set_enabled(Some(false));
     options.set_minimap(Some(&minimap_settings));
 
     let e = CodeEditor::create(html_element, Some(options));
-    let keycode = monaco::sys::KeyMod::win_ctrl() as u32 | monaco::sys::KeyCode::Enter.to_value();
+    let keycode = KeyMod::win_ctrl() as u32 | KeyCode::Enter.to_value();
     // TODO: Fix this
     e.as_ref().add_command(
       keycode.into(),

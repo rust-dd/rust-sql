@@ -42,6 +42,7 @@ impl Default for TabsStore {
 }
 
 impl TabsStore {
+  #[must_use]
   pub fn new() -> Self {
     Self {
       active_tabs: create_rw_signal(1),

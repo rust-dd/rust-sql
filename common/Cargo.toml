@@ -4,4 +4,6 @@ version = "1.0.0-alpha.8"
 edition = "2021"
 
 [dependencies]
+js-sys = "0.3.67"
 serde = "1.0.193"
+wasm-bindgen = "0.2.90"

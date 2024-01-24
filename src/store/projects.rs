@@ -22,6 +22,7 @@ impl Default for ProjectsStore {
 }
 
 impl ProjectsStore {
+  #[must_use]
   pub fn new() -> Self {
     Self(create_rw_signal(BTreeMap::default()))
   }

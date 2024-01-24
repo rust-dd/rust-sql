@@ -19,6 +19,7 @@ impl Default for QueryStore {
 }
 
 impl QueryStore {
+  #[must_use]
   pub fn new() -> Self {
     Self(create_rw_signal(BTreeMap::new()))
   }

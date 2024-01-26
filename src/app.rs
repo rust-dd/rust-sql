@@ -8,12 +8,8 @@ use crate::{
   },
 };
 
+// TODO: help to add custom langunage support
 // https://github.com/abesto/clox-rs/blob/def4bed61a1c1c6b5d84a67284549a6343c8cd06/web/src/monaco_lox.rs
-// #[wasm_bindgen(module = "/js/pgsql.js")]
-// extern "C" {
-//   #[wasm_bindgen(js_name = "load_env")]
-//   pub fn pgsql_worker() -> Object;
-// }
 
 pub fn app() -> impl IntoView {
   provide_context(QueryStore::default());

@@ -1,7 +1,21 @@
 {
   "emmet.includeLanguages": {
-    "rust": "html"
+    "rust": "html",
+    "*.rs": "html"
   },
+  "tailwindCSS.includeLanguages": {
+    "rust": "rust",
+    "*.rs": "rust"
+  },
+  "files.associations": {
+    "*.rs": "rust"
+  },
+  "editor.quickSuggestions": {
+    "other": "on",
+    "comments": "on",
+    "strings": true
+  },
+  "css.validate": false,
   "editor.formatOnSave": true,
   "[rust]": {
     "editor.semanticHighlighting.enabled": false

@@ -15,6 +15,7 @@ pub fn app() -> impl IntoView {
   provide_context(QueryStore::default());
   provide_context(ProjectsStore::default());
   provide_context(create_rw_signal(QueryTableLayout::Grid));
+  provide_context(create_rw_signal(0.0f32));
   provide_context(ActiveProjectStore::default());
   provide_context(TabsStore::default());
 

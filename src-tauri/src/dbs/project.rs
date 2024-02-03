@@ -72,9 +72,9 @@ pub async fn insert_project(project: Project, app_state: State<'_, AppState>) ->
 }
 
 #[tauri::command(rename_all = "snake_case")]
-pub async fn delete_project(project_name: &str, app_state: State<'_, AppState>) -> Result<String> {
+pub async fn delete_project(project_name: &str, app_state: State<'_, AppState>) -> Result<()> {
   let db = app_state.project_db.lock().await;
   let db = db.clone().unwrap();
   db.remove(project_name).unwrap();
-  Ok(project_name.to_string())
+  Ok(())
 }

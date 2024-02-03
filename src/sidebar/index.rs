@@ -22,7 +22,7 @@ pub fn component() -> impl IntoView {
       show.set(false);
     }
   });
-  let projects = create_resource(
+  create_resource(
     move || projects_state.0.get(),
     move |_| async move {
       let projects = invoke::<_, Vec<(String, Project)>>(
@@ -54,7 +54,7 @@ pub fn component() -> impl IntoView {
               ),
           )
           .child(For(ForProps {
-            each: move || projects.get().unwrap_or_default(),
+            each: move || projects_state.0.get(),
             key: |(project, _)| project.clone(),
             children: |(project, _)| project::component(project),
           })),

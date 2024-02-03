@@ -71,7 +71,7 @@ impl TabsStore {
     let sql = self
       .find_query_for_line(&sql, position.line_number())
       .unwrap();
-    let data = invoke::<_, (Vec<String>, Vec<Vec<String>>)>(
+    let (cols, rows, elasped) = invoke::<_, (Vec<String>, Vec<Vec<String>>, f32)>(
       &Invoke::select_sql_result.to_string(),
       &InvokeSqlResultArgs {
         project_name: &active_project,
@@ -79,11 +79,13 @@ impl TabsStore {
       },
     )
     .await?;
+    let sql_timer = use_context::<RwSignal<f32>>().unwrap();
+    sql_timer.set(elasped);
     self.sql_results.update(|prev| {
       let index = self.convert_selected_tab_to_index();
       match prev.get_mut(index) {
-        Some(sql_result) => *sql_result = data,
-        None => prev.push(data),
+        Some(sql_result) => *sql_result = (cols, rows),
+        None => prev.push((cols, rows)),
       }
     });
     self.is_loading.set(false);

@@ -1,3 +1,5 @@
+use std::time::Instant;
+
 use common::projects::postgresql::PostgresqlRelation;
 use tauri::{AppHandle, Manager, Result, State};
 use tokio_postgres::{connect, NoTls};
@@ -73,13 +75,14 @@ pub async fn select_sql_result(
   project_name: &str,
   sql: String,
   app_state: State<'_, AppState>,
-) -> Result<(Vec<String>, Vec<Vec<String>>)> {
+) -> Result<(Vec<String>, Vec<Vec<String>>, f32)> {
+  let start = Instant::now();
   let clients = app_state.client.lock().await;
   let client = clients.as_ref().unwrap().get(project_name).unwrap();
   let rows = client.query(sql.as_str(), &[]).await.unwrap();
 
   if rows.is_empty() {
-    return Ok((Vec::new(), Vec::new()));
+    return Ok((Vec::new(), Vec::new(), 0.0f32));
   }
 
   let columns = rows
@@ -100,8 +103,8 @@ pub async fn select_sql_result(
       row_values
     })
     .collect::<Vec<Vec<String>>>();
-
-  Ok((columns, rows))
+  let elasped = start.elapsed().as_millis() as f32;
+  Ok((columns, rows, elasped))
 }
 
 #[tauri::command(rename_all = "snake_case")]

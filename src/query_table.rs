@@ -1,23 +1,26 @@
-use crate::{enums::QueryTableLayout, grid_view, record_view, store::tabs::TabsStore};
-use leptos::{html::*, *};
+use crate::{
+  enums::QueryTableLayout, grid_view::GridView, record_view::RecordView, store::tabs::TabsStore,
+};
+use leptos::*;
 
-pub fn component() -> impl IntoView {
+#[component]
+pub fn QueryTable() -> impl IntoView {
   let tabs_store = use_context::<TabsStore>().unwrap();
   let table_view = use_context::<RwSignal<QueryTableLayout>>().unwrap();
-  let table_layout = move || match tabs_store.select_active_editor_sql_result() {
-    None => div(),
-    Some(_) => match table_view() {
-      QueryTableLayout::Grid => div().child(grid_view::component()),
-      QueryTableLayout::Records => div().child(record_view::component()),
-    },
-  };
-  let when = move || !tabs_store.is_loading.get();
-  let fallback = ViewFn::from(|| p().classes("pl-2").child("Loading..."));
-  let children = ChildrenFn::to_children(move || Fragment::new(vec![table_layout().into_view()]));
 
-  Show(ShowProps {
-    children,
-    when,
-    fallback,
-  })
+  view! {
+      <Show when=move || !tabs_store.is_loading.get() fallback=|| view! { <p>"Loading..."</p> }>
+          {move || match tabs_store.select_active_editor_sql_result() {
+              None => view! { <p>"No data to display"</p> },
+              Some(_) => {
+                  match table_view.get() {
+                      QueryTableLayout::Grid => view! { <GridView/> },
+                      QueryTableLayout::Record => view! { <RecordView/> },
+                  }
+              }
+          }}
+
+      </Show>
+  }
 }
+

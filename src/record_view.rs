@@ -1,8 +1,9 @@
-use leptos::{html::*, *};
+use leptos::*;
 
 use crate::store::tabs::TabsStore;
 
-pub fn component() -> impl IntoView {
+#[component]
+pub fn RecordView() -> impl IntoView {
   let tabs_store = use_context::<TabsStore>().unwrap();
   let columns = tabs_store.select_active_editor_sql_result().unwrap().0;
   let first_row = tabs_store
@@ -14,29 +15,30 @@ pub fn component() -> impl IntoView {
     .clone();
   let columns_with_values = columns.into_iter().zip(first_row).collect::<Vec<_>>();
 
-  // 2 columns table Properties, Values
-  table()
-    .classes("table-auto w-full")
-    .child(
-      thead().classes("sticky top-0 bg-white").child(
-        tr()
-          .classes("bg-gray-100")
-          .child(th().classes("text-xs px-4").child("Properties"))
-          .child(th().classes("text-xs px-4").child("Values")),
-      ),
-    )
-    .child(tbody().child(For(ForProps {
-      each: move || columns_with_values.clone(),
-      key: |(col, _)| col.clone(),
-      children: move |(col, val)| {
-        tr()
-          .classes("divide-y divide-gray-200")
-          .child(
-            td()
-              .classes("px-4 text-xs bg-gray-200 font-semibold")
-              .child(col),
-          )
-          .child(td().classes("px-4 text-xs hover:bg-gray-100").child(val))
-      },
-    })))
+  view! {
+      <table class="table-auto w-full">
+          <thead class="sticky top-0 bg-white">
+              <tr class="bg-gray-100">
+                  <th class="text-xs px 4">"Properties"</th>
+                  <th class="text-xs px 4">"Values"</th>
+              </tr>
+          </thead>
+          <tbody>
+              <For
+                  each=move || columns_with_values.clone()
+                  key=|(col, _)| col.clone()
+                  children=move |(col, val)| {
+                      view! {
+                          <tr class="hover:bg-gray-100 divide-x divide-gray-200">
+                              <td class="px-4 text-xs bg-gray-200 font-semibold">{col}</td>
+                              <td class="px-4 text-xs hover:bg-gray-100">{val}</td>
+                          </tr>
+                      }
+                  }
+              />
+
+          </tbody>
+      </table>
+  }
 }
+

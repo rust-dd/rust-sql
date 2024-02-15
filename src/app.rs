@@ -3,7 +3,9 @@ use thaw::{Button, Tab, Tabs};
 
 use crate::{
   enums::QueryTableLayout,
-  query_editor, query_table, sidebar,
+  query_editor::QueryEditor,
+  query_table::QueryTable,
+  sidebar,
   store::{
     active_project::ActiveProjectStore,
     projects::ProjectsStore,
@@ -35,10 +37,9 @@ pub fn App() -> impl IntoView {
                           key=|index| index.to_string()
                           children=move |index| {
                               view! {
-                                  <Tab key=index
-                                      .to_string()>
-                                      {query_editor::component().into_view()}
-                                      {query_table::component().into_view()}
+                                  <Tab key=index.to_string()>
+                                      <QueryEditor/>
+                                      <QueryTable/>
                                   </Tab>
                               }
                           }
@@ -60,7 +61,7 @@ pub fn App() -> impl IntoView {
                       }
                   >
 
-                      {"+"}
+                      "+"
                   </Button>
               </main>
           </div>

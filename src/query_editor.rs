@@ -1,7 +1,7 @@
 use std::{cell::RefCell, rc::Rc, sync::Arc};
 
 use futures::lock::Mutex;
-use leptos::{html::*, *};
+use leptos::*;
 use leptos_use::{use_document, use_event_listener};
 use monaco::{
   api::{CodeEditor, CodeEditorOptions, TextModel},
@@ -12,12 +12,13 @@ use monaco::{
 };
 use wasm_bindgen::{closure::Closure, JsCast};
 
-use crate::{modals, store::tabs::TabsStore};
+use crate::{modals::custom_query::CustomQuery, store::tabs::TabsStore};
 
 pub type ModelCell = Rc<RefCell<Option<CodeEditor>>>;
 pub const MODE_ID: &str = "pgsql";
 
-pub fn component() -> impl IntoView {
+#[component]
+pub fn QueryEditor() -> impl IntoView {
   let tabs_store = Rc::new(RefCell::new(use_context::<TabsStore>().unwrap()));
   let show = create_rw_signal(false);
   let _ = use_event_listener(use_document(), ev::keydown, move |event| {
@@ -69,30 +70,26 @@ pub fn component() -> impl IntoView {
     }
   });
 
-  div()
-    .classes("border-b-1 border-neutral-200 h-72 sticky")
-    .node_ref(node_ref)
-    .child(div().child(modals::custom_query::component(show)))
-    .child(
-      div()
-        .classes(
-          "absolute bottom-0 items-center flex justify-end px-4 left-0 w-full h-10 bg-gray-50",
-        )
-        .child(
-          div()
-            .classes("flex flex-row gap-2 text-xs")
-            .child(
-              button()
-                .classes("p-1 border-1 border-neutral-200 bg-white hover:bg-neutral-200 rounded-md")
-                .on(ev::click, move |_| show.set(true))
-                .child("Save Query"),
-            )
-            .child(
-              button()
-                .classes("p-1 border-1 border-neutral-200 bg-white hover:bg-neutral-200 rounded-md")
-                .on(ev::click, move |_| run_query.dispatch(tabs_store.clone()))
-                .child("Query"),
-            ),
-        ),
-    )
+  view! {
+      <div node_ref=node_ref class="border-b-1 border-neutral-200 h-72 sticky">
+          <CustomQuery show=show.clone()/>
+          <div class="absolute bottom-0 items-center flex justify-end px-4 left-0 w-full h-10 bg-gray-50">
+              <div class="flex flex-row gap-2 text-xs">
+                  <button
+                      class="p-1 border-1 border-neutral-200 bg-white hover:bg-neutral-200 rounded-md"
+                      on:click=move |_| show.set(true)
+                  >
+                      "Save Query"
+                  </button>
+                  <button
+                      class="p-1 border-1 border-neutral-200 bg-white hover:bg-neutral-200 rounded-md"
+                      on:click=move |_| run_query.dispatch(tabs_store.clone())
+                  >
+                      "Query"
+                  </button>
+              </div>
+          </div>
+      </div>
+  }
 }
+

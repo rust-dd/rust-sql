@@ -1,9 +1,10 @@
-use leptos::{html::*, *};
+use leptos::*;
 use leptos_icons::*;
 
 use crate::store::{query::QueryStore, tabs::TabsStore};
 
-pub fn component(key: String) -> impl IntoView {
+#[component]
+pub fn Query(key: String) -> impl IntoView {
   let query_store = use_context::<QueryStore>().unwrap();
   let tabs_store = use_context::<TabsStore>().unwrap();
   let key_clone = key.clone();
@@ -16,39 +17,39 @@ pub fn component(key: String) -> impl IntoView {
       .collect::<Vec<String>>()
   });
 
-  div()
-    .classes("flex flex-row justify-between items-center")
-    .child(
-      button()
-        .classes("hover:font-semibold")
-        .child(
-          div()
-            .classes("flex flex-row items-center gap-1")
-            .child(Icon(IconProps {
-              icon: MaybeSignal::Static(icondata::HiCircleStackOutlineLg),
-              width: MaybeProp::from(String::from("12")),
-              height: MaybeProp::from(String::from("12")),
-              class: MaybeProp::default(),
-              style: MaybeProp::default(),
-            }))
-            .child(splitted_key.clone().get()[1].clone()),
-        )
-        .on(ev::click, {
-          let key = key.clone();
-          move |_| {
-            tabs_store.load_query(&key).unwrap();
-          }
-        }),
-    )
-    .child(
-      button()
-        .classes("px-2 rounded-full hover:bg-gray-200")
-        .child("-")
-        .on(ev::click, move |_| {
-          let key = key.clone();
-          spawn_local(async move {
-            query_store.delete_query(&key).await.unwrap();
-          })
-        }),
-    )
+  view! {
+      <div class="flex flex-row justify-between items-center">
+          <button
+              class="hover:font-semibold"
+              on:click={
+                  let key = key.clone();
+                  move |_| {
+                      tabs_store.load_query(&key).unwrap();
+                  }
+              }
+          >
+
+              <div class="flex flex-row items-center gap-1">
+                  <Icon icon=icondata::HiCircleStackOutlineLg width="12" height="12"/>
+                  {splitted_key.clone().get()[1].clone()}
+              </div>
+          </button>
+          <button
+              class="px-2 rounded-full hover:bg-gray-200"
+              on:click={
+                  let key = key.clone();
+                  move |_| {
+                      let key = key.clone();
+                      spawn_local(async move {
+                          query_store.delete_query(&key).await.unwrap();
+                      })
+                  }
+              }
+          >
+
+              "-"
+          </button>
+      </div>
+  }
 }
+

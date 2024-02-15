@@ -11,11 +11,15 @@ pub fn QueryTable() -> impl IntoView {
   view! {
       <Show when=move || !tabs_store.is_loading.get() fallback=|| view! { <p>"Loading..."</p> }>
           {move || match tabs_store.select_active_editor_sql_result() {
-              None => view! { <p>"No data to display"</p> },
+              None => view! { <>"No data to display"</> },
               Some(_) => {
-                  match table_view.get() {
-                      QueryTableLayout::Grid => view! { <GridView/> },
-                      QueryTableLayout::Record => view! { <RecordView/> },
+                  view! {
+                      <>
+                          {match table_view.get() {
+                              QueryTableLayout::Grid => view! { <GridView/> },
+                              QueryTableLayout::Records => view! { <RecordView/> },
+                          }}
+                      </>
                   }
               }
           }}

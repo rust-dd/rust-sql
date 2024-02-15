@@ -1,9 +1,10 @@
-use leptos::{html::*, *};
+use leptos::*;
 
-use super::table;
+use super::table::Table;
 use crate::store::projects::ProjectsStore;
 
-pub fn component(schema: String, project: String) -> impl IntoView {
+#[component]
+pub fn Tables(schema: String, project: String) -> impl IntoView {
   let projects_store = use_context::<ProjectsStore>().unwrap();
   let schema_clone = schema.clone();
   let project_clone = project.clone();
@@ -21,9 +22,12 @@ pub fn component(schema: String, project: String) -> impl IntoView {
     },
   );
 
-  div().child(For(ForProps {
-    each: move || tables.get().unwrap_or_default(),
-    key: |table| table.0.clone(),
-    children: move |t| table::component(t, project.clone(), schema.clone()),
-  }))
+  view! {
+      <For
+          each=move || tables.get().unwrap_or_default()
+          key=|table| table.0.clone()
+          children=move |t| view! { <Table table=t schema=schema.clone() project=project.clone()/> }
+      />
+  }
 }
+

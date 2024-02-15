@@ -1,5 +1,5 @@
-use leptos::{html::*, *};
-use thaw::{Modal, ModalFooter, ModalProps};
+use leptos::*;
+use thaw::{Modal, ModalFooter};
 
 use crate::store::{
   active_project::ActiveProjectStore, projects::ProjectsStore, query::QueryStore,

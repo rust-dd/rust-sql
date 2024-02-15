@@ -3,9 +3,10 @@ use thaw::{Button, Tab, Tabs};
 
 use crate::{
   enums::QueryTableLayout,
+  footer::Footer,
   query_editor::QueryEditor,
   query_table::QueryTable,
-  sidebar,
+  sidebar::index::Sidebar,
   store::{
     active_project::ActiveProjectStore,
     projects::ProjectsStore,
@@ -29,7 +30,8 @@ pub fn App() -> impl IntoView {
 
   view! {
       <div class="flex h-screen">
-          {sidebar::index::component()} <div>
+          <Sidebar/>
+          <div>
               <main>
                   <Tabs value=tabs.selected_tab>
                       <For
@@ -65,6 +67,7 @@ pub fn App() -> impl IntoView {
                   </Button>
               </main>
           </div>
+          <Footer/>
       </div>
   }
 }

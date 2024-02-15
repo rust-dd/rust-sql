@@ -1,36 +1,43 @@
-use leptos::{html::*, *};
+use leptos::*;
 
-use super::tables;
+use super::tables::Tables;
 
-pub fn component(schema: String, project: String) -> impl IntoView {
+#[component]
+pub fn Schema(schema: String, project: String) -> impl IntoView {
   let (show_tables, set_show_tables) = create_signal(false);
 
-  div()
-    .child(
-      div()
-        .classes("hover:font-semibold cursor-pointer sticky top-0 z-10 bg-white")
-        .child(&schema)
-        .on(ev::click, move |_| set_show_tables(!show_tables())),
-    )
-    .child(div().classes("pl-1").child(Suspense(SuspenseProps {
-      fallback: ViewFn::from(|| "Loading..."),
-      children: ChildrenFn::to_children(move || {
-        let schema = schema.clone();
-        let project = project.clone();
-        Fragment::new(vec![Show(ShowProps {
-          children: {
-            let schema = schema.clone();
-            let project = project.clone();
-            ChildrenFn::to_children(move || {
-              let schema = schema.clone();
-              let project = project.clone();
-              Fragment::new(vec![tables::component(schema, project).into_view()])
-            })
-          },
-          when: show_tables,
-          fallback: ViewFn::default(),
-        })
-        .into_view()])
-      }),
-    })))
+  view! {
+      <div>
+          <div
+              class="hover:font-semibold cursor-pointer sticky top-0 z-10 bg-white"
+              on:click=move |_| set_show_tables(!show_tables())
+          >
+              {&schema}
+          </div>
+          <div class="pl-1">
+              <Suspense fallback=move || {
+                  view! { <p>"Loading..."</p> }
+              }>
+
+                  {
+                      let schema = schema.clone();
+                      let project = project.clone();
+                      view! {
+                          <Show when=show_tables fallback=|| view! {}>
+
+                              {
+                                  let schema = schema.clone();
+                                  let project = project.clone();
+                                  view! { <Tables schema=schema project=project/> }
+                              }
+
+                          </Show>
+                      }
+                  }
+
+              </Suspense>
+          </div>
+      </div>
+  }
 }
+

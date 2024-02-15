@@ -12,7 +12,8 @@ use crate::{
   store::projects::ProjectsStore,
 };
 
-pub fn component(show: RwSignal<bool>) -> impl IntoView {
+#[component]
+pub fn Connection(show: RwSignal<bool>) -> impl IntoView {
   let projects_store = use_context::<ProjectsStore>().unwrap();
   let (driver, _set_driver) = create_signal(Drivers::POSTGRESQL);
   let (project, set_project) = create_signal(String::new());

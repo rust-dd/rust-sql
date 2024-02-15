@@ -27,6 +27,7 @@ pub fn component() -> impl IntoView {
                       class: MaybeSignal::default(),
                       key: index.to_string(),
                       label: (index + 1).to_string(),
+                      tab_label: None,
                       children: Children::to_children(move || {
                         Fragment::new(vec![
                           query_editor::component().into_view(),
@@ -69,3 +70,4 @@ pub fn component() -> impl IntoView {
         .child(footer::component()),
     )
 }
+

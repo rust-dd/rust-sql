@@ -94,3 +94,4 @@ pub fn component(show: RwSignal<bool>) -> impl IntoView {
     }),
   })
 }
+

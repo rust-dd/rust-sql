@@ -20,6 +20,7 @@
   "[rust]": {
     "editor.semanticHighlighting.enabled": false
   },
+  "rust-analyzer.rustfmt.overrideCommand": ["leptosfmt", "--stdin", "--rustfmt"],
   "editor.tokenColorCustomizations": {
     "[LaserWave High Contrast]": {
       "textMateRules": [

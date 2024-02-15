@@ -5,19 +5,19 @@ edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [dependencies]
-leptos = { version = "0.5.7", features = ["csr", "nightly"] }
+leptos = { version = "0.6.5", features = ["csr", "nightly"] }
 leptos_devtools = { git = "https://github.com/luoxiaozero/leptos-devtools" }
 serde = { version = "1.0.192", features = ["derive"] }
 serde-wasm-bindgen = "0.6.3"
-wasm-bindgen = { version ="0.2.88", features = ["serde-serialize"] }
-js-sys = "0.3.65"
-leptos-use = { version = "0.9.0", features = ["serde", "serde_json"]}
-leptos_icons = "0.2.1" # https://carlosted.github.io/icondata/
-serde_json = "1.0.108"
+wasm-bindgen = { version ="0.2.91", features = ["serde-serialize"] }
+js-sys = "0.3.68"
+leptos-use = { version = "0.10.2", features = ["serde", "serde_json"]}
+leptos_icons = "0.3.0" # https://carlosted.github.io/icondata/
+serde_json = "1.0.113"
 wasm-bindgen-futures = "0.4.39"
 monaco = "0.4.0"
 tauri-sys = { git = "https://github.com/JonasKruckenberg/tauri-sys", features = ["all"] }
-thaw = "0.1.8"
+thaw = "0.1.10"
 common = { path = "common" }
 futures = "0.3.30"
 async-stream = "0.3.5"

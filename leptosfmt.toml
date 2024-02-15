@@ -1,0 +1,5 @@
+max_width = 100 # Maximum width of each line
+tab_spaces = 4 # Number of spaces per tab
+indentation_style = "Auto" # "Tabs", "Spaces" or "Auto"
+newline_style = "Auto" # "Unix", "Windows" or "Auto"
+attr_value_brace_style = "WhenRequired" # "Always", "AlwaysUnlessLit", "WhenRequired" or "Preserve"

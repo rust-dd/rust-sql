@@ -23,24 +23,16 @@ pub fn Footer() -> impl IntoView {
           <div class="flex flex-row gap-1 items-center text-xs">
               <p>{formatted_timer}</p>
               <button
-                  class=if table_view() == QueryTableLayout::Records {
-                      "p-1 hover:bg-gray-300 rounded-full bg-gray-300"
-                  } else {
-                      "p-1 hover:bg-gray-300 rounded-full"
-                  }
-
+                  class="p-1 hover:bg-gray-300 rounded-full"
+                  class=("bg-gray-300", move || table_view() == QueryTableLayout::Records)
                   on:click=move |_| table_view.set(QueryTableLayout::Records)
               >
 
                   <Icon icon=icondata::HiBars4OutlineLg width="16" height="16"/>
               </button>
               <button
-                  class=if table_view() == QueryTableLayout::Grid {
-                      "p-1 hover:bg-gray-300 rounded-full bg-gray-300"
-                  } else {
-                      "p-1 hover:bg-gray-300 rounded-full"
-                  }
-
+                  class="p-1 hover:bg-gray-300 rounded-full"
+                  class=("bg-gray-300", move || table_view() == QueryTableLayout::Grid)
                   on:click=move |_| table_view.set(QueryTableLayout::Grid)
               >
                   <Icon icon=icondata::HiTableCellsOutlineLg width="16" height="16"/>

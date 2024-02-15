@@ -31,8 +31,8 @@ pub fn App() -> impl IntoView {
   view! {
       <div class="flex h-screen">
           <Sidebar/>
-          <div>
-              <main>
+          <div class="flex flex-col flex-1 overflow-hidden">
+              <main class="flex-1 overflow-y-scroll">
                   <Tabs value=tabs.selected_tab>
                       <For
                           each=move || (0..tabs.active_tabs.get())
@@ -66,8 +66,8 @@ pub fn App() -> impl IntoView {
                       "+"
                   </Button>
               </main>
+              <Footer/>
           </div>
-          <Footer/>
       </div>
   }
 }

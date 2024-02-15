@@ -39,14 +39,14 @@ pub fn Sidebar() -> impl IntoView {
   view! {
       <div
           _ref=node_ref
-          classes="flex border-r-1 min-w-[320px] justify-between border-neutral-200 flex-col p-4"
+          class="flex border-r-1 min-w-[320px] justify-between border-neutral-200 flex-col p-4"
       >
           <Connection show=show/>
-          <div classes="flex flex-col overflow-auto">
-              <div classes="flex flex-row justify-between items-center">
-                  <p classes="font-semibold text-lg">Projects</p>
+          <div class="flex flex-col overflow-auto">
+              <div class="flex flex-row justify-between items-center">
+                  <p class="font-semibold text-lg">Projects</p>
                   <button
-                      classes="px-2 rounded-full hover:bg-gray-200"
+                      class="px-2 rounded-full hover:bg-gray-200"
                       on:click=move |_| show.set(true)
                   >
                       "+"
@@ -58,9 +58,9 @@ pub fn Sidebar() -> impl IntoView {
                   children=|(project, _)| view! { <Project project=project/> }
               />
           </div>
-          <div classes="py-2">
-              <p classes="font-semibold text-lg">Saved Queries</p>
-              <div classes="text-sm">
+          <div class="py-2">
+              <p class="font-semibold text-lg">Saved Queries</p>
+              <div class="text-sm">
                   <Queries/>
               </div>
           </div>

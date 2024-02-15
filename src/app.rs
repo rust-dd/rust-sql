@@ -1,11 +1,14 @@
 use leptos::*;
-use thaw::{Button, ButtonProps, Tab, TabProps, Tabs, TabsProps};
+use thaw::{Button, Tab, Tabs};
 
 use crate::{
   enums::QueryTableLayout,
-  layout, sidebar,
+  query_editor, query_table, sidebar,
   store::{
-    active_project::ActiveProjectStore, projects::ProjectsStore, query::QueryStore, tabs::TabsStore,
+    active_project::ActiveProjectStore,
+    projects::ProjectsStore,
+    query::QueryStore,
+    tabs::{self, TabsStore},
   },
 };
 
@@ -30,10 +33,13 @@ pub fn App() -> impl IntoView {
                       <For
                           each=move || (0..tabs.active_tabs.get())
                           key=|index| index.to_string()
-                          children=move |_| {
+                          children=move |index| {
                               view! {
-                                  query_editor::component().into_view(),
-                                  query_table::component()
+                                  <Tab key=index
+                                      .to_string()>
+                                      {query_editor::component().into_view()}
+                                      {query_table::component().into_view()}
+                                  </Tab>
                               }
                           }
                       />
@@ -54,7 +60,7 @@ pub fn App() -> impl IntoView {
                       }
                   >
 
-                      +
+                      {"+"}
                   </Button>
               </main>
           </div>

@@ -17,7 +17,7 @@ serde_json = "1.0.113"
 wasm-bindgen-futures = "0.4.39"
 monaco = "0.4.0"
 tauri-sys = { git = "https://github.com/JonasKruckenberg/tauri-sys", features = ["all"] }
-thaw = "0.1.10"
+thaw = { version = "0.2.0-beta", features = ["csr"] }
 common = { path = "common" }
 futures = "0.3.30"
 async-stream = "0.3.5"

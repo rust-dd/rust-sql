@@ -34,29 +34,38 @@ pub fn CustomQuery(show: RwSignal<bool>) -> impl IntoView {
   );
 
   view! {
-      <Modal show=show title="Save query!">
-          // modal_footer= {
-          // <ModalFooter>
-          // <div class="flex gap-2 justify-end">
-          // <button
-          // class="px-4 py-2 border-1 border-neutral-200 hover:bg-neutral-200 rounded-md"
-          // on:click=move |_| {
-          // insert_query.dispatch((query_store, query_title(), project_name()));
-          // show.set(false);
-          // }
-          // >
+      <Modal
+          show=show
+          title="Save query!"
+          modal_footer=ModalFooter {
+              children: ChildrenFn::to_children(move || Fragment::new(
+                  vec![
+                      view! {
+                          <div class="flex gap-2 justify-end">
+                              <button
+                                  class="px-4 py-2 border-1 border-neutral-200 hover:bg-neutral-200 rounded-md"
+                                  on:click=move |_| {
+                                      insert_query
+                                          .dispatch((query_store, query_title(), project_name()));
+                                      show.set(false);
+                                  }
+                              >
 
-          // Save
-          // </button>
-          // <button
-          // class="px-4 py-2 border-1 border-neutral-200 hover:bg-neutral-200 rounded-md"
-          // on:click=move |_| show.set(false)
-          // >
-          // Cancel
-          // </button>
-          // </div>
-          // </ModalFooter>
-          // }
+                                  Save
+                              </button>
+                              <button
+                                  class="px-4 py-2 border-1 border-neutral-200 hover:bg-neutral-200 rounded-md"
+                                  on:click=move |_| show.set(false)
+                              >
+                                  Cancel
+                              </button>
+                          </div>
+                      }
+                          .into_view(),
+                  ],
+              )),
+          }
+      >
 
           <div class="flex flex-col gap-2">
               <select
@@ -89,24 +98,4 @@ pub fn CustomQuery(show: RwSignal<bool>) -> impl IntoView {
       </Modal>
   }
 }
-
-// modal_footer=<ModalFooter>
-//               <div class="flex gap-2 justify-end">
-//                   <button
-//                       class="px-4 py-2 border-1 border-neutral-200 hover:bg-neutral-200 rounded-md"
-//                       on:click=move |_| {
-//                           insert_query.dispatch((query_store, query_title(), project_name()));
-//                           show.set(false);
-//                       }
-//                   >
-//                       Save
-//                   </button>
-//                   <button
-//                       class="px-4 py-2 border-1 border-neutral-200 hover:bg-neutral-200 rounded-md"
-//                       on:click=move |_| show.set(false)
-//                   >
-//                       Cancel
-//                   </button>
-//               </div>
-//           </ModalFooter>
 

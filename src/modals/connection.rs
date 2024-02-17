@@ -38,7 +38,57 @@ pub fn Connection(show: RwSignal<bool>) -> impl IntoView {
   });
 
   view! {
-      <Modal show=show title="Add new project">
+      <Modal
+          show=show
+          title="Add new project"
+          modal_footer=ModalFooter {
+              children: ChildrenFn::to_children(move || Fragment::new(
+                  vec![
+                      view! {
+                          <div class="flex gap-2 justify-end">
+                              <button
+                                  class="px-4 py-2 border-1 border-neutral-200 hover:bg-neutral-200 rounded-md"
+                                  disabled=move || {
+                                      project().is_empty() || db_user().is_empty()
+                                          || db_password().is_empty() || db_host().is_empty()
+                                          || db_port().is_empty()
+                                  }
+
+                                  on:click=move |_| {
+                                      let project_details = match driver() {
+                                          Drivers::POSTGRESQL => {
+                                              Project::POSTGRESQL(Postgresql {
+                                                  name: project(),
+                                                  driver: PostgresqlDriver::new(
+                                                      db_user(),
+                                                      db_password(),
+                                                      db_host(),
+                                                      db_port(),
+                                                  ),
+                                                  ..Postgresql::default()
+                                              })
+                                          }
+                                      };
+                                      save_project.dispatch(project_details);
+                                  }
+                              >
+
+                                  Add
+                              </button>
+                              <button
+                                  class="px-4 py-2 border-1 border-neutral-200 hover:bg-neutral-200 rounded-md"
+                                  on:click=move |_| show.set(false)
+                              >
+                                  Cancel
+                              </button>
+                          </div>
+                      }
+                          .into_view(),
+                  ],
+              )),
+          }
+      >
+
           <div class="flex flex-col gap-2">
               <input
                   class="border-1 border-neutral-200 p-1 rounded-md"
@@ -81,128 +131,7 @@ pub fn Connection(show: RwSignal<bool>) -> impl IntoView {
               />
 
           </div>
-      // <ModalFooter>
-      // <div class="flex gap-2 justify-end">
-      // <button
-      // class="px-4 py-2 border-1 border-neutral-200 hover:bg-neutral-200 rounded-md"
-      // disabled=move || {
-      // project.is_empty() || db_user.is_empty() || db_password.is_empty()
-      // || db_host.is_empty() || db_port.is_empty()
-      // }
-      // on:click=move |_| {
-      // let project_details = match driver() {
-      // Drivers::POSTGRESQL => {
-      // Project::POSTGRESQL(Postgresql {
-      // name: project(),
-      // driver: PostgresqlDriver::new(
-      // db_user(),
-      // db_password(),
-      // db_host(),
-      // db_port(),
-      // ),
-      // ..Postgresql::default()
-      // })
-      // }
-      // };
-      // save_project.dispatch(project_details);
-      // }
-      // >
-
-      // Add
-      // </button>
-      // <button
-      // class="px-4 py-2 border-1 border-neutral-200 hover:bg-neutral-200 rounded-md"
-      // on:click=move |_| show.set(false)
-      // >
-      // Cancel
-      // </button>
-      // </div>
-      // </ModalFooter>
       </Modal>
   }
-  // Modal(ModalProps {
-  //   show,
-  //   title: MaybeSignal::Static(String::from("Add new project")),
-  //   children: Children::to_children(move || {
-  //     Fragment::new(vec![div()
-  //       .classes("flex flex-col gap-2")
-  //       .child(
-  //         input()
-  //           .classes("border-1 border-neutral-200 p-1 rounded-md")
-  //           .prop("type", "text")
-  //           .prop("placeholder", "project")
-  //           .prop("value", project)
-  //           .on(ev::input, move |e| set_project(event_target_value(&e))),
-  //       )
-  //       .child(
-  //         input()
-  //           .classes("border-1 border-neutral-200 p-1 rounded-md")
-  //           .prop("type", "text")
-  //           .prop("value", db_user)
-  //           .prop("placeholder", "username")
-  //           .on(ev::input, move |e| set_db_user(event_target_value(&e))),
-  //       )
-  //       .child(
-  //         input()
-  //           .classes("border-1 border-neutral-200 p-1 rounded-md")
-  //           .prop("type", "password")
-  //           .prop("value", db_password)
-  //           .prop("placeholder", "password")
-  //           .on(ev::input, move |e| set_db_password(event_target_value(&e))),
-  //       )
-  //       .child(
-  //         input()
-  //           .classes("border-1 border-neutral-200 p-1 rounded-md")
-  //           .prop("type", "text")
-  //           .prop("value", db_host)
-  //           .prop("placeholder", "host")
-  //           .on(ev::input, move |e| set_db_host(event_target_value(&e))),
-  //       )
-  //       .child(
-  //         input()
-  //           .classes("border-1 border-neutral-200 p-1 rounded-md")
-  //           .prop("type", "text")
-  //           .prop("value", db_port)
-  //           .prop("placeholder", "port")
-  //           .on(ev::input, move |e| set_db_port(event_target_value(&e))),
-  //       )
-  //       .into_view()])
-  //   }),
-  //   modal_footer: Some(ModalFooter {
-  //     children: ChildrenFn::to_children(move || {
-  //       Fragment::new(vec![div()
-  //         .classes("flex gap-2 justify-end")
-  //         .child(
-  //           button()
-  //             .classes("px-4 py-2 border-1 border-neutral-200 hover:bg-neutral-200 rounded-md")
-  //             .child("Add")
-  //             .prop("disabled", move || {
-  //               project().is_empty()
-  //                 || db_user().is_empty()
-  //                 || db_password().is_empty()
-  //                 || db_host().is_empty()
-  //                 || db_port().is_empty()
-  //             })
-  //             .on(ev::click, move |_| {
-  //               let project_details = match driver() {
-  //                 Drivers::POSTGRESQL => Project::POSTGRESQL(Postgresql {
-  //                   name: project(),
-  //                   driver: PostgresqlDriver::new(db_user(), db_password(), db_host(), db_port()),
-  //                   ..Postgresql::default()
-  //                 }),
-  //               };
-  //               save_project.dispatch(project_details);
-  //             }),
-  //         )
-  //         .child(
-  //           button()
-  //             .classes("px-4 py-2 border-1 border-neutral-200 hover:bg-neutral-200 rounded-md")
-  //             .child("Cancel")
-  //             .on(ev::click, move |_| show.set(false)),
-  //         )
-  //         .into_view()])
-  //     }),
-  //   }),
-  // })
 }
 

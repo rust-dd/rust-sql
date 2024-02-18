@@ -38,57 +38,7 @@ pub fn Connection(show: RwSignal<bool>) -> impl IntoView {
   });
 
   view! {
-      <Modal
-          show=show
-          title="Add new project"
-          modal_footer=ModalFooter {
-              children: ChildrenFn::to_children(move || Fragment::new(
-                  vec![
-                      view! {
-                          <div class="flex gap-2 justify-end">
-                              <button
-                                  class="px-4 py-2 border-1 border-neutral-200 hover:bg-neutral-200 rounded-md"
-                                  disabled=move || {
-                                      project().is_empty() || db_user().is_empty()
-                                          || db_password().is_empty() || db_host().is_empty()
-                                          || db_port().is_empty()
-                                  }
-
-                                  on:click=move |_| {
-                                      let project_details = match driver() {
-                                          Drivers::POSTGRESQL => {
-                                              Project::POSTGRESQL(Postgresql {
-                                                  name: project(),
-                                                  driver: PostgresqlDriver::new(
-                                                      db_user(),
-                                                      db_password(),
-                                                      db_host(),
-                                                      db_port(),
-                                                  ),
-                                                  ..Postgresql::default()
-                                              })
-                                          }
-                                      };
-                                      save_project.dispatch(project_details);
-                                  }
-                              >
-
-                                  Add
-                              </button>
-                              <button
-                                  class="px-4 py-2 border-1 border-neutral-200 hover:bg-neutral-200 rounded-md"
-                                  on:click=move |_| show.set(false)
-                              >
-                                  Cancel
-                              </button>
-                          </div>
-                      }
-                          .into_view(),
-                  ],
-              )),
-          }
-      >
-
+      <Modal show=show title="Add new project">
           <div class="flex flex-col gap-2">
               <input
                   class="border-1 border-neutral-200 p-1 rounded-md"
@@ -129,8 +79,46 @@ pub fn Connection(show: RwSignal<bool>) -> impl IntoView {
                   placeholder="port"
                   on:input=move |e| set_db_port(event_target_value(&e))
               />
-
           </div>
+
+          <ModalFooter slot>
+              <div class="flex gap-2 justify-end">
+                  <button
+                      class="px-4 py-2 border-1 border-neutral-200 hover:bg-neutral-200 rounded-md"
+                      disabled=move || {
+                          project().is_empty() || db_user().is_empty() || db_password().is_empty()
+                              || db_host().is_empty() || db_port().is_empty()
+                      }
+
+                      on:click=move |_| {
+                          let project_details = match driver() {
+                              Drivers::POSTGRESQL => {
+                                  Project::POSTGRESQL(Postgresql {
+                                      name: project(),
+                                      driver: PostgresqlDriver::new(
+                                          db_user(),
+                                          db_password(),
+                                          db_host(),
+                                          db_port(),
+                                      ),
+                                      ..Postgresql::default()
+                                  })
+                              }
+                          };
+                          save_project.dispatch(project_details);
+                      }
+                  >
+
+                      Add
+                  </button>
+                  <button
+                      class="px-4 py-2 border-1 border-neutral-200 hover:bg-neutral-200 rounded-md"
+                      on:click=move |_| show.set(false)
+                  >
+                      Cancel
+                  </button>
+              </div>
+          </ModalFooter>
       </Modal>
   }
 }

@@ -34,39 +34,7 @@ pub fn CustomQuery(show: RwSignal<bool>) -> impl IntoView {
   );
 
   view! {
-      <Modal
-          show=show
-          title="Save query!"
-          modal_footer=ModalFooter {
-              children: ChildrenFn::to_children(move || Fragment::new(
-                  vec![
-                      view! {
-                          <div class="flex gap-2 justify-end">
-                              <button
-                                  class="px-4 py-2 border-1 border-neutral-200 hover:bg-neutral-200 rounded-md"
-                                  on:click=move |_| {
-                                      insert_query
-                                          .dispatch((query_store, query_title(), project_name()));
-                                      show.set(false);
-                                  }
-                              >
-
-                                  Save
-                              </button>
-                              <button
-                                  class="px-4 py-2 border-1 border-neutral-200 hover:bg-neutral-200 rounded-md"
-                                  on:click=move |_| show.set(false)
-                              >
-                                  Cancel
-                              </button>
-                          </div>
-                      }
-                          .into_view(),
-                  ],
-              )),
-          }
-      >
-
+      <Modal show=show title="Save query!">
           <div class="flex flex-col gap-2">
               <select
                   class="border-1 border-neutral-200 p-1 rounded-md w-full bg-white appearance-none"
@@ -95,6 +63,27 @@ pub fn CustomQuery(show: RwSignal<bool>) -> impl IntoView {
                   on:input=move |e| set_query_title(event_target_value(&e))
               />
           </div>
+
+          <ModalFooter slot>
+              <div class="flex gap-2 justify-end">
+                  <button
+                      class="px-4 py-2 border-1 border-neutral-200 hover:bg-neutral-200 rounded-md"
+                      on:click=move |_| {
+                          insert_query.dispatch((query_store, query_title(), project_name()));
+                          show.set(false);
+                      }
+                  >
+
+                      Save
+                  </button>
+                  <button
+                      class="px-4 py-2 border-1 border-neutral-200 hover:bg-neutral-200 rounded-md"
+                      on:click=move |_| show.set(false)
+                  >
+                      Cancel
+                  </button>
+              </div>
+          </ModalFooter>
       </Modal>
   }
 }

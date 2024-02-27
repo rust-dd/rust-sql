@@ -1,5 +1,5 @@
 use leptos::*;
-use thaw::{Button, Tab, Tabs};
+use thaw::{Button, Tab, TabLabel, Tabs};
 
 use crate::{
   enums::QueryTableLayout,
@@ -40,6 +40,12 @@ pub fn App() -> impl IntoView {
                           children=move |index| {
                               view! {
                                   <Tab key=index.to_string()>
+                                      <TabLabel class="p-0" slot>
+                                          <div class="flex flex-row items-center justify-between w-20">
+                                              <div>{(index + 1).to_string()}</div>
+                                              <button class="rounded-md text-xs">X</button>
+                                          </div>
+                                      </TabLabel>
                                       <QueryEditor/>
                                       <QueryTable/>
                                   </Tab>

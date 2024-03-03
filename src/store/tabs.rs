@@ -122,7 +122,19 @@ impl TabsStore {
 
   #[allow(dead_code)]
   pub fn remove_editor(&mut self, index: usize) {
+    if self.active_tabs.get() == 1 {
+      return;
+    }
+
+    self.active_tabs.update(|prev| {
+      *prev -= 1;
+    });
+
     self.editors.update(|prev| {
+      prev.remove(index);
+    });
+
+    self.sql_results.update(|prev| {
       prev.remove(index);
     });
   }
@@ -197,3 +209,4 @@ impl TabsStore {
     None
   }
 }
+

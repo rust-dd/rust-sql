@@ -1,5 +1,6 @@
 use leptos::*;
-use thaw::{Button, Tab, TabLabel, Tabs};
+use leptos_icons::*;
+use thaw::{Button, ButtonSize, Tab, TabLabel, Tabs};
 
 use crate::{
   enums::QueryTableLayout,
@@ -26,7 +27,7 @@ pub fn App() -> impl IntoView {
   provide_context(create_rw_signal(0.0f32));
   provide_context(ActiveProjectStore::default());
   provide_context(TabsStore::default());
-  let tabs = use_context::<tabs::TabsStore>().unwrap();
+  let mut tabs = use_context::<tabs::TabsStore>().unwrap();
 
   view! {
       <div class="flex h-screen">
@@ -40,10 +41,16 @@ pub fn App() -> impl IntoView {
                           children=move |index| {
                               view! {
                                   <Tab key=index.to_string()>
-                                      <TabLabel class="p-0" slot>
-                                          <div class="flex flex-row items-center justify-between w-20">
-                                              <div>{(index + 1).to_string()}</div>
-                                              <button class="rounded-md text-xs">X</button>
+                                      <TabLabel slot>
+                                          <div class="flex flex-row items-center justify-between gap-2 h-full text-sm">
+                                              <span>{format!("Tab {}", (index + 1).to_string())}</span>
+                                              <button
+                                                  class="rounded-full p-1 hover:bg-gray-100"
+                                                  on:click=move |_| { tabs.remove_editor(index) }
+                                              >
+
+                                                  <Icon icon=icondata::CgClose width="16" height="16"/>
+                                              </button>
                                           </div>
                                       </TabLabel>
                                       <QueryEditor/>
@@ -55,7 +62,9 @@ pub fn App() -> impl IntoView {
 
                   </Tabs>
                   <Button
-                      class="absolute top-2 right-2"
+                      size=ButtonSize::Small
+                      icon=icondata::TbPlus
+                      class="absolute top-2 right-2 text-sm"
                       on:click=move |_| {
                           tabs.active_tabs.update(|prev| *prev += 1);
                           tabs.selected_tab
@@ -69,7 +78,7 @@ pub fn App() -> impl IntoView {
                       }
                   >
 
-                      "+"
+                      {"Add Tab"}
                   </Button>
               </main>
               <Footer/>

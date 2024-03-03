@@ -1,14 +1,6 @@
 {
-  "emmet.includeLanguages": {
-    "rust": "html",
-    "*.rs": "html"
-  },
   "tailwindCSS.includeLanguages": {
-    "rust": "rust",
-    "*.rs": "rust"
-  },
-  "files.associations": {
-    "*.rs": "rust"
+    "rust": "html"
   },
   "editor.quickSuggestions": {
     "other": "on",

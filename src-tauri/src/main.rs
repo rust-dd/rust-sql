@@ -33,7 +33,6 @@ impl Default for AppState {
 
 fn main() {
   tauri::Builder::default()
-    .plugin(tauri_plugin_context_menu::init())
     .manage(AppState::default())
     .setup(|app| {
       let app_handle = app.handle();
@@ -72,3 +71,4 @@ fn main() {
     .run(tauri::generate_context!())
     .expect("error while running tauri application");
 }
+

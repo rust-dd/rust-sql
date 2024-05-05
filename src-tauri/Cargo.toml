@@ -21,7 +21,6 @@ tokio = "1.36.0"
 tokio-postgres = "0.7.10"
 chrono = "0.4.31"
 sled = "0.34.7"
-tauri-plugin-context-menu = "0.7.1"
 
 
 

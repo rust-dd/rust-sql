@@ -43,7 +43,7 @@ pub fn App() -> impl IntoView {
                                   <Tab key=index.to_string()>
                                       <TabLabel slot>
                                           <div class="flex flex-row items-center justify-between gap-2 h-full text-sm">
-                                              <span>{format!("Tab {}", (index + 1).to_string())}</span>
+                                              <span>{format!("Tab {}", index + 1)}</span>
                                               <button
                                                   class="rounded-full p-1 hover:bg-gray-100"
                                                   on:click=move |_| { tabs.remove_editor(index) }

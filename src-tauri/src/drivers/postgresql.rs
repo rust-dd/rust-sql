@@ -1,7 +1,8 @@
-use std::time::Instant;
+use std::{sync::Arc, time::Instant};
 
-use common::projects::postgresql::PostgresqlRelation;
+use common::{enums::PostgresqlError, projects::postgresql::PostgresqlRelation};
 use tauri::{AppHandle, Manager, Result, State};
+use tokio::{sync::Mutex, time as tokio_time};
 use tokio_postgres::{connect, NoTls};
 
 use crate::{utils::reflective_get, AppState};
@@ -13,24 +14,82 @@ pub async fn postgresql_connector(
   app: AppHandle,
 ) -> Result<Vec<String>> {
   let app_state = app.state::<AppState>();
-  let (client, connection) = connect(key, NoTls).await.expect("connection error");
-  tokio::spawn(async move {
-    if let Err(e) = connection.await {
-      eprintln!("connection error: {}", e);
+  let connection = tokio_time::timeout(tokio_time::Duration::from_secs(10), connect(key, NoTls))
+    .await
+    .map_err(|_| PostgresqlError::ConnectionTimeout);
+
+  if connection.is_err() {
+    tracing::error!("Postgres connection timeout error!");
+    return Err(tauri::Error::Io(std::io::Error::new(
+      std::io::ErrorKind::Other,
+      PostgresqlError::ConnectionTimeout,
+    )));
+  }
+
+  let connection = connection.unwrap();
+  if connection.is_err() {
+    tracing::error!("Postgres connection error!");
+    return Err(tauri::Error::Io(std::io::Error::new(
+      std::io::ErrorKind::Other,
+      PostgresqlError::ConnectionError,
+    )));
+  }
+
+  let is_connection_error = Arc::new(Mutex::new(false));
+  let (client, connection) = connection.unwrap();
+  tracing::info!("Postgres connection established!");
+
+  // check if connection has some error
+  tokio::spawn({
+    let is_connection_error = Arc::clone(&is_connection_error);
+    async move {
+      if let Err(e) = connection.await {
+        tracing::info!("Postgres connection error: {:?}", e);
+        *is_connection_error.lock().await = true;
+      }
     }
   });
 
-  let schemas = client
-    .query(
+  if *is_connection_error.lock().await {
+    tracing::error!("Postgres connection error!");
+    return Err(tauri::Error::Io(std::io::Error::new(
+      std::io::ErrorKind::Other,
+      PostgresqlError::ConnectionError,
+    )));
+  }
+
+  let schemas = tokio_time::timeout(
+    tokio_time::Duration::from_secs(30),
+    client.query(
       r#"
         SELECT schema_name
         FROM information_schema.schemata
         WHERE schema_name NOT IN ('pg_catalog', 'information_schema');
         "#,
       &[],
-    )
-    .await
-    .unwrap();
+    ),
+  )
+  .await
+  .map_err(|_| PostgresqlError::QueryTimeout);
+
+  if schemas.is_err() {
+    tracing::error!("Postgres schema query timeout error!");
+    return Err(tauri::Error::Io(std::io::Error::new(
+      std::io::ErrorKind::Other,
+      PostgresqlError::QueryTimeout,
+    )));
+  }
+
+  let schemas = schemas.unwrap();
+  if schemas.is_err() {
+    tracing::error!("Postgres schema query error!");
+    return Err(tauri::Error::Io(std::io::Error::new(
+      std::io::ErrorKind::Other,
+      PostgresqlError::QueryError,
+    )));
+  }
+
+  let schemas = schemas.unwrap();
   let schemas = schemas.iter().map(|r| r.get(0)).collect();
   let mut clients = app_state.client.lock().await;
   let clients = clients.as_mut().unwrap();

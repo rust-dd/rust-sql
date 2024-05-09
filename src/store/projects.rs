@@ -1,10 +1,10 @@
 use std::collections::BTreeMap;
 
 use common::{
-  enums::{Project, ProjectConnectionStatus},
+  enums::{PostgresqlError, Project, ProjectConnectionStatus},
   projects::postgresql::PostgresqlRelation,
 };
-use leptos::{create_rw_signal, error::Result, RwSignal, SignalGet, SignalUpdate};
+use leptos::{create_rw_signal, error::Result, logging::log, RwSignal, SignalGet, SignalUpdate};
 use tauri_sys::tauri::invoke;
 
 use crate::invoke::{
@@ -154,14 +154,34 @@ impl ProjectsStore {
 
   async fn postgresql_schema_selector(&self, project_name: &str) -> Result<Vec<String>> {
     let connection_string = self.create_project_connection_string(project_name);
-    let mut schemas = invoke::<_, Vec<String>>(
+    log!("connection_string: {}", connection_string.clone());
+    let schemas = invoke::<_, Vec<String>>(
       &Invoke::postgresql_connector.to_string(),
       &InvokePostgresConnectionArgs {
         project_name,
         key: &connection_string,
       },
     )
-    .await?;
+    .await
+    .map_err(|err| match err {
+      tauri_sys::Error::Command(command) => {
+        let error = serde_json::from_str::<PostgresqlError>(&command).unwrap();
+
+        match error {
+          PostgresqlError::ConnectionTimeout => PostgresqlError::ConnectionTimeout,
+          PostgresqlError::ConnectionError => PostgresqlError::ConnectionError,
+          PostgresqlError::QueryError => PostgresqlError::QueryError,
+          PostgresqlError::QueryTimeout => PostgresqlError::QueryTimeout,
+        }
+      }
+      _ => PostgresqlError::ConnectionError,
+    });
+
+    if schemas.is_err() {
+      return Err(schemas.unwrap_err().into());
+    }
+
+    let mut schemas = schemas.unwrap();
     schemas.sort();
     Ok(schemas)
   }
@@ -192,3 +212,4 @@ impl ProjectsStore {
     Ok((tables, relations))
   }
 }
+

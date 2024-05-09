@@ -4,8 +4,6 @@ use leptos_use::{use_document, use_event_listener};
 use tauri_sys::tauri::invoke;
 
 use crate::{
-  context_menu::siderbar::context_menu,
-  hooks::use_context_menu,
   invoke::{Invoke, InvokeSelectProjectsArgs},
   modals::connection::Connection,
   store::projects::ProjectsStore,
@@ -16,7 +14,6 @@ use super::{project::Project, queries::Queries};
 #[component]
 pub fn Sidebar() -> impl IntoView {
   let projects_state = use_context::<ProjectsStore>().unwrap();
-  let node_ref = use_context_menu::use_context_menu(context_menu);
   let show = create_rw_signal(false);
   let _ = use_event_listener(use_document(), ev::keydown, move |event| {
     if event.key() == "Escape" {
@@ -37,10 +34,7 @@ pub fn Sidebar() -> impl IntoView {
   );
 
   view! {
-      <div
-          _ref=node_ref
-          class="flex border-r-1 min-w-[320px] justify-between border-neutral-200 flex-col p-4"
-      >
+      <div class="flex border-r-1 min-w-[320px] justify-between border-neutral-200 flex-col p-4">
           <Connection show=show/>
           <div class="flex flex-col overflow-auto">
               <div class="flex flex-row justify-between items-center">

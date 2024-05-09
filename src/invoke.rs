@@ -9,7 +9,6 @@ pub enum Invoke {
   delete_query,
   insert_project,
   insert_query,
-  plugin_context_menu,
   postgresql_connector,
   select_projects,
   select_queries,
@@ -26,7 +25,6 @@ impl Display for Invoke {
       Invoke::insert_project => write!(f, "insert_project"),
       Invoke::insert_query => write!(f, "insert_query"),
       Invoke::postgresql_connector => write!(f, "postgresql_connector"),
-      Invoke::plugin_context_menu => write!(f, "plugin:context_menu|show_context_menu"),
       Invoke::select_projects => write!(f, "select_projects"),
       Invoke::select_queries => write!(f, "select_queries"),
       Invoke::select_schema_relations => write!(f, "select_schema_relations"),
@@ -136,3 +134,4 @@ pub struct InvokeContextMenuPosition {
   pub y: f64,
   pub is_absolute: Option<bool>,
 }
+

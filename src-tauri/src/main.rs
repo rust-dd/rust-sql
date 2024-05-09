@@ -13,6 +13,7 @@ use std::{collections::BTreeMap, sync::Arc};
 use tauri::Manager;
 use tokio::sync::Mutex;
 use tokio_postgres::Client;
+use tracing::Level;
 use utils::create_or_open_local_db;
 
 pub struct AppState {
@@ -32,6 +33,13 @@ impl Default for AppState {
 }
 
 fn main() {
+  tracing_subscriber::fmt()
+    .with_file(true)
+    .with_line_number(true)
+    .with_level(true)
+    .with_max_level(Level::INFO)
+    .init();
+
   tauri::Builder::default()
     .manage(AppState::default())
     .setup(|app| {

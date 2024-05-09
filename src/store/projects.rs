@@ -4,12 +4,18 @@ use common::{
   enums::{PostgresqlError, Project, ProjectConnectionStatus},
   projects::postgresql::PostgresqlRelation,
 };
-use leptos::{create_rw_signal, error::Result, logging::log, RwSignal, SignalGet, SignalUpdate};
+use leptos::{
+  create_rw_signal, error::Result, logging::log, use_context, RwSignal, SignalGet, SignalSet,
+  SignalUpdate,
+};
 use tauri_sys::tauri::invoke;
 
-use crate::invoke::{
-  Invoke, InvokeDeleteProjectArgs, InvokePostgresConnectionArgs, InvokeSchemaRelationsArgs,
-  InvokeSchemaTablesArgs,
+use crate::{
+  app::ErrorModal,
+  invoke::{
+    Invoke, InvokeDeleteProjectArgs, InvokePostgresConnectionArgs, InvokeSchemaRelationsArgs,
+    InvokeSchemaTablesArgs,
+  },
 };
 
 #[derive(Clone, Copy, Debug)]
@@ -154,7 +160,6 @@ impl ProjectsStore {
 
   async fn postgresql_schema_selector(&self, project_name: &str) -> Result<Vec<String>> {
     let connection_string = self.create_project_connection_string(project_name);
-    log!("connection_string: {}", connection_string.clone());
     let schemas = invoke::<_, Vec<String>>(
       &Invoke::postgresql_connector.to_string(),
       &InvokePostgresConnectionArgs {
@@ -178,6 +183,11 @@ impl ProjectsStore {
     });
 
     if schemas.is_err() {
+      let mut error_modal = use_context::<ErrorModal>().unwrap();
+      log!("err");
+      let error_message = schemas.clone().unwrap_err().to_string();
+      error_modal.show.update(|prev| *prev = true);
+      error_modal.message = error_message;
       return Err(schemas.unwrap_err().into());
     }
 

@@ -43,7 +43,7 @@ impl Display for ProjectConnectionStatus {
 
 use std::fmt;
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone, Copy)]
 pub enum PostgresqlError {
   ConnectionTimeout,
   ConnectionError,

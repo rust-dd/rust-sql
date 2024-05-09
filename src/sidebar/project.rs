@@ -1,6 +1,10 @@
 use leptos::*;
 
-use crate::store::{active_project::ActiveProjectStore, projects::ProjectsStore};
+use crate::{
+  app::ErrorModal,
+  modals::error::Error as Modal,
+  store::{active_project::ActiveProjectStore, projects::ProjectsStore},
+};
 
 use super::schemas::Schemas;
 
@@ -8,6 +12,7 @@ use super::schemas::Schemas;
 pub fn Project(project: String) -> impl IntoView {
   let projects_store = use_context::<ProjectsStore>().unwrap();
   let active_project_store = use_context::<ActiveProjectStore>().unwrap();
+  let error_modal = use_context::<ErrorModal>().unwrap();
   let (show_schemas, set_show_schemas) = create_signal(false);
   let delete_project = create_action(move |(projects_store, project): &(ProjectsStore, String)| {
     let projects_store = *projects_store;
@@ -17,8 +22,15 @@ pub fn Project(project: String) -> impl IntoView {
     }
   });
 
+  let on_click = move || {
+    error_modal.show.update(|prev| *prev = false);
+    set_show_schemas(false);
+    active_project_store.0.set(None);
+  };
+
   view! {
       <div class="pl-1 text-xs">
+          <Modal show=error_modal.show message=error_modal.message on_click=on_click/>
           <div class="flex flex-row justify-between items-center">
               <button
                   class="hover:font-semibold"

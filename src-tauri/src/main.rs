@@ -71,10 +71,11 @@ fn main() {
       dbs::query::delete_query,
       dbs::query::insert_query,
       dbs::query::select_queries,
-      drivers::postgresql::postgresql_connector,
-      drivers::postgresql::select_schema_relations,
-      drivers::postgresql::select_schema_tables,
-      drivers::postgresql::select_sql_result,
+      drivers::postgresql::pgsql_connector,
+      drivers::postgresql::pgsql_load_relations,
+      drivers::postgresql::pgsql_load_schemas,
+      drivers::postgresql::pgsql_load_tables,
+      drivers::postgresql::pgsql_run_query,
     ])
     .run(tauri::generate_context!())
     .expect("error while running tauri application");

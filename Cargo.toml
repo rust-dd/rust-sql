@@ -22,6 +22,7 @@ common = { path = "common" }
 futures = "0.3.30"
 async-stream = "0.3.5"
 icondata = "0.3.0"
+ahash = "0.8.11"
 
 [workspace]
 members = ["src-tauri", "common"]

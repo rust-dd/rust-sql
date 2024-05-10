@@ -1,6 +1,9 @@
 use std::{sync::Arc, time::Instant};
 
-use common::{enums::PostgresqlError, projects::postgresql::PostgresqlRelation};
+use common::{
+  enums::{PostgresqlError, ProjectConnectionStatus},
+  projects::postgresql::PostgresqlRelation,
+};
 use tauri::{AppHandle, Manager, Result, State};
 use tokio::{sync::Mutex, time as tokio_time};
 use tokio_postgres::{connect, NoTls};
@@ -8,11 +11,11 @@ use tokio_postgres::{connect, NoTls};
 use crate::{utils::reflective_get, AppState};
 
 #[tauri::command(rename_all = "snake_case")]
-pub async fn postgresql_connector(
+pub async fn pgsql_connector(
   project_name: &str,
   key: &str,
   app: AppHandle,
-) -> Result<Vec<String>> {
+) -> Result<ProjectConnectionStatus> {
   let app_state = app.state::<AppState>();
   let connection = tokio_time::timeout(tokio_time::Duration::from_secs(10), connect(key, NoTls))
     .await
@@ -20,19 +23,13 @@ pub async fn postgresql_connector(
 
   if connection.is_err() {
     tracing::error!("Postgres connection timeout error!");
-    return Err(tauri::Error::Io(std::io::Error::new(
-      std::io::ErrorKind::Other,
-      PostgresqlError::ConnectionTimeout,
-    )));
+    return Ok(ProjectConnectionStatus::Failed);
   }
 
   let connection = connection.unwrap();
   if connection.is_err() {
     tracing::error!("Postgres connection error!");
-    return Err(tauri::Error::Io(std::io::Error::new(
-      std::io::ErrorKind::Other,
-      PostgresqlError::ConnectionError,
-    )));
+    return Ok(ProjectConnectionStatus::Failed);
   }
 
   let is_connection_error = Arc::new(Mutex::new(false));
@@ -52,11 +49,23 @@ pub async fn postgresql_connector(
 
   if *is_connection_error.lock().await {
     tracing::error!("Postgres connection error!");
-    return Err(tauri::Error::Io(std::io::Error::new(
-      std::io::ErrorKind::Other,
-      PostgresqlError::ConnectionError,
-    )));
+    return Ok(ProjectConnectionStatus::Failed);
   }
+
+  let mut clients = app_state.client.lock().await;
+  let clients = clients.as_mut().unwrap();
+  clients.insert(project_name.to_string(), client);
+
+  Ok(ProjectConnectionStatus::Connected)
+}
+
+#[tauri::command(rename_all = "snake_case")]
+pub async fn pgsql_load_schemas(
+  project_name: &str,
+  app_state: State<'_, AppState>,
+) -> Result<Vec<String>> {
+  let clients = app_state.client.lock().await;
+  let client = clients.as_ref().unwrap().get(project_name).unwrap();
 
   let schemas = tokio_time::timeout(
     tokio_time::Duration::from_secs(30),
@@ -91,14 +100,12 @@ pub async fn postgresql_connector(
 
   let schemas = schemas.unwrap();
   let schemas = schemas.iter().map(|r| r.get(0)).collect();
-  let mut clients = app_state.client.lock().await;
-  let clients = clients.as_mut().unwrap();
-  clients.insert(project_name.to_string(), client);
+
   Ok(schemas)
 }
 
 #[tauri::command(rename_all = "snake_case")]
-pub async fn select_schema_tables(
+pub async fn pgsql_load_tables(
   project_name: &str,
   schema: &str,
   app_state: State<'_, AppState>,
@@ -130,7 +137,7 @@ pub async fn select_schema_tables(
 }
 
 #[tauri::command(rename_all = "snake_case")]
-pub async fn select_sql_result(
+pub async fn pgsql_run_query(
   project_name: &str,
   sql: String,
   app_state: State<'_, AppState>,
@@ -167,7 +174,7 @@ pub async fn select_sql_result(
 }
 
 #[tauri::command(rename_all = "snake_case")]
-pub async fn select_schema_relations(
+pub async fn pgsql_load_relations(
   project_name: &str,
   schema: &str,
   app_state: State<'_, AppState>,

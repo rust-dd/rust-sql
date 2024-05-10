@@ -9,12 +9,14 @@ pub enum Invoke {
   delete_query,
   insert_project,
   insert_query,
-  postgresql_connector,
   select_projects,
   select_queries,
-  select_schema_relations,
-  select_schema_tables,
-  select_sql_result,
+
+  pgsql_connector,
+  pgsql_load_schemas,
+  pgsql_load_tables,
+  pgsql_load_relations,
+  pgsql_run_query,
 }
 
 impl Display for Invoke {
@@ -24,18 +26,38 @@ impl Display for Invoke {
       Invoke::delete_query => write!(f, "delete_query"),
       Invoke::insert_project => write!(f, "insert_project"),
       Invoke::insert_query => write!(f, "insert_query"),
-      Invoke::postgresql_connector => write!(f, "postgresql_connector"),
       Invoke::select_projects => write!(f, "select_projects"),
       Invoke::select_queries => write!(f, "select_queries"),
-      Invoke::select_schema_relations => write!(f, "select_schema_relations"),
-      Invoke::select_schema_tables => write!(f, "select_schema_tables"),
-      Invoke::select_sql_result => write!(f, "select_sql_result"),
+
+      Invoke::pgsql_connector => write!(f, "pgsql_connector"),
+      Invoke::pgsql_load_relations => write!(f, "pgsql_load_relations"),
+      Invoke::pgsql_load_tables => write!(f, "pgsql_load_tables"),
+      Invoke::pgsql_load_schemas => write!(f, "pgsql_load_schemas"),
+      Invoke::pgsql_run_query => write!(f, "pgsql_run_query"),
+    }
+  }
+}
+
+impl AsRef<str> for Invoke {
+  fn as_ref(&self) -> &str {
+    match *self {
+      Invoke::delete_project => "delete_project",
+      Invoke::delete_query => "delete_query",
+      Invoke::insert_project => "insert_project",
+      Invoke::insert_query => "insert_query",
+      Invoke::select_projects => "select_projects",
+      Invoke::select_queries => "select_queries",
+      Invoke::pgsql_connector => "pgsql_connector",
+      Invoke::pgsql_load_schemas => "pgsql_load_schemas",
+      Invoke::pgsql_load_tables => "pgsql_load_tables",
+      Invoke::pgsql_load_relations => "pgsql_load_relations",
+      Invoke::pgsql_run_query => "pgsql_run_query",
     }
   }
 }
 
 #[derive(Serialize, Deserialize)]
-pub struct InvokePostgresConnectionArgs<'a> {
+pub struct InvokePostgresConnectorArgs<'a> {
   pub project_name: &'a str,
   pub key: &'a str,
 }

@@ -1,4 +1,5 @@
 use leptos::{logging::log, *};
+use leptos_icons::*;
 
 use crate::{
   app::ErrorModal,

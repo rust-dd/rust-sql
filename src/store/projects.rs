@@ -5,16 +5,14 @@ use common::{
   projects::postgresql::PostgresqlRelation,
 };
 use leptos::{
-  create_rw_signal, error::Result, logging::log, use_context, RwSignal, SignalGet, SignalSet,
-  SignalUpdate,
+  create_rw_signal, error::Result, logging::log, use_context, RwSignal, SignalGet, SignalUpdate,
 };
 use tauri_sys::tauri::invoke;
-use wasm_bindgen::JsValue;
 
 use crate::{
   app::ErrorModal,
   invoke::{
-    Invoke, InvokeDeleteProjectArgs, InvokePostgresConnectionArgs, InvokeSchemaRelationsArgs,
+    Invoke, InvokeDeleteProjectArgs, InvokePostgresConnectorArgs, InvokeSchemaRelationsArgs,
     InvokeSchemaTablesArgs,
   },
 };
@@ -80,30 +78,25 @@ impl ProjectsStore {
     }
   }
 
-  pub async fn connect(&self, project_name: &str) -> Result<Vec<String>> {
-    let projects = self.0;
-    let _projects = projects.get();
-    let project = _projects.get(project_name).unwrap();
+  // pub async fn connector(&self, project_name: &str) -> Result<()> {
+  //   let projects = self.0;
+  //   let _projects = projects.get();
+  //   let key = self.create_project_connection_string(project_name);
+  //   let status = invoke::<_, ProjectConnectionStatus>(
+  //     Invoke::pgsql_connector.as_ref(),
+  //     &InvokePostgresConnectorArgs {
+  //       project_name,
+  //       key: &key,
+  //     },
+  //   )
+  //   .await?;
 
-    match project {
-      Project::POSTGRESQL(project) => {
-        if project.connection_status == ProjectConnectionStatus::Connected {
-          return Ok(project.schemas.clone().unwrap());
-        }
-        let schemas = self.postgresql_schema_selector(&project.name).await?;
-        projects.update(|prev| {
-          let project = prev.get_mut(project_name).unwrap();
-          match project {
-            Project::POSTGRESQL(project) => {
-              project.schemas = Some(schemas.clone());
-              project.connection_status = ProjectConnectionStatus::Connected;
-            }
-          }
-        });
-        Ok(schemas)
-      }
-    }
-  }
+  //   match status {
+  //     ProjectConnectionStatus::Connected => todo!(),
+  //     ProjectConnectionStatus::Failed => todo!(),
+  //     ProjectConnectionStatus::Disconnected => todo!(),
+  //   }
+  // }
 
   pub async fn retrieve_tables(
     &self,
@@ -162,7 +155,7 @@ impl ProjectsStore {
   async fn postgresql_schema_selector(&self, project_name: &str) -> Result<Vec<String>> {
     let connection_string = self.create_project_connection_string(project_name);
     let schemas = invoke::<_, Vec<String>>(
-      &Invoke::postgresql_connector.to_string(),
+      &Invoke::pgsql_connector.to_string(),
       &InvokePostgresConnectionArgs {
         project_name,
         key: &connection_string,

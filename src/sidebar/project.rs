@@ -1,4 +1,4 @@
-use leptos::*;
+use leptos::{logging::log, *};
 
 use crate::{
   app::ErrorModal,
@@ -35,6 +35,7 @@ pub fn Project(project: String) -> impl IntoView {
               <button
                   class="hover:font-semibold"
                   on:click={
+                      log!("project: {}", error_modal.show.get());
                       let project = project.clone();
                       move |_| {
                           active_project_store.0.set(Some(project.clone()));

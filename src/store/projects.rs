@@ -9,6 +9,7 @@ use leptos::{
   SignalUpdate,
 };
 use tauri_sys::tauri::invoke;
+use wasm_bindgen::JsValue;
 
 use crate::{
   app::ErrorModal,
@@ -170,13 +171,16 @@ impl ProjectsStore {
     .await
     .map_err(|err| match err {
       tauri_sys::Error::Command(command) => {
-        let error = serde_json::from_str::<PostgresqlError>(&command).unwrap();
-
-        match error {
-          PostgresqlError::ConnectionTimeout => PostgresqlError::ConnectionTimeout,
-          PostgresqlError::ConnectionError => PostgresqlError::ConnectionError,
-          PostgresqlError::QueryError => PostgresqlError::QueryError,
-          PostgresqlError::QueryTimeout => PostgresqlError::QueryTimeout,
+        if command.contains("ConnectionTimeout") {
+          PostgresqlError::ConnectionTimeout
+        } else if command.contains("ConnectionError") {
+          PostgresqlError::ConnectionError
+        } else if command.contains("QueryError") {
+          PostgresqlError::QueryError
+        } else if command.contains("QueryTimeout") {
+          PostgresqlError::QueryTimeout
+        } else {
+          PostgresqlError::ConnectionError
         }
       }
       _ => PostgresqlError::ConnectionError,

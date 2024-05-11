@@ -1,0 +1,145 @@
+use std::time::Duration;
+
+use leptos::*;
+use leptos_icons::*;
+use thaw::{use_message, MessageOptions};
+
+use crate::{drivers::pgsql, store::projects::ProjectsStore};
+use common::enums::ProjectConnectionStatus;
+
+#[component]
+pub fn Pgsql(project_id: String) -> impl IntoView {
+  let message = use_message();
+  let projects_store = use_context::<ProjectsStore>().unwrap();
+  let project_details = projects_store.select_project_by_name(&project_id).unwrap();
+  let connection_params = project_details
+    .split(':')
+    .into_iter()
+    .map(String::from)
+    .collect::<Vec<String>>();
+  let connection_params = connection_params
+    .into_iter()
+    .skip(1)
+    .map(|s| {
+      let kv = s.split('=').collect::<Vec<&str>>();
+      kv[1].to_owned()
+    })
+    .collect::<Vec<String>>();
+  let connection_params = Box::leak(connection_params.into_boxed_slice());
+  // [user, password, host, port]
+  let mut pgsql = pgsql::Pgsql::new(project_id.clone());
+  {
+    pgsql.load_connection_details(
+      &connection_params[0],
+      &connection_params[1],
+      &connection_params[2],
+      &connection_params[3],
+    );
+  }
+  let connect = create_action(move |pgsql: &pgsql::Pgsql| {
+    let pgsql = pgsql.clone();
+    async move {
+      let status = pgsql.connector().await.unwrap();
+      match status {
+        ProjectConnectionStatus::Connected => {
+          message.create(
+            "Connected to project".into(),
+            thaw::MessageVariant::Success,
+            Default::default(),
+          );
+        }
+        ProjectConnectionStatus::Failed => {
+          message.create(
+            "Failed to connect to project".into(),
+            thaw::MessageVariant::Error,
+            Default::default(),
+          );
+        }
+        _ => {
+          message.create(
+            "Failed to connect to project".into(),
+            thaw::MessageVariant::Error,
+            Default::default(),
+          );
+        }
+      }
+    }
+  });
+  let delete_project = create_action(
+    move |(projects_store, project_id): &(ProjectsStore, String)| {
+      let projects_store = *projects_store;
+      let project_id = project_id.clone();
+      async move { projects_store.delete_project(&project_id) }
+    },
+  );
+
+  view! {
+      <div class="pl-1 text-xs">
+          <div class="flex flex-row justify-between items-center">
+              <button
+                  class="hover:font-semibold flex flex-row items-center gap-1 disabled:opacity-50 disabled:font-normal"
+                  disabled=move || { pgsql.status.get() == ProjectConnectionStatus::Connecting }
+                  on:click=move |_| {
+                      if pgsql.status.get() == ProjectConnectionStatus::Connected {
+                          return;
+                      }
+                      connect.dispatch(pgsql);
+                  }
+              >
+
+                  {move || match pgsql.status.get() {
+                      ProjectConnectionStatus::Connected => {
+                          view! {
+                              <Icon icon=icondata::HiCheckCircleOutlineLg width="12" height="12"/>
+                          }
+                      }
+                      ProjectConnectionStatus::Connecting => {
+                          view! {
+                              <Icon
+                                  icon=icondata::HiArrowPathOutlineLg
+                                  class="animate-spin"
+                                  width="12"
+                                  height="12"
+                              />
+                          }
+                      }
+                      _ => {
+                          view! { <Icon icon=icondata::HiXCircleOutlineLg width="12" height="12"/> }
+                      }
+                  }}
+
+                  {pgsql.project_id}
+              </button>
+              <button
+                  class="px-2 rounded-full hover:bg-gray-200"
+                  on:click={
+                      let project_id = project_id.clone();
+                      move |_| {
+                          delete_project.dispatch((projects_store, project_id.clone()));
+                      }
+                  }
+              >
+
+                  "-"
+              </button>
+          </div>
+      // <div class="pl-1">
+      // <Suspense fallback=move || {
+      // view! { <p>Loading...</p> }
+      // }>
+
+      // {
+      // let project = project.clone();
+      // view! {
+      // <Show when=show_schemas fallback=|| view! {}>
+      // <Schemas project=project.clone()/>
+      // </Show>
+      // }
+      // }
+
+      // </Suspense>
+      // </div>
+      </div>
+  }
+}
+

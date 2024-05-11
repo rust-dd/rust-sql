@@ -1,39 +1,39 @@
 use std::fmt::Display;
 
-use common::enums::Project;
 use serde::{Deserialize, Serialize};
 
-#[allow(non_camel_case_types)]
 pub enum Invoke {
-  delete_project,
-  delete_query,
-  insert_project,
-  insert_query,
-  select_projects,
-  select_queries,
+  ProjectDbSelect,
+  ProjectDbInsert,
+  ProjectDbDelete,
 
-  pgsql_connector,
-  pgsql_load_schemas,
-  pgsql_load_tables,
-  pgsql_load_relations,
-  pgsql_run_query,
+  QueryDbSelect,
+  QueryDbInsert,
+  QueryDbDelete,
+
+  PgsqlConnector,
+  PgsqlLoadSchemas,
+  PgsqlLoadTables,
+  PgsqlLoadRelations,
+  PgsqlRunQuery,
 }
 
 impl Display for Invoke {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
     match self {
-      Invoke::delete_project => write!(f, "delete_project"),
-      Invoke::delete_query => write!(f, "delete_query"),
-      Invoke::insert_project => write!(f, "insert_project"),
-      Invoke::insert_query => write!(f, "insert_query"),
-      Invoke::select_projects => write!(f, "select_projects"),
-      Invoke::select_queries => write!(f, "select_queries"),
+      Invoke::ProjectDbSelect => write!(f, "project_db_select"),
+      Invoke::ProjectDbInsert => write!(f, "project_db_insert"),
+      Invoke::ProjectDbDelete => write!(f, "project_db_delete"),
 
-      Invoke::pgsql_connector => write!(f, "pgsql_connector"),
-      Invoke::pgsql_load_relations => write!(f, "pgsql_load_relations"),
-      Invoke::pgsql_load_tables => write!(f, "pgsql_load_tables"),
-      Invoke::pgsql_load_schemas => write!(f, "pgsql_load_schemas"),
-      Invoke::pgsql_run_query => write!(f, "pgsql_run_query"),
+      Invoke::QueryDbSelect => write!(f, "query_db_select"),
+      Invoke::QueryDbInsert => write!(f, "query_db_insert"),
+      Invoke::QueryDbDelete => write!(f, "query_db_delete"),
+
+      Invoke::PgsqlConnector => write!(f, "pgsql_connector"),
+      Invoke::PgsqlLoadRelations => write!(f, "pgsql_load_relations"),
+      Invoke::PgsqlLoadTables => write!(f, "pgsql_load_tables"),
+      Invoke::PgsqlLoadSchemas => write!(f, "pgsql_load_schemas"),
+      Invoke::PgsqlRunQuery => write!(f, "pgsql_run_query"),
     }
   }
 }
@@ -41,17 +41,19 @@ impl Display for Invoke {
 impl AsRef<str> for Invoke {
   fn as_ref(&self) -> &str {
     match *self {
-      Invoke::delete_project => "delete_project",
-      Invoke::delete_query => "delete_query",
-      Invoke::insert_project => "insert_project",
-      Invoke::insert_query => "insert_query",
-      Invoke::select_projects => "select_projects",
-      Invoke::select_queries => "select_queries",
-      Invoke::pgsql_connector => "pgsql_connector",
-      Invoke::pgsql_load_schemas => "pgsql_load_schemas",
-      Invoke::pgsql_load_tables => "pgsql_load_tables",
-      Invoke::pgsql_load_relations => "pgsql_load_relations",
-      Invoke::pgsql_run_query => "pgsql_run_query",
+      Invoke::ProjectDbSelect => "project_db_select",
+      Invoke::ProjectDbInsert => "project_db_insert",
+      Invoke::ProjectDbDelete => "project_db_delete",
+
+      Invoke::QueryDbSelect => "query_db_select",
+      Invoke::QueryDbInsert => "query_db_insert",
+      Invoke::QueryDbDelete => "query_db_delete",
+
+      Invoke::PgsqlConnector => "pgsql_connector",
+      Invoke::PgsqlLoadSchemas => "pgsql_load_schemas",
+      Invoke::PgsqlLoadTables => "pgsql_load_tables",
+      Invoke::PgsqlLoadRelations => "pgsql_load_relations",
+      Invoke::PgsqlRunQuery => "pgsql_run_query",
     }
   }
 }
@@ -85,7 +87,7 @@ pub struct InvokeSelectProjectsArgs;
 
 #[derive(Serialize, Deserialize)]
 pub struct InvokeInsertProjectArgs {
-  pub project: Project,
+  //pub project: Project,
 }
 
 #[derive(Serialize, Deserialize)]

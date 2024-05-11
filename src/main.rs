@@ -1,5 +1,6 @@
 mod app;
 mod context_menu;
+mod driver_components;
 mod drivers;
 mod enums;
 mod footer;

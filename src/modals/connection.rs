@@ -1,8 +1,4 @@
-use common::{
-  drivers::postgresql::Postgresql as PostgresqlDriver,
-  enums::{Drivers, Project},
-  projects::postgresql::Postgresql,
-};
+use common::enums::Drivers;
 use leptos::*;
 use tauri_sys::tauri::invoke;
 use thaw::{Modal, ModalFooter};
@@ -21,21 +17,21 @@ pub fn Connection(show: RwSignal<bool>) -> impl IntoView {
   let (db_password, set_db_password) = create_signal(String::new());
   let (db_host, set_db_host) = create_signal(String::new());
   let (db_port, set_db_port) = create_signal(String::new());
-  let save_project = create_action(move |project_details: &Project| {
-    let project_details = project_details.clone();
-    async move {
-      let project = invoke::<_, Project>(
-        &Invoke::insert_project.to_string(),
-        &InvokeInsertProjectArgs {
-          project: project_details,
-        },
-      )
-      .await
-      .unwrap();
-      projects_store.insert_project(project).unwrap();
-      show.set(false);
-    }
-  });
+  //   let save_project = create_action(move |project_details: &Project| {
+  //     let project_details = project_details.clone();
+  //     async move {
+  //       //   let project = invoke::<_, Project>(
+  //       //     &Invoke::insert_project.to_string(),
+  //       //     &InvokeInsertProjectArgs {
+  //       //       project: project_details,
+  //       //     },
+  //       //   )
+  //       //   .await
+  //       //   .unwrap();
+  //       //   projects_store.insert_project(project).unwrap();
+  //       //   show.set(false);
+  //     }
+  //   });
 
   view! {
       <Modal show=show title="Add new project">
@@ -90,23 +86,7 @@ pub fn Connection(show: RwSignal<bool>) -> impl IntoView {
                               || db_host().is_empty() || db_port().is_empty()
                       }
 
-                      on:click=move |_| {
-                          let project_details = match driver() {
-                              Drivers::POSTGRESQL => {
-                                  Project::POSTGRESQL(Postgresql {
-                                      name: project(),
-                                      driver: PostgresqlDriver::new(
-                                          db_user(),
-                                          db_password(),
-                                          db_host(),
-                                          db_port(),
-                                      ),
-                                      ..Postgresql::default()
-                                  })
-                              }
-                          };
-                          save_project.dispatch(project_details);
-                      }
+                      on:click=move |_| {}
                   >
 
                       Add

@@ -26,7 +26,7 @@ impl QueryStore {
 
   pub async fn select_queries(&self) -> Result<BTreeMap<String, String>> {
     let saved_queries = invoke::<_, BTreeMap<String, String>>(
-      &Invoke::select_queries.to_string(),
+      &Invoke::QueryDbSelect.to_string(),
       &InvokeSelectQueriesArgs,
     )
     .await?;
@@ -41,7 +41,7 @@ impl QueryStore {
     let tabs_store = use_context::<TabsStore>().unwrap();
     let sql = tabs_store.select_active_editor_value();
     invoke(
-      &Invoke::insert_query.to_string(),
+      &Invoke::QueryDbInsert.to_string(),
       &InvokeInsertQueryArgs {
         key: &format!("{}:{}", project_name, key),
         sql: sql.as_str(),
@@ -54,7 +54,7 @@ impl QueryStore {
 
   pub async fn delete_query(&self, key: &str) -> Result<()> {
     invoke(
-      &Invoke::delete_query.to_string(),
+      &Invoke::QueryDbDelete.to_string(),
       &InvokeDeleteQueryArgs { key },
     )
     .await?;
@@ -62,3 +62,4 @@ impl QueryStore {
     Ok(())
   }
 }
+

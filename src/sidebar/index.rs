@@ -1,9 +1,9 @@
-use common::enums::Project;
 use leptos::*;
 use leptos_use::{use_document, use_event_listener};
 use tauri_sys::tauri::invoke;
 
 use crate::{
+  driver_components::pgsql::Pgsql,
   invoke::{Invoke, InvokeSelectProjectsArgs},
   modals::connection::Connection,
   store::projects::ProjectsStore,
@@ -13,7 +13,7 @@ use super::{project::Project, queries::Queries};
 
 #[component]
 pub fn Sidebar() -> impl IntoView {
-  let projects_state = use_context::<ProjectsStore>().unwrap();
+  let projects_store = use_context::<ProjectsStore>().unwrap();
   let show = create_rw_signal(false);
   let _ = use_event_listener(use_document(), ev::keydown, move |event| {
     if event.key() == "Escape" {
@@ -21,15 +21,9 @@ pub fn Sidebar() -> impl IntoView {
     }
   });
   create_resource(
-    move || projects_state.0.get(),
+    move || projects_store.0.get(),
     move |_| async move {
-      let projects = invoke::<_, Vec<(String, Project)>>(
-        &Invoke::select_projects.to_string(),
-        &InvokeSelectProjectsArgs,
-      )
-      .await
-      .unwrap();
-      projects_state.set_projects(projects).unwrap()
+      projects_store.load_projects().await;
     },
   );
 
@@ -47,9 +41,9 @@ pub fn Sidebar() -> impl IntoView {
                   </button>
               </div>
               <For
-                  each=move || projects_state.0.get()
+                  each=move || projects_store.0.get()
                   key=|(project, _)| project.clone()
-                  children=|(project, _)| view! { <Project project=project/> }
+                  children=|(project_id, _)| view! { <Pgsql project_id=project_id/> }
               />
           </div>
           <div class="py-2">

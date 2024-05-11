@@ -1,9 +1,6 @@
 use std::{sync::Arc, time::Instant};
 
-use common::{
-  enums::{PostgresqlError, ProjectConnectionStatus},
-  projects::postgresql::PostgresqlRelation,
-};
+use common::enums::{PostgresqlError, ProjectConnectionStatus};
 use tauri::{AppHandle, Manager, Result, State};
 use tokio::{sync::Mutex, time as tokio_time};
 use tokio_postgres::{connect, NoTls};
@@ -178,48 +175,49 @@ pub async fn pgsql_load_relations(
   project_name: &str,
   schema: &str,
   app_state: State<'_, AppState>,
-) -> Result<Vec<PostgresqlRelation>> {
-  let clients = app_state.client.lock().await;
-  let client = clients.as_ref().unwrap().get(project_name).unwrap();
-  let rows = client
-    .query(
-      r#"--sql SELECT 
-          tc.constraint_name, 
-          tc.table_name,
-          kcu.column_name, 
-          ccu.table_name AS foreign_table_name, 
-          ccu.column_name AS foreign_column_name 
-        FROM information_schema.table_constraints AS tc 
-        JOIN information_schema.key_column_usage AS kcu
-        ON tc.constraint_name = kcu.constraint_name
-        JOIN information_schema.constraint_column_usage AS ccu
-        ON ccu.constraint_name = tc.constraint_name
-        WHERE constraint_type = 'FOREIGN KEY'
-        AND tc.table_schema = $1;
-      "#,
-      &[&schema],
-    )
-    .await
-    .unwrap();
+) -> Result<Vec<()>> {
+  // let clients = app_state.client.lock().await;
+  // let client = clients.as_ref().unwrap().get(project_name).unwrap();
+  // let rows = client
+  //   .query(
+  //     r#"--sql SELECT
+  //         tc.constraint_name,
+  //         tc.table_name,
+  //         kcu.column_name,
+  //         ccu.table_name AS foreign_table_name,
+  //         ccu.column_name AS foreign_column_name
+  //       FROM information_schema.table_constraints AS tc
+  //       JOIN information_schema.key_column_usage AS kcu
+  //       ON tc.constraint_name = kcu.constraint_name
+  //       JOIN information_schema.constraint_column_usage AS ccu
+  //       ON ccu.constraint_name = tc.constraint_name
+  //       WHERE constraint_type = 'FOREIGN KEY'
+  //       AND tc.table_schema = $1;
+  //     "#,
+  //     &[&schema],
+  //   )
+  //   .await
+  //   .unwrap();
 
-  let relations = rows
-    .iter()
-    .map(|row| {
-      let constraint_name = row.get(0);
-      let table_name = row.get(1);
-      let column_name = row.get(2);
-      let foreign_table_name = row.get(3);
-      let foreign_column_name = row.get(4);
-      PostgresqlRelation {
-        constraint_name,
-        table_name,
-        column_name,
-        foreign_table_name,
-        foreign_column_name,
-      }
-    })
-    .collect::<Vec<PostgresqlRelation>>();
+  // let relations = rows
+  //   .iter()
+  //   .map(|row| {
+  //     let constraint_name = row.get(0);
+  //     let table_name = row.get(1);
+  //     let column_name = row.get(2);
+  //     let foreign_table_name = row.get(3);
+  //     let foreign_column_name = row.get(4);
+  //     PostgresqlRelation {
+  //       constraint_name,
+  //       table_name,
+  //       column_name,
+  //       foreign_table_name,
+  //       foreign_column_name,
+  //     }
+  //   })
+  //   .collect::<Vec<PostgresqlRelation>>();
 
-  Ok(relations)
+  // Ok(relations)
+  todo!()
 }
 

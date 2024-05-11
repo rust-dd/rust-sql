@@ -10,14 +10,14 @@ pub fn CustomQuery(show: RwSignal<bool>) -> impl IntoView {
   let projects_store = use_context::<ProjectsStore>().unwrap();
   let query_store = use_context::<QueryStore>().unwrap();
   let (query_title, set_query_title) = create_signal(String::new());
-  let projects = create_memo(move |_| projects_store.get_projects().unwrap());
+  //let projects = create_memo(move |_| projects_store.get_projects().unwrap());
   let active_project = use_context::<ActiveProjectStore>().unwrap();
   let (project_name, set_project_name) = create_signal(active_project.0.get().unwrap_or_default());
-  create_effect(move |_| {
-    if !projects.get().is_empty() {
-      set_project_name(projects.get()[0].clone());
-    }
-  });
+  //   create_effect(move |_| {
+  //     if !projects.get().is_empty() {
+  //       set_project_name(projects.get()[0].clone());
+  //     }
+  //   });
 
   let insert_query = create_action(
     move |(query_db, key, project_name): &(QueryStore, String, String)| {
@@ -41,18 +41,17 @@ pub fn CustomQuery(show: RwSignal<bool>) -> impl IntoView {
                   value=project_name
                   default_value="teszt"
                   placeholder="Select project.."
-              >
-                  <For
-                      each=move || projects.get()
-                      key=|project| project.clone()
-                      children=move |p| {
-                          view! {
-                              <option value=&p selected=project_name() == p>
-                                  {p}
-                              </option>
-                          }
-                      }
-                  />
+              >// <For
+              // each=move || projects.get()
+              // key=|project| project.clone()
+              // children=move |p| {
+              // view! {
+              // <option value=&p selected=project_name() == p>
+              // {p}
+              // </option>
+              // }
+              // }
+              // />
 
               </select>
               <input

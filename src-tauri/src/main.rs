@@ -65,12 +65,12 @@ fn main() {
       Ok(())
     })
     .invoke_handler(tauri::generate_handler![
-      dbs::project::delete_project,
-      dbs::project::insert_project,
-      dbs::project::select_projects,
-      dbs::query::delete_query,
-      dbs::query::insert_query,
-      dbs::query::select_queries,
+      dbs::project::project_db_select,
+      dbs::project::project_db_insert,
+      dbs::project::project_db_delete,
+      dbs::query::query_db_select,
+      dbs::query::query_db_insert,
+      dbs::query::query_db_delete,
       drivers::postgresql::pgsql_connector,
       drivers::postgresql::pgsql_load_relations,
       drivers::postgresql::pgsql_load_schemas,

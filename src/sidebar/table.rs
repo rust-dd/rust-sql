@@ -23,7 +23,7 @@ pub fn Table(table: (String, String), project: String, schema: String) -> impl I
           .lock()
           .await
           .set_editor_value(&format!("SELECT * FROM {}.{} LIMIT 100;", schema, table));
-        tabs_store.lock().await.run_query().await.unwrap()
+        //tabs_store.lock().await.run_query().await.unwrap()
       }
     },
   );

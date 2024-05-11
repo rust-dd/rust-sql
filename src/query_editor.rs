@@ -60,7 +60,7 @@ pub fn QueryEditor() -> impl IntoView {
   let run_query = create_action(move |tabs_store: &Arc<Mutex<TabsStore>>| {
     let tabs_store = tabs_store.clone();
     async move {
-      tabs_store.lock().await.run_query().await.unwrap();
+      //tabs_store.lock().await.run_query().await.unwrap();
     }
   });
   let tabs_store_clone = tabs_store.clone();

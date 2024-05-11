@@ -38,6 +38,7 @@ impl<'a> Pgsql<'a> {
   }
 
   pub async fn connector(&self) {
+    self.status.set(ProjectConnectionStatus::Connecting);
     let status = invoke::<_, ProjectConnectionStatus>(
       Invoke::pgsql_connector.as_ref(),
       &InvokePostgresConnectorArgs {
@@ -47,7 +48,6 @@ impl<'a> Pgsql<'a> {
     )
     .await
     .unwrap();
-
     self.status.set(status);
   }
 

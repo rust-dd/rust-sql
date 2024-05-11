@@ -46,6 +46,8 @@ pub fn Project(project: String) -> impl IntoView {
               >
 
                   {&project}
+
+                  {}
               </button>
               <button
                   class="px-2 rounded-full hover:bg-gray-200"
@@ -60,22 +62,22 @@ pub fn Project(project: String) -> impl IntoView {
                   "-"
               </button>
           </div>
-          <div class="pl-1">
-              <Suspense fallback=move || {
-                  view! { <p>Loading...</p> }
-              }>
+      // <div class="pl-1">
+      // <Suspense fallback=move || {
+      // view! { <p>Loading...</p> }
+      // }>
 
-                  {
-                      let project = project.clone();
-                      view! {
-                          <Show when=show_schemas fallback=|| view! {}>
-                              <Schemas project=project.clone()/>
-                          </Show>
-                      }
-                  }
+      // {
+      // let project = project.clone();
+      // view! {
+      // <Show when=show_schemas fallback=|| view! {}>
+      // <Schemas project=project.clone()/>
+      // </Show>
+      // }
+      // }
 
-              </Suspense>
-          </div>
+      // </Suspense>
+      // </div>
       </div>
   }
 }

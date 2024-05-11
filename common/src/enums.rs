@@ -25,6 +25,7 @@ impl Display for Drivers {
 #[derive(Clone, Default, Debug, PartialEq, Serialize, Deserialize)]
 pub enum ProjectConnectionStatus {
   Connected,
+  Connecting,
   #[default]
   Disconnected,
   Failed,
@@ -35,6 +36,7 @@ impl Display for ProjectConnectionStatus {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
     match self {
       ProjectConnectionStatus::Connected => write!(f, "Connected"),
+      ProjectConnectionStatus::Connecting => write!(f, "Connecting"),
       ProjectConnectionStatus::Disconnected => write!(f, "Disconnected"),
       ProjectConnectionStatus::Failed => write!(f, "Failed"),
     }

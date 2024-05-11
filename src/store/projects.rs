@@ -152,46 +152,46 @@ impl ProjectsStore {
     Ok(())
   }
 
-  async fn postgresql_schema_selector(&self, project_name: &str) -> Result<Vec<String>> {
-    let connection_string = self.create_project_connection_string(project_name);
-    let schemas = invoke::<_, Vec<String>>(
-      &Invoke::pgsql_connector.to_string(),
-      &InvokePostgresConnectionArgs {
-        project_name,
-        key: &connection_string,
-      },
-    )
-    .await
-    .map_err(|err| match err {
-      tauri_sys::Error::Command(command) => {
-        if command.contains("ConnectionTimeout") {
-          PostgresqlError::ConnectionTimeout
-        } else if command.contains("ConnectionError") {
-          PostgresqlError::ConnectionError
-        } else if command.contains("QueryError") {
-          PostgresqlError::QueryError
-        } else if command.contains("QueryTimeout") {
-          PostgresqlError::QueryTimeout
-        } else {
-          PostgresqlError::ConnectionError
-        }
-      }
-      _ => PostgresqlError::ConnectionError,
-    });
+  // async fn postgresql_schema_selector(&self, project_name: &str) -> Result<Vec<String>> {
+  //   let connection_string = self.create_project_connection_string(project_name);
+  //   let schemas = invoke::<_, Vec<String>>(
+  //     &Invoke::pgsql_connector.to_string(),
+  //     &InvokePostgresConnectionArgs {
+  //       project_name,
+  //       key: &connection_string,
+  //     },
+  //   )
+  //   .await
+  //   .map_err(|err| match err {
+  //     tauri_sys::Error::Command(command) => {
+  //       if command.contains("ConnectionTimeout") {
+  //         PostgresqlError::ConnectionTimeout
+  //       } else if command.contains("ConnectionError") {
+  //         PostgresqlError::ConnectionError
+  //       } else if command.contains("QueryError") {
+  //         PostgresqlError::QueryError
+  //       } else if command.contains("QueryTimeout") {
+  //         PostgresqlError::QueryTimeout
+  //       } else {
+  //         PostgresqlError::ConnectionError
+  //       }
+  //     }
+  //     _ => PostgresqlError::ConnectionError,
+  //   });
 
-    if schemas.is_err() {
-      let mut error_modal = use_context::<ErrorModal>().unwrap();
-      log!("err");
-      let error_message = schemas.clone().unwrap_err().to_string();
-      error_modal.show.update(|prev| *prev = true);
-      error_modal.message = error_message;
-      return Err(schemas.unwrap_err().into());
-    }
+  //   if schemas.is_err() {
+  //     let mut error_modal = use_context::<ErrorModal>().unwrap();
+  //     log!("err");
+  //     let error_message = schemas.clone().unwrap_err().to_string();
+  //     error_modal.show.update(|prev| *prev = true);
+  //     error_modal.message = error_message;
+  //     return Err(schemas.unwrap_err().into());
+  //   }
 
-    let mut schemas = schemas.unwrap();
-    schemas.sort();
-    Ok(schemas)
-  }
+  //   let mut schemas = schemas.unwrap();
+  //   schemas.sort();
+  //   Ok(schemas)
+  // }
 
   async fn postgresql_table_selector(
     &self,
@@ -199,7 +199,7 @@ impl ProjectsStore {
     schema: &str,
   ) -> Result<(Vec<(String, String)>, Vec<PostgresqlRelation>)> {
     let tables = invoke::<_, Vec<(String, String)>>(
-      &Invoke::select_schema_tables.to_string(),
+      &Invoke::pgsql_load_tables.to_string(),
       &InvokeSchemaTablesArgs {
         project_name,
         schema,
@@ -208,7 +208,7 @@ impl ProjectsStore {
     .await?;
 
     let relations = invoke::<_, Vec<PostgresqlRelation>>(
-      &Invoke::select_schema_relations.to_string(),
+      &Invoke::pgsql_load_relations.to_string(),
       &InvokeSchemaRelationsArgs {
         project_name,
         schema,

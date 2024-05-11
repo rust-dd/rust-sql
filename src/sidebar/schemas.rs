@@ -11,19 +11,22 @@ pub fn Schemas(project: String) -> impl IntoView {
     || {},
     move |_| {
       let project = project.clone();
-      async move { projects_store.connect(&project).await.unwrap() }
+      async move {
+        todo!();
+        //projects_store.connect(&project).await.unwrap()
+      }
     },
   );
 
   view! {
-      <For
-          each=move || schemas.get().unwrap_or_default()
-          key=|schema| schema.clone()
-          children=move |s| {
-              let project = project_clone.clone();
-              view! { <Schema schema=s project=project.clone()/> }
-          }
-      />
+      // <For
+      //     each=move || schemas.get().unwrap_or_default()
+      //     key=|schema| schema.clone()
+      //     children=move |s| {
+      //         let project = project_clone.clone();
+      //         view! { <Schema schema=s project=project.clone()/> }
+      //     }
+      // />
   }
 }
 

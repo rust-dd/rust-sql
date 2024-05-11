@@ -53,44 +53,44 @@ impl TabsStore {
     }
   }
 
-  pub async fn run_query(&self) -> Result<()> {
-    self.is_loading.set(true);
-    let active_project = use_context::<ActiveProjectStore>().unwrap();
-    let active_project = active_project.0.get().unwrap();
-    let projects_store = use_context::<ProjectsStore>().unwrap();
-    projects_store.connect(&active_project).await?;
-    let active_editor = self.select_active_editor();
-    let position = active_editor
-      .borrow()
-      .as_ref()
-      .unwrap()
-      .as_ref()
-      .get_position()
-      .unwrap();
-    let sql = self.select_active_editor_value();
-    let sql = self
-      .find_query_for_line(&sql, position.line_number())
-      .unwrap();
-    let (cols, rows, elasped) = invoke::<_, (Vec<String>, Vec<Vec<String>>, f32)>(
-      &Invoke::select_sql_result.to_string(),
-      &InvokeSqlResultArgs {
-        project_name: &active_project,
-        sql: &sql.query,
-      },
-    )
-    .await?;
-    let sql_timer = use_context::<RwSignal<f32>>().unwrap();
-    sql_timer.set(elasped);
-    self.sql_results.update(|prev| {
-      let index = self.convert_selected_tab_to_index();
-      match prev.get_mut(index) {
-        Some(sql_result) => *sql_result = (cols, rows),
-        None => prev.push((cols, rows)),
-      }
-    });
-    self.is_loading.set(false);
-    Ok(())
-  }
+  // pub async fn run_query(&self) -> Result<()> {
+  //   self.is_loading.set(true);
+  //   let active_project = use_context::<ActiveProjectStore>().unwrap();
+  //   let active_project = active_project.0.get().unwrap();
+  //   let projects_store = use_context::<ProjectsStore>().unwrap();
+  //   projects_store.(&active_project).await?;
+  //   let active_editor = self.select_active_editor();
+  //   let position = active_editor
+  //     .borrow()
+  //     .as_ref()
+  //     .unwrap()
+  //     .as_ref()
+  //     .get_position()
+  //     .unwrap();
+  //   let sql = self.select_active_editor_value();
+  //   let sql = self
+  //     .find_query_for_line(&sql, position.line_number())
+  //     .unwrap();
+  //   let (cols, rows, elasped) = invoke::<_, (Vec<String>, Vec<Vec<String>>, f32)>(
+  //     &Invoke::pgsql_run_query.to_string(),
+  //     &InvokeSqlResultArgs {
+  //       project_name: &active_project,
+  //       sql: &sql.query,
+  //     },
+  //   )
+  //   .await?;
+  //   let sql_timer = use_context::<RwSignal<f32>>().unwrap();
+  //   sql_timer.set(elasped);
+  //   self.sql_results.update(|prev| {
+  //     let index = self.convert_selected_tab_to_index();
+  //     match prev.get_mut(index) {
+  //       Some(sql_result) => *sql_result = (cols, rows),
+  //       None => prev.push((cols, rows)),
+  //     }
+  //   });
+  //   self.is_loading.set(false);
+  //   Ok(())
+  // }
 
   pub fn load_query(&self, key: &str) -> Result<()> {
     let active_project = use_context::<ActiveProjectStore>().unwrap();

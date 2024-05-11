@@ -1,1 +1,2 @@
-pub mod postgresql;
+pub mod pgsql;
+

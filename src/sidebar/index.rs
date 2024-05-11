@@ -8,8 +8,9 @@ use crate::{
   modals::connection::Connection,
   store::projects::ProjectsStore,
 };
+use common::enums::Drivers;
 
-use super::{project::Project, queries::Queries};
+use super::queries::Queries;
 
 #[component]
 pub fn Sidebar() -> impl IntoView {
@@ -43,8 +44,19 @@ pub fn Sidebar() -> impl IntoView {
               <For
                   each=move || projects_store.0.get()
                   key=|(project, _)| project.clone()
-                  children=|(project_id, _)| view! { <Pgsql project_id=project_id/> }
+                  children=|(project_id, project_details)| {
+                      if project_details.contains(Drivers::POSTGRESQL.as_ref()) {
+                          view! {
+                              <div>
+                                  <Pgsql project_id=project_id/>
+                              </div>
+                          }
+                      } else {
+                          view! { <div></div> }
+                      }
+                  }
               />
+
           </div>
           <div class="py-2">
               <p class="font-semibold text-lg">Saved Queries</p>

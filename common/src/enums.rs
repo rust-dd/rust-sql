@@ -15,6 +15,14 @@ impl Display for Drivers {
   }
 }
 
+impl AsRef<str> for Drivers {
+  fn as_ref(&self) -> &str {
+    match self {
+      Drivers::POSTGRESQL => "POSTGRESQL",
+    }
+  }
+}
+
 #[derive(Clone, Default, Debug, PartialEq, Serialize, Deserialize)]
 pub enum ProjectConnectionStatus {
   Connected,

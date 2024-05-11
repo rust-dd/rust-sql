@@ -9,7 +9,7 @@ use crate::{utils::reflective_get, AppState};
 
 #[tauri::command(rename_all = "snake_case")]
 pub async fn pgsql_connector(
-  project_name: &str,
+  project_id: &str,
   key: &str,
   app: AppHandle,
 ) -> Result<ProjectConnectionStatus> {
@@ -51,18 +51,18 @@ pub async fn pgsql_connector(
 
   let mut clients = app_state.client.lock().await;
   let clients = clients.as_mut().unwrap();
-  clients.insert(project_name.to_string(), client);
+  clients.insert(project_id.to_string(), client);
 
   Ok(ProjectConnectionStatus::Connected)
 }
 
 #[tauri::command(rename_all = "snake_case")]
 pub async fn pgsql_load_schemas(
-  project_name: &str,
+  project_id: &str,
   app_state: State<'_, AppState>,
 ) -> Result<Vec<String>> {
   let clients = app_state.client.lock().await;
-  let client = clients.as_ref().unwrap().get(project_name).unwrap();
+  let client = clients.as_ref().unwrap().get(project_id).unwrap();
 
   let schemas = tokio_time::timeout(
     tokio_time::Duration::from_secs(30),
@@ -97,6 +97,7 @@ pub async fn pgsql_load_schemas(
 
   let schemas = schemas.unwrap();
   let schemas = schemas.iter().map(|r| r.get(0)).collect();
+  tracing::info!("Postgres schemas: {:?}", schemas);
 
   Ok(schemas)
 }

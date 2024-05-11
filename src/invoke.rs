@@ -60,8 +60,13 @@ impl AsRef<str> for Invoke {
 
 #[derive(Serialize, Deserialize)]
 pub struct InvokePostgresConnectorArgs<'a> {
-  pub project_name: &'a str,
+  pub project_id: &'a str,
   pub key: &'a str,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct InvokePostgresSchemasArgs<'a> {
+  pub project_id: &'a str,
 }
 
 #[derive(Serialize, Deserialize)]

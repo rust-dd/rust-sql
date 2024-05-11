@@ -1,10 +1,8 @@
-use ahash::AHashMap;
-
 use common::enums::ProjectConnectionStatus;
-use leptos::{error::Result, logging::log, RwSignal, SignalGet, SignalUpdate};
+use leptos::{error::Result, RwSignal, SignalGet, SignalSet, SignalUpdate};
 use tauri_sys::tauri::invoke;
 
-use crate::invoke::{Invoke, InvokePostgresConnectorArgs};
+use crate::invoke::{Invoke, InvokePostgresConnectorArgs, InvokePostgresSchemasArgs};
 
 #[derive(Debug, Clone, Copy)]
 pub struct Pgsql<'a> {
@@ -13,9 +11,8 @@ pub struct Pgsql<'a> {
   password: Option<&'a str>,
   host: Option<&'a str>,
   port: Option<&'a str>,
-  //connection_string: Option<String>,
   pub status: RwSignal<ProjectConnectionStatus>,
-  pub schemas: RwSignal<AHashMap<String, Vec<String>>>,
+  pub schemas: RwSignal<Vec<String>>,
 }
 
 impl<'a> Pgsql<'a> {
@@ -39,18 +36,27 @@ impl<'a> Pgsql<'a> {
     let status = invoke::<_, ProjectConnectionStatus>(
       Invoke::PgsqlConnector.as_ref(),
       &InvokePostgresConnectorArgs {
-        project_name: &self.project_id.get(),
+        project_id: &self.project_id.get(),
         key: connection_string.as_str(),
       },
     )
     .await
     .unwrap();
+    self.load_schemas().await;
     self.status.update(|prev| *prev = status.clone());
     Ok(status)
   }
 
-  pub async fn load_schemas() {
-    unimplemented!()
+  pub async fn load_schemas(&self) {
+    let schemas = invoke::<_, Vec<String>>(
+      Invoke::PgsqlLoadSchemas.as_ref(),
+      &InvokePostgresSchemasArgs {
+        project_id: &self.project_id.get(),
+      },
+    )
+    .await
+    .unwrap();
+    self.schemas.set(schemas);
   }
 
   pub async fn load_tables() {

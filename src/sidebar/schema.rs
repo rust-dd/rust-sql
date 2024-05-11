@@ -3,7 +3,7 @@ use leptos::*;
 use super::tables::Tables;
 
 #[component]
-pub fn Schema(schema: String, project: String) -> impl IntoView {
+pub fn Schema(schema: String) -> impl IntoView {
   let (show_tables, set_show_tables) = create_signal(false);
 
   view! {
@@ -21,14 +21,15 @@ pub fn Schema(schema: String, project: String) -> impl IntoView {
 
                   {
                       let schema = schema.clone();
-                      let project = project.clone();
                       view! {
                           <Show when=show_tables fallback=|| view! {}>
 
                               {
                                   let schema = schema.clone();
-                                  let project = project.clone();
-                                  view! { <Tables schema=schema project=project/> }
+                                  view! {
+                                      // <Tables schema=schema project=project/>
+                                      <div></div>
+                                  }
                               }
 
                           </Show>

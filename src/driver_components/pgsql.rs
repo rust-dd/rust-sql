@@ -1,10 +1,8 @@
-use std::time::Duration;
-
 use leptos::*;
 use leptos_icons::*;
-use thaw::{use_message, MessageOptions};
+use thaw::use_message;
 
-use crate::{drivers::pgsql, store::projects::ProjectsStore};
+use crate::{drivers::pgsql, sidebar::schemas::Schemas, store::projects::ProjectsStore};
 use common::enums::ProjectConnectionStatus;
 
 #[component]
@@ -123,22 +121,11 @@ pub fn Pgsql(project_id: String) -> impl IntoView {
                   "-"
               </button>
           </div>
-      // <div class="pl-1">
-      // <Suspense fallback=move || {
-      // view! { <p>Loading...</p> }
-      // }>
-
-      // {
-      // let project = project.clone();
-      // view! {
-      // <Show when=show_schemas fallback=|| view! {}>
-      // <Schemas project=project.clone()/>
-      // </Show>
-      // }
-      // }
-
-      // </Suspense>
-      // </div>
+          <div class="pl-4">
+              <Show when=move || !pgsql.schemas.get().is_empty() fallback=|| view! {}>
+                  <Schemas schemas=pgsql.schemas.get()/>
+              </Show>
+          </div>
       </div>
   }
 }

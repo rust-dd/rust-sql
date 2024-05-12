@@ -1,7 +1,10 @@
 use leptos::*;
 use leptos_use::{use_document, use_event_listener};
 
-use crate::{pgsql::add::Add, pgsql::index::Pgsql, store::projects::ProjectsStore};
+use crate::{
+  databases::pgsql::{add::Add, index::Pgsql},
+  store::projects::ProjectsStore,
+};
 use common::enums::Drivers;
 
 use super::queries::Queries;

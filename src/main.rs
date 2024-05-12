@@ -1,13 +1,13 @@
 #![feature(pattern)]
 
 mod app;
+mod databases;
 mod enums;
 mod footer;
 mod grid_view;
 mod hooks;
 mod invoke;
 mod modals;
-mod pgsql;
 mod query_editor;
 mod query_table;
 mod record_view;

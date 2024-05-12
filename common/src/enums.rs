@@ -58,11 +58,11 @@ pub enum PostgresqlError {
 impl std::error::Error for PostgresqlError {}
 impl fmt::Display for PostgresqlError {
   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-    match self {
-      &PostgresqlError::ConnectionTimeout => write!(f, "ConnectionTimeout"),
-      &PostgresqlError::ConnectionError => write!(f, "ConnectionError"),
-      &PostgresqlError::QueryTimeout => write!(f, "QueryTimeout"),
-      &PostgresqlError::QueryError => write!(f, "QueryError"),
+    match *self {
+      PostgresqlError::ConnectionTimeout => write!(f, "ConnectionTimeout"),
+      PostgresqlError::ConnectionError => write!(f, "ConnectionError"),
+      PostgresqlError::QueryTimeout => write!(f, "QueryTimeout"),
+      PostgresqlError::QueryError => write!(f, "QueryError"),
     }
   }
 }

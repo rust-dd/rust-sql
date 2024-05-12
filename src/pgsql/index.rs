@@ -2,8 +2,8 @@ use leptos::*;
 use leptos_icons::*;
 use leptos_toaster::{Toast, ToastId, ToastVariant, Toasts};
 
-use super::driver::Pgsql;
-use crate::{sidebar::schemas::Schemas, store::projects::ProjectsStore};
+use super::{driver::Pgsql, schema::Schema};
+use crate::store::projects::ProjectsStore;
 use common::enums::ProjectConnectionStatus;
 
 #[component]
@@ -69,61 +69,76 @@ pub fn Pgsql(project_id: String) -> impl IntoView {
   );
 
   view! {
-      <div class="pl-1 text-xs">
-          <div class="flex flex-row justify-between items-center">
-              <button
-                  class="hover:font-semibold flex flex-row items-center gap-1 disabled:opacity-50 disabled:font-normal"
-                  disabled=move || { pgsql.status.get() == ProjectConnectionStatus::Connecting }
-                  on:click=move |_| {
-                      if pgsql.status.get() == ProjectConnectionStatus::Connected {
-                          return;
+      <Provider value=pgsql>
+          <div class="pl-1 text-xs">
+              <div class="flex flex-row justify-between items-center">
+                  <button
+                      class="hover:font-semibold flex flex-row items-center gap-1 disabled:opacity-50 disabled:font-normal"
+                      disabled=move || { pgsql.status.get() == ProjectConnectionStatus::Connecting }
+                      on:click=move |_| {
+                          if pgsql.status.get() == ProjectConnectionStatus::Connected {
+                              return;
+                          }
+                          connect.dispatch(pgsql);
                       }
-                      connect.dispatch(pgsql);
-                  }
-              >
+                  >
 
-                  {move || match pgsql.status.get() {
-                      ProjectConnectionStatus::Connected => {
-                          view! {
-                              <Icon icon=icondata::HiCheckCircleOutlineLg width="12" height="12"/>
+                      {move || match pgsql.status.get() {
+                          ProjectConnectionStatus::Connected => {
+                              view! {
+                                  <Icon
+                                      icon=icondata::HiCheckCircleOutlineLg
+                                      width="12"
+                                      height="12"
+                                  />
+                              }
+                          }
+                          ProjectConnectionStatus::Connecting => {
+                              view! {
+                                  <Icon
+                                      icon=icondata::HiArrowPathOutlineLg
+                                      class="animate-spin"
+                                      width="12"
+                                      height="12"
+                                  />
+                              }
+                          }
+                          _ => {
+                              view! {
+                                  <Icon icon=icondata::HiXCircleOutlineLg width="12" height="12"/>
+                              }
+                          }
+                      }}
+
+                      {pgsql.project_id}
+                  </button>
+                  <button
+                      class="px-2 rounded-full hover:bg-gray-200"
+                      on:click={
+                          let project_id = project_id.clone();
+                          move |_| {
+                              delete_project.dispatch((projects_store, project_id.clone()));
                           }
                       }
-                      ProjectConnectionStatus::Connecting => {
-                          view! {
-                              <Icon
-                                  icon=icondata::HiArrowPathOutlineLg
-                                  class="animate-spin"
-                                  width="12"
-                                  height="12"
-                              />
+                  >
+
+                      "-"
+                  </button>
+              </div>
+              <div class="pl-4">
+                  <Show when=move || !pgsql.schemas.get().is_empty() fallback=|| view! {}>
+                      <For
+                          each=move || pgsql.schemas.get()
+                          key=|schema| schema.clone()
+                          children=move |schema| {
+                              view! { <Schema schema=schema/> }
                           }
-                      }
-                      _ => {
-                          view! { <Icon icon=icondata::HiXCircleOutlineLg width="12" height="12"/> }
-                      }
-                  }}
+                      />
 
-                  {pgsql.project_id}
-              </button>
-              <button
-                  class="px-2 rounded-full hover:bg-gray-200"
-                  on:click={
-                      let project_id = project_id.clone();
-                      move |_| {
-                          delete_project.dispatch((projects_store, project_id.clone()));
-                      }
-                  }
-              >
-
-                  "-"
-              </button>
+                  </Show>
+              </div>
           </div>
-          <div class="pl-4">
-              <Show when=move || !pgsql.schemas.get().is_empty() fallback=|| view! {}>
-                  <Schemas schemas=pgsql.schemas.get()/>
-              </Show>
-          </div>
-      </div>
+      </Provider>
   }
 }
 

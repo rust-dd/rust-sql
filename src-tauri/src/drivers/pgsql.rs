@@ -1,4 +1,4 @@
-use std::{sync::Arc, time::Instant};
+use std::{collections::BTreeMap, sync::Arc, time::Instant};
 
 use common::enums::{PostgresqlError, ProjectConnectionStatus};
 use tauri::{AppHandle, Manager, Result, State};
@@ -64,13 +64,14 @@ pub async fn pgsql_load_schemas(
   let clients = app_state.client.lock().await;
   let client = clients.as_ref().unwrap().get(project_id).unwrap();
 
-  let schemas = tokio_time::timeout(
+  let query = tokio_time::timeout(
     tokio_time::Duration::from_secs(10),
     client.query(
       r#"
         SELECT schema_name
         FROM information_schema.schemata
-        WHERE schema_name NOT IN ('pg_catalog', 'information_schema');
+        WHERE schema_name NOT IN ('pg_catalog', 'information_schema')
+        ORDER BY schema_name;
         "#,
       &[],
     ),
@@ -78,7 +79,7 @@ pub async fn pgsql_load_schemas(
   .await
   .map_err(|_| PostgresqlError::QueryTimeout);
 
-  if schemas.is_err() {
+  if query.is_err() {
     tracing::error!("Postgres schema query timeout error!");
     return Err(tauri::Error::Io(std::io::Error::new(
       std::io::ErrorKind::Other,
@@ -86,8 +87,8 @@ pub async fn pgsql_load_schemas(
     )));
   }
 
-  let schemas = schemas.unwrap();
-  if schemas.is_err() {
+  let query = query.unwrap();
+  if query.is_err() {
     tracing::error!("Postgres schema query error!");
     return Err(tauri::Error::Io(std::io::Error::new(
       std::io::ErrorKind::Other,
@@ -95,22 +96,21 @@ pub async fn pgsql_load_schemas(
     )));
   }
 
-  let schemas = schemas.unwrap();
-  let schemas = schemas.iter().map(|r| r.get(0)).collect();
+  let qeury = query.unwrap();
+  let schemas = qeury.iter().map(|r| r.get(0)).collect::<Vec<String>>();
   tracing::info!("Postgres schemas: {:?}", schemas);
-
   Ok(schemas)
 }
 
 #[tauri::command(rename_all = "snake_case")]
 pub async fn pgsql_load_tables(
-  project_name: &str,
+  project_id: &str,
   schema: &str,
   app_state: State<'_, AppState>,
 ) -> Result<Vec<(String, String)>> {
   let clients = app_state.client.lock().await;
-  let client = clients.as_ref().unwrap().get(project_name).unwrap();
-  let tables = client
+  let client = clients.as_ref().unwrap().get(project_id).unwrap();
+  let query = client
     .query(
       r#"--sql
         SELECT 
@@ -127,7 +127,7 @@ pub async fn pgsql_load_tables(
     )
     .await
     .unwrap();
-  let tables = tables
+  let tables = query
     .iter()
     .map(|r| (r.get(0), r.get(1)))
     .collect::<Vec<(String, String)>>();

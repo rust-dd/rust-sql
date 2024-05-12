@@ -70,8 +70,8 @@ pub struct InvokePgsqlLoadSchemasArgs<'a> {
 }
 
 #[derive(Serialize, Deserialize)]
-pub struct InvokeSchemaTablesArgs<'a> {
-  pub project_name: &'a str,
+pub struct InvokePgsqlLoadTablesArgs<'a> {
+  pub project_id: &'a str,
   pub schema: &'a str,
 }
 

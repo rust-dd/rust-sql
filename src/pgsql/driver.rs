@@ -1,8 +1,13 @@
+use std::collections::BTreeMap;
+
+use ahash::AHashMap;
 use common::enums::ProjectConnectionStatus;
 use leptos::{error::Result, RwSignal, SignalGet, SignalSet, SignalUpdate};
 use tauri_sys::tauri::invoke;
 
-use crate::invoke::{Invoke, InvokePgsqlConnectorArgs, InvokePgsqlLoadSchemasArgs};
+use crate::invoke::{
+  Invoke, InvokePgsqlConnectorArgs, InvokePgsqlLoadSchemasArgs, InvokePgsqlLoadTablesArgs,
+};
 
 #[derive(Debug, Clone, Copy)]
 pub struct Pgsql<'a> {
@@ -13,6 +18,7 @@ pub struct Pgsql<'a> {
   port: Option<&'a str>,
   pub status: RwSignal<ProjectConnectionStatus>,
   pub schemas: RwSignal<Vec<String>>,
+  pub tables: RwSignal<AHashMap<String, Vec<(String, String)>>>,
 }
 
 impl<'a> Pgsql<'a> {
@@ -21,6 +27,7 @@ impl<'a> Pgsql<'a> {
       project_id: RwSignal::new(project_id),
       status: RwSignal::default(),
       schemas: RwSignal::default(),
+      tables: RwSignal::default(),
       user: None,
       password: None,
       host: None,
@@ -61,14 +68,31 @@ impl<'a> Pgsql<'a> {
     self.schemas.set(schemas);
   }
 
-  #[allow(dead_code)]
-  pub async fn load_tables() {
-    unimplemented!()
+  pub async fn load_tables(&self, schema: &str) {
+    if self.tables.get().contains_key(schema) {
+      return;
+    }
+    let tables = invoke::<_, Vec<(String, String)>>(
+      Invoke::PgsqlLoadTables.as_ref(),
+      &InvokePgsqlLoadTablesArgs {
+        project_id: &self.project_id.get(),
+        schema,
+      },
+    )
+    .await
+    .unwrap();
+    self.tables.update(|prev| {
+      prev.insert(schema.to_owned(), tables);
+    });
   }
 
   #[allow(dead_code)]
   pub async fn run_query() {
     unimplemented!()
+  }
+
+  pub fn select_tables_by_schema(&self, schema: &str) -> Option<Vec<(String, String)>> {
+    self.tables.get().get(schema).cloned()
   }
 
   pub fn load_connection_details(

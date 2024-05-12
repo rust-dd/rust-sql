@@ -23,7 +23,7 @@ pub fn Sidebar() -> impl IntoView {
   );
 
   view! {
-      <div class="flex border-r-1 min-w-[320px] justify-between border-neutral-200 flex-col p-4">
+      <div class="flex border-r-1 min-w-[400px] justify-between border-neutral-200 flex-col p-4">
           <Add show=show/>
           <div class="flex flex-col overflow-auto">
               <div class="flex flex-row justify-between items-center">

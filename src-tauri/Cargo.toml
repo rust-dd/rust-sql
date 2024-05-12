@@ -24,6 +24,7 @@ sled = "0.34.7"
 anyhow = "1.0.83"
 tracing = "0.1.40"
 tracing-subscriber = { version = "0.3.18", features = ["fmt"] }
+ahash = { version = "0.8.11", features = ["serde"] }
 
 
 

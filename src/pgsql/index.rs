@@ -12,7 +12,6 @@ pub fn Pgsql(project_id: String) -> impl IntoView {
   let project_details = projects_store.select_project_by_name(&project_id).unwrap();
   let connection_params = project_details
     .split(':')
-    .into_iter()
     .map(String::from)
     .collect::<Vec<String>>();
   let connection_params = connection_params
@@ -45,7 +44,7 @@ pub fn Pgsql(project_id: String) -> impl IntoView {
   };
 
   let connect = create_action(move |pgsql: &Pgsql| {
-    let pgsql = pgsql.clone();
+    let pgsql = *pgsql;
     async move {
       let status = pgsql.connector().await.unwrap();
       match status {

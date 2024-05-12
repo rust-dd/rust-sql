@@ -76,8 +76,8 @@ pub struct InvokePgsqlLoadTablesArgs<'a> {
 }
 
 #[derive(Serialize, Deserialize)]
-pub struct InvokeSqlResultArgs<'a> {
-  pub project_name: &'a str,
+pub struct InvokePgsqlRunQueryArgs<'a> {
+  pub project_id: &'a str,
   pub sql: &'a str,
 }
 

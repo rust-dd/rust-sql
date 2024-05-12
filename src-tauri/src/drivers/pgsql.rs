@@ -1,6 +1,9 @@
-use std::{collections::BTreeMap, sync::Arc, time::Instant};
+use std::{sync::Arc, time::Instant};
 
-use common::enums::{PostgresqlError, ProjectConnectionStatus};
+use common::{
+  enums::{PostgresqlError, ProjectConnectionStatus},
+  types::pgsql::{PgsqlLoadSchemas, PgsqlLoadTables},
+};
 use tauri::{AppHandle, Manager, Result, State};
 use tokio::{sync::Mutex, time as tokio_time};
 use tokio_postgres::{connect, NoTls};
@@ -60,7 +63,7 @@ pub async fn pgsql_connector(
 pub async fn pgsql_load_schemas(
   project_id: &str,
   app_state: State<'_, AppState>,
-) -> Result<Vec<String>> {
+) -> Result<PgsqlLoadSchemas> {
   let clients = app_state.client.lock().await;
   let client = clients.as_ref().unwrap().get(project_id).unwrap();
 
@@ -107,7 +110,7 @@ pub async fn pgsql_load_tables(
   project_id: &str,
   schema: &str,
   app_state: State<'_, AppState>,
-) -> Result<Vec<(String, String)>> {
+) -> Result<PgsqlLoadTables> {
   let clients = app_state.client.lock().await;
   let client = clients.as_ref().unwrap().get(project_id).unwrap();
   let query = client

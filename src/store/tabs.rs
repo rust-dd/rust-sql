@@ -4,14 +4,10 @@ use leptos::{
   create_rw_signal, error::Result, use_context, RwSignal, SignalGet, SignalSet, SignalUpdate,
 };
 use monaco::api::CodeEditor;
-use tauri_sys::tauri::invoke;
 
-use crate::{
-  invoke::{Invoke, InvokeSqlResultArgs},
-  query_editor::ModelCell,
-};
+use crate::query_editor::ModelCell;
 
-use super::{active_project::ActiveProjectStore, projects::ProjectsStore, query::QueryStore};
+use super::{active_project::ActiveProjectStore, query::QueryStore};
 
 #[derive(Clone, Debug)]
 struct QueryInfo {

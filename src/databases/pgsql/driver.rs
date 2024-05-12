@@ -1,10 +1,17 @@
 use ahash::AHashMap;
-use common::enums::ProjectConnectionStatus;
-use leptos::{error::Result, RwSignal, SignalGet, SignalSet, SignalUpdate};
+use common::{
+  enums::ProjectConnectionStatus,
+  types::pgsql::{PgsqlLoadSchemas, PgsqlLoadTables, PgsqlRunQuery},
+};
+use leptos::{error::Result, expect_context, RwSignal, SignalGet, SignalSet, SignalUpdate};
 use tauri_sys::tauri::invoke;
 
-use crate::invoke::{
-  Invoke, InvokePgsqlConnectorArgs, InvokePgsqlLoadSchemasArgs, InvokePgsqlLoadTablesArgs,
+use crate::{
+  invoke::{
+    Invoke, InvokePgsqlConnectorArgs, InvokePgsqlLoadSchemasArgs, InvokePgsqlLoadTablesArgs,
+    InvokePgsqlRunQueryArgs,
+  },
+  store::atoms::{QueryPerformanceAtom, QueryPerformanceContext},
 };
 
 #[derive(Debug, Clone, Copy)]
@@ -55,7 +62,7 @@ impl<'a> Pgsql<'a> {
   }
 
   pub async fn load_schemas(&self) {
-    let schemas = invoke::<_, Vec<String>>(
+    let schemas = invoke::<_, PgsqlLoadSchemas>(
       Invoke::PgsqlLoadSchemas.as_ref(),
       &InvokePgsqlLoadSchemasArgs {
         project_id: &self.project_id.get(),
@@ -70,7 +77,7 @@ impl<'a> Pgsql<'a> {
     if self.tables.get().contains_key(schema) {
       return;
     }
-    let tables = invoke::<_, Vec<(String, String)>>(
+    let tables = invoke::<_, PgsqlLoadTables>(
       Invoke::PgsqlLoadTables.as_ref(),
       &InvokePgsqlLoadTablesArgs {
         project_id: &self.project_id.get(),
@@ -84,9 +91,25 @@ impl<'a> Pgsql<'a> {
     });
   }
 
-  #[allow(dead_code)]
-  pub async fn run_query() {
-    unimplemented!()
+  pub async fn run_query(&self, sql: &str) {
+    let query = invoke::<_, PgsqlRunQuery>(
+      Invoke::PgsqlRunQuery.as_ref(),
+      &InvokePgsqlRunQueryArgs {
+        project_id: &self.project_id.get(),
+        sql,
+      },
+    )
+    .await
+    .unwrap();
+    let (cols, rows, query_time) = query;
+    let qp_store = expect_context::<QueryPerformanceContext>();
+    qp_store.update(|prev| {
+      prev.push(QueryPerformanceAtom {
+        message: Some(format!("Query executed in {:.2} seconds", query_time)),
+        execution_time: Some(query_time),
+        query: Some(sql.to_string()),
+      })
+    });
   }
 
   pub fn select_tables_by_schema(&self, schema: &str) -> Option<Vec<(String, String)>> {

@@ -10,7 +10,10 @@ use crate::{
   query_table::QueryTable,
   sidebar::index::Sidebar,
   store::{
-    active_project::ActiveProjectStore,
+    atoms::{
+      ActiveTabAtom, ActiveTabContext, QueryPerformanceAtom, QueryPerformanceContext,
+      SelectedTabAtom, SelectedTabContext,
+    },
     projects::ProjectsStore,
     query::QueryStore,
     tabs::{self, TabsStore},
@@ -24,9 +27,10 @@ use crate::{
 pub fn App() -> impl IntoView {
   provide_context(QueryStore::default());
   provide_context(ProjectsStore::default());
-  provide_context(create_rw_signal(QueryTableLayout::Grid));
-  provide_context(create_rw_signal(0.0f32));
-  provide_context(ActiveProjectStore::default());
+  provide_context(RwSignal::new(QueryTableLayout::Grid));
+  provide_context::<QueryPerformanceContext>(RwSignal::new(Vec::<QueryPerformanceAtom>::new()));
+  provide_context::<ActiveTabContext>(RwSignal::new(ActiveTabAtom::default()));
+  provide_context::<SelectedTabContext>(RwSignal::new(SelectedTabAtom::default()));
   provide_context(TabsStore::default());
   let mut tabs = expect_context::<tabs::TabsStore>();
 

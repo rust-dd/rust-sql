@@ -45,4 +45,3 @@ pub async fn project_db_delete(project_id: &str, app_state: State<'_, AppState>)
   db.remove(project_id).unwrap();
   Ok(())
 }
-

@@ -31,7 +31,7 @@ impl IntoIterator for ConnectionDetails {
 }
 
 #[component]
-pub fn Add(show: RwSignal<bool>) -> impl IntoView {
+pub fn AddPgsqlConnection(show: RwSignal<bool>) -> impl IntoView {
   let projects_store = expect_context::<ProjectsStore>();
   let params = create_rw_signal(ConnectionDetails {
     driver: Drivers::PGSQL,

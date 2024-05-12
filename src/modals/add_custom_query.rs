@@ -6,7 +6,7 @@ use crate::store::{
 };
 
 #[component]
-pub fn CustomQuery(show: RwSignal<bool>) -> impl IntoView {
+pub fn AddCustomQuery(show: RwSignal<bool>) -> impl IntoView {
   let projects_store = expect_context::<ProjectsStore>();
   let query_store = expect_context::<QueryStore>();
   let (query_title, set_query_title) = create_signal(String::new());

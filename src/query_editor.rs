@@ -12,7 +12,7 @@ use monaco::{
 };
 use wasm_bindgen::{closure::Closure, JsCast};
 
-use crate::{modals::custom_query::CustomQuery, store::tabs::TabsStore};
+use crate::{modals::add_custom_query::AddCustomQuery, store::tabs::TabsStore};
 
 pub type ModelCell = Rc<RefCell<Option<CodeEditor>>>;
 pub const MODE_ID: &str = "pgsql";
@@ -72,7 +72,7 @@ pub fn QueryEditor() -> impl IntoView {
 
   view! {
       <div _ref=node_ref class="border-b-1 border-neutral-200 h-72 sticky">
-          <CustomQuery show=show/>
+          <AddCustomQuery show=show/>
           <div class="absolute bottom-0 items-center flex justify-end px-4 left-0 w-full h-10 bg-gray-50">
               <div class="flex flex-row gap-2 text-xs">
                   <button

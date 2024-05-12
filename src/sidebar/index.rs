@@ -2,7 +2,7 @@ use leptos::*;
 use leptos_use::{use_document, use_event_listener};
 
 use crate::{
-  databases::pgsql::{add::Add, index::Pgsql},
+  databases::pgsql::index::Pgsql, modals::add_pgsql_connection::AddPgsqlConnection,
   store::projects::ProjectsStore,
 };
 use common::enums::Drivers;
@@ -27,7 +27,7 @@ pub fn Sidebar() -> impl IntoView {
 
   view! {
       <div class="flex border-r-1 min-w-[400px] justify-between border-neutral-200 flex-col p-4">
-          <Add show=show/>
+          <AddPgsqlConnection show=show/>
           <div class="flex flex-col overflow-auto">
               <div class="flex flex-row justify-between items-center">
                   <p class="font-semibold text-lg">Projects</p>

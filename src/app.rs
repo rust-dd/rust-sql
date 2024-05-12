@@ -35,7 +35,7 @@ pub fn App() -> impl IntoView {
           <div class="flex h-screen">
               <Sidebar/>
               <div class="flex flex-col flex-1 overflow-hidden">
-                  <main class="flex-1 overflow-y-scroll">
+                  <main class="flex-1 relative overflow-y-scroll">
                       <Tabs value=tabs.selected_tab>
                           <For
                               each=move || (0..tabs.active_tabs.get())
@@ -84,6 +84,12 @@ pub fn App() -> impl IntoView {
                       </Button>
                   </main>
                   <Footer/>
+              </div>
+              <div class="w-[240px] bg-white border-l-1 border-neutral-200">
+                  <div class="p-4">
+                      <p class="font-semibold text-lg">Database performance</p>
+                      <div class="text-sm"></div>
+                  </div>
               </div>
           </div>
       </Toaster>

@@ -23,7 +23,7 @@ pub fn Schema(schema: String) -> impl IntoView {
   view! {
       <div>
           <button
-              class="hover:font-semibold cursor-pointer sticky top-0 z-10 bg-white flex flex-row items-center gap-1 disabled:opacity-50 disabled:font-normal"
+              class="hover:font-semibold cursor-pointer flex flex-row items-center gap-1 disabled:opacity-50 disabled:font-normal"
               on:click={
                   let schema = schema.clone();
                   move |_| {

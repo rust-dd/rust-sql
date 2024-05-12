@@ -4,7 +4,7 @@ use crate::store::tabs::TabsStore;
 
 #[component]
 pub fn GridView() -> impl IntoView {
-  let tabs_store = use_context::<TabsStore>().unwrap();
+  let tabs_store = expect_context::<TabsStore>();
 
   view! {
       <table class="table-auto w-full">

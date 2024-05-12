@@ -1,14 +1,14 @@
 use leptos::*;
 use leptos_icons::*;
-use thaw::use_message;
+use leptos_toaster::{Toast, ToastId, ToastVariant, Toasts};
 
-use crate::{drivers::pgsql, sidebar::schemas::Schemas, store::projects::ProjectsStore};
+use super::driver::Pgsql;
+use crate::{sidebar::schemas::Schemas, store::projects::ProjectsStore};
 use common::enums::ProjectConnectionStatus;
 
 #[component]
 pub fn Pgsql(project_id: String) -> impl IntoView {
-  let message = use_message();
-  let projects_store = use_context::<ProjectsStore>().unwrap();
+  let projects_store = expect_context::<ProjectsStore>();
   let project_details = projects_store.select_project_by_name(&project_id).unwrap();
   let connection_params = project_details
     .split(':')
@@ -25,7 +25,7 @@ pub fn Pgsql(project_id: String) -> impl IntoView {
     .collect::<Vec<String>>();
   let connection_params = Box::leak(connection_params.into_boxed_slice());
   // [user, password, host, port]
-  let mut pgsql = pgsql::Pgsql::new(project_id.clone());
+  let mut pgsql = Pgsql::new(project_id.clone());
   {
     pgsql.load_connection_details(
       &connection_params[0],
@@ -34,32 +34,28 @@ pub fn Pgsql(project_id: String) -> impl IntoView {
       &connection_params[3],
     );
   }
-  let connect = create_action(move |pgsql: &pgsql::Pgsql| {
+  let toast_context = expect_context::<Toasts>();
+  let create_toast = move |variant: ToastVariant, title: String| {
+    let toast_id = ToastId::new();
+    toast_context.toast(
+      view! { <Toast toast_id variant title=view! { {title} }.into_view()/> },
+      Some(toast_id),
+      None, // options
+    );
+  };
+
+  let connect = create_action(move |pgsql: &Pgsql| {
     let pgsql = pgsql.clone();
     async move {
       let status = pgsql.connector().await.unwrap();
       match status {
         ProjectConnectionStatus::Connected => {
-          message.create(
-            "Connected to project".into(),
-            thaw::MessageVariant::Success,
-            Default::default(),
-          );
+          create_toast(ToastVariant::Success, "Connected to project".into());
         }
         ProjectConnectionStatus::Failed => {
-          message.create(
-            "Failed to connect to project".into(),
-            thaw::MessageVariant::Error,
-            Default::default(),
-          );
+          create_toast(ToastVariant::Error, "Failed to connect to project".into())
         }
-        _ => {
-          message.create(
-            "Failed to connect to project".into(),
-            thaw::MessageVariant::Error,
-            Default::default(),
-          );
-        }
+        _ => create_toast(ToastVariant::Warning, "Failed to connect to project".into()),
       }
     }
   });
@@ -67,7 +63,9 @@ pub fn Pgsql(project_id: String) -> impl IntoView {
     move |(projects_store, project_id): &(ProjectsStore, String)| {
       let projects_store = *projects_store;
       let project_id = project_id.clone();
-      async move { projects_store.delete_project(&project_id) }
+      async move {
+        projects_store.delete_project(&project_id).await;
+      }
     },
   );
 

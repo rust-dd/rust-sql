@@ -5,7 +5,7 @@ use crate::store::projects::ProjectsStore;
 
 #[component]
 pub fn Tables(schema: String, project: String) -> impl IntoView {
-  let projects_store = use_context::<ProjectsStore>().unwrap();
+  let projects_store = expect_context::<ProjectsStore>();
   let schema_clone = schema.clone();
   let project_clone = project.clone();
   let tables = create_resource(

@@ -4,7 +4,7 @@ use crate::store::tabs::TabsStore;
 
 #[component]
 pub fn RecordView() -> impl IntoView {
-  let tabs_store = use_context::<TabsStore>().unwrap();
+  let tabs_store = expect_context::<TabsStore>();
   let columns = tabs_store.select_active_editor_sql_result().unwrap().0;
   let first_row = tabs_store
     .select_active_editor_sql_result()

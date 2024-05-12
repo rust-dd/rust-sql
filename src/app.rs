@@ -1,6 +1,7 @@
 use leptos::*;
 use leptos_icons::*;
-use thaw::{Button, ButtonSize, MessageProvider, Tab, TabLabel, Tabs};
+use leptos_toaster::{Toaster, ToasterPosition};
+use thaw::{Button, ButtonSize, Tab, TabLabel, Tabs};
 
 use crate::{
   enums::QueryTableLayout,
@@ -27,10 +28,10 @@ pub fn App() -> impl IntoView {
   provide_context(create_rw_signal(0.0f32));
   provide_context(ActiveProjectStore::default());
   provide_context(TabsStore::default());
-  let mut tabs = use_context::<tabs::TabsStore>().unwrap();
+  let mut tabs = expect_context::<tabs::TabsStore>();
 
   view! {
-      <MessageProvider>
+      <Toaster position=ToasterPosition::TopCenter>
           <div class="flex h-screen">
               <Sidebar/>
               <div class="flex flex-col flex-1 overflow-hidden">
@@ -85,7 +86,7 @@ pub fn App() -> impl IntoView {
                   <Footer/>
               </div>
           </div>
-      </MessageProvider>
+      </Toaster>
   }
 }
 

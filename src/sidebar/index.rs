@@ -1,20 +1,14 @@
-use leptos::*;
+use leptos::{logging::log, *};
 use leptos_use::{use_document, use_event_listener};
-use tauri_sys::tauri::invoke;
 
-use crate::{
-  driver_components::pgsql::Pgsql,
-  invoke::{Invoke, InvokeSelectProjectsArgs},
-  modals::connection::Connection,
-  store::projects::ProjectsStore,
-};
+use crate::{pgsql::add::Add, pgsql::index::Pgsql, store::projects::ProjectsStore};
 use common::enums::Drivers;
 
 use super::queries::Queries;
 
 #[component]
 pub fn Sidebar() -> impl IntoView {
-  let projects_store = use_context::<ProjectsStore>().unwrap();
+  let projects_store = expect_context::<ProjectsStore>();
   let show = create_rw_signal(false);
   let _ = use_event_listener(use_document(), ev::keydown, move |event| {
     if event.key() == "Escape" {
@@ -22,7 +16,7 @@ pub fn Sidebar() -> impl IntoView {
     }
   });
   create_resource(
-    move || projects_store.0.get(),
+    || {},
     move |_| async move {
       projects_store.load_projects().await;
     },
@@ -30,7 +24,7 @@ pub fn Sidebar() -> impl IntoView {
 
   view! {
       <div class="flex border-r-1 min-w-[320px] justify-between border-neutral-200 flex-col p-4">
-          <Connection show=show/>
+          <Add show=show/>
           <div class="flex flex-col overflow-auto">
               <div class="flex flex-row justify-between items-center">
                   <p class="font-semibold text-lg">Projects</p>
@@ -45,10 +39,10 @@ pub fn Sidebar() -> impl IntoView {
                   each=move || projects_store.0.get()
                   key=|(project, _)| project.clone()
                   children=|(project_id, project_details)| {
-                      if project_details.contains(Drivers::POSTGRESQL.as_ref()) {
+                      if project_details.contains(Drivers::PGSQL.as_ref()) {
                           view! {
                               <div>
-                                  <Pgsql project_id=project_id/>
+                                  <Pgsql project_id/>
                               </div>
                           }
                       } else {

@@ -5,8 +5,8 @@ use crate::store::{query::QueryStore, tabs::TabsStore};
 
 #[component]
 pub fn Query(key: String) -> impl IntoView {
-  let query_store = use_context::<QueryStore>().unwrap();
-  let tabs_store = use_context::<TabsStore>().unwrap();
+  let query_store = expect_context::<QueryStore>();
+  let tabs_store = expect_context::<TabsStore>();
   let key_clone = key.clone();
   let splitted_key = create_memo(move |_| {
     let key = key_clone.clone();

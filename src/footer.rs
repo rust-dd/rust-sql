@@ -5,9 +5,9 @@ use crate::{enums::QueryTableLayout, store::active_project::ActiveProjectStore};
 
 #[component]
 pub fn Footer() -> impl IntoView {
-  let table_view = use_context::<RwSignal<QueryTableLayout>>().unwrap();
-  let acitve_project = use_context::<ActiveProjectStore>().unwrap();
-  let sql_timer = use_context::<RwSignal<f32>>().unwrap();
+  let table_view = expect_context::<RwSignal<QueryTableLayout>>();
+  let acitve_project = expect_context::<ActiveProjectStore>();
+  let sql_timer = expect_context::<RwSignal<f32>>();
   let formatted_timer = create_memo(move |_| format!("Query complete: {}ms", sql_timer.get()));
 
   view! {

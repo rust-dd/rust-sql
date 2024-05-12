@@ -2,15 +2,16 @@ use std::fmt::Display;
 
 use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, Copy, Serialize, Deserialize, Default)]
 pub enum Drivers {
-  POSTGRESQL,
+  #[default]
+  PGSQL,
 }
 
 impl Display for Drivers {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
     match self {
-      Drivers::POSTGRESQL => write!(f, "POSTGRESQL"),
+      Drivers::PGSQL => write!(f, "PGSQL"),
     }
   }
 }
@@ -18,7 +19,7 @@ impl Display for Drivers {
 impl AsRef<str> for Drivers {
   fn as_ref(&self) -> &str {
     match self {
-      Drivers::POSTGRESQL => "POSTGRESQL",
+      Drivers::PGSQL => "PGSQL",
     }
   }
 }

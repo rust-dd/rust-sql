@@ -9,6 +9,12 @@ pub async fn project_db_select(app_state: State<'_, AppState>) -> Result<BTreeMa
   let project_db = app_state.project_db.lock().await;
   let db = project_db.clone().unwrap();
   let mut projects = BTreeMap::new();
+
+  if db.is_empty() {
+    tracing::info!("No projects found in the database");
+    return Ok(projects);
+  }
+
   for p in db.iter() {
     let project = p.unwrap();
 
@@ -18,7 +24,6 @@ pub async fn project_db_select(app_state: State<'_, AppState>) -> Result<BTreeMa
     );
     projects.insert(project.0, project.1);
   }
-
   Ok(projects)
 }
 

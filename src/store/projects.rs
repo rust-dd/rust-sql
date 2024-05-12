@@ -1,11 +1,9 @@
 use std::collections::BTreeMap;
 
-use leptos::{
-  create_rw_signal, logging::log, use_context, RwSignal, SignalGet, SignalSet, SignalUpdate,
-};
+use leptos::{RwSignal, SignalGet, SignalSet};
 use tauri_sys::tauri::invoke;
 
-use crate::invoke::Invoke;
+use crate::invoke::{Invoke, InvokeProjectDbDeleteArgs, InvokeProjectDbInsertArgs};
 
 #[derive(Clone, Copy, Debug)]
 pub struct ProjectsStore(pub RwSignal<BTreeMap<String, String>>);
@@ -19,26 +17,39 @@ impl Default for ProjectsStore {
 impl ProjectsStore {
   #[must_use]
   pub fn new() -> Self {
-    Self(create_rw_signal(BTreeMap::default()))
-  }
-
-  pub async fn load_projects(&self) {
-    let projects_store = use_context::<ProjectsStore>().unwrap();
-    let projects = invoke::<_, BTreeMap<String, String>>(Invoke::ProjectDbSelect.as_ref(), &())
-      .await
-      .unwrap();
-    log!("projects: {:?}", projects);
-    projects_store.0.set(projects);
+    Self(RwSignal::default())
   }
 
   pub fn select_project_by_name(&self, project_id: &str) -> Option<String> {
     self.0.get().get(project_id).cloned()
   }
 
-  pub fn delete_project(&self, project_id: &str) {
-    self.0.update(|projects| {
-      projects.remove(project_id);
-    });
+  pub async fn load_projects(&self) {
+    let projects = invoke::<_, BTreeMap<String, String>>(Invoke::ProjectDbSelect.as_ref(), &())
+      .await
+      .unwrap();
+    self.0.set(projects);
+  }
+
+  pub async fn insert_project(&self, project_id: &str, project_details: &str) {
+    let _ = invoke::<_, ()>(
+      Invoke::ProjectDbInsert.as_ref(),
+      &InvokeProjectDbInsertArgs {
+        project_id,
+        project_details,
+      },
+    )
+    .await;
+    self.load_projects().await;
+  }
+
+  pub async fn delete_project(&self, project_id: &str) {
+    let _ = invoke::<_, ()>(
+      Invoke::ProjectDbDelete.as_ref(),
+      &InvokeProjectDbDeleteArgs { project_id },
+    )
+    .await;
+    self.load_projects().await;
   }
 }
 

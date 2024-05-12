@@ -65,7 +65,7 @@ pub async fn pgsql_load_schemas(
   let client = clients.as_ref().unwrap().get(project_id).unwrap();
 
   let schemas = tokio_time::timeout(
-    tokio_time::Duration::from_secs(30),
+    tokio_time::Duration::from_secs(10),
     client.query(
       r#"
         SELECT schema_name

@@ -59,20 +59,14 @@ impl AsRef<str> for Invoke {
 }
 
 #[derive(Serialize, Deserialize)]
-pub struct InvokePostgresConnectorArgs<'a> {
+pub struct InvokePgsqlConnectorArgs<'a> {
   pub project_id: &'a str,
   pub key: &'a str,
 }
 
 #[derive(Serialize, Deserialize)]
-pub struct InvokePostgresSchemasArgs<'a> {
+pub struct InvokePgsqlLoadSchemasArgs<'a> {
   pub project_id: &'a str,
-}
-
-#[derive(Serialize, Deserialize)]
-pub struct InvokeSchemaRelationsArgs<'a> {
-  pub project_name: &'a str,
-  pub schema: &'a str,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -88,16 +82,14 @@ pub struct InvokeSqlResultArgs<'a> {
 }
 
 #[derive(Serialize, Deserialize)]
-pub struct InvokeSelectProjectsArgs;
-
-#[derive(Serialize, Deserialize)]
-pub struct InvokeInsertProjectArgs {
-  //pub project: Project,
+pub struct InvokeProjectDbInsertArgs<'a> {
+  pub project_id: &'a str,
+  pub project_details: &'a str,
 }
 
 #[derive(Serialize, Deserialize)]
-pub struct InvokeDeleteProjectArgs<'a> {
-  pub project_name: &'a str,
+pub struct InvokeProjectDbDeleteArgs<'a> {
+  pub project_id: &'a str,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -112,55 +104,5 @@ pub struct InvokeSelectQueriesArgs;
 #[derive(Serialize, Deserialize)]
 pub struct InvokeDeleteQueryArgs<'a> {
   pub key: &'a str,
-}
-
-#[derive(Default, Serialize, Deserialize)]
-pub struct InvokeContextMenuArgs<'a> {
-  pub pos: Option<InvokeContextMenuPosition>,
-  #[serde(borrow)]
-  pub items: Option<Vec<InvokeContextMenuItem<'a>>>,
-}
-
-#[derive(Serialize, Deserialize)]
-pub struct InvokeContextMenuItem<'a> {
-  pub label: Option<&'a str>,
-  pub disabled: Option<bool>,
-  pub shortcut: Option<&'a str>,
-  pub event: Option<&'a str>,
-  pub payload: Option<&'a str>,
-  pub subitems: Option<Vec<InvokeContextMenuItem<'a>>>,
-  pub icon: Option<InvokeContextItemIcon<'a>>,
-  pub checked: Option<bool>,
-  pub is_separator: Option<bool>,
-}
-
-impl<'a> Default for InvokeContextMenuItem<'a> {
-  fn default() -> Self {
-    Self {
-      label: None,
-      disabled: Some(false),
-      shortcut: None,
-      event: None,
-      payload: None,
-      subitems: None,
-      icon: None,
-      checked: Some(false),
-      is_separator: Some(false),
-    }
-  }
-}
-
-#[derive(Serialize, Deserialize)]
-pub struct InvokeContextItemIcon<'a> {
-  pub path: &'a str,
-  pub width: Option<u32>,
-  pub height: Option<u32>,
-}
-
-#[derive(Serialize, Deserialize)]
-pub struct InvokeContextMenuPosition {
-  pub x: f64,
-  pub y: f64,
-  pub is_absolute: Option<bool>,
 }
 

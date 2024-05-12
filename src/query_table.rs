@@ -5,8 +5,8 @@ use leptos::*;
 
 #[component]
 pub fn QueryTable() -> impl IntoView {
-  let tabs_store = use_context::<TabsStore>().unwrap();
-  let table_view = use_context::<RwSignal<QueryTableLayout>>().unwrap();
+  let tabs_store = expect_context::<TabsStore>();
+  let table_view = expect_context::<RwSignal<QueryTableLayout>>();
 
   view! {
       <Show when=move || !tabs_store.is_loading.get() fallback=|| view! { <p>"Loading..."</p> }>

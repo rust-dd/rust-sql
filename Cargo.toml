@@ -23,6 +23,7 @@ futures = "0.3.30"
 async-stream = "0.3.5"
 icondata = "0.3.0"
 ahash = "0.8.11"
+leptos_toaster = { version = "0.1.6", features = ["builtin_toast"] }
 
 [workspace]
 members = ["src-tauri", "common"]

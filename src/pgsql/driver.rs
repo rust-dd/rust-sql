@@ -2,7 +2,7 @@ use common::enums::ProjectConnectionStatus;
 use leptos::{error::Result, RwSignal, SignalGet, SignalSet, SignalUpdate};
 use tauri_sys::tauri::invoke;
 
-use crate::invoke::{Invoke, InvokePostgresConnectorArgs, InvokePostgresSchemasArgs};
+use crate::invoke::{Invoke, InvokePgsqlConnectorArgs, InvokePgsqlLoadSchemasArgs};
 
 #[derive(Debug, Clone, Copy)]
 pub struct Pgsql<'a> {
@@ -35,14 +35,16 @@ impl<'a> Pgsql<'a> {
     let connection_string = self.generate_connection_string();
     let status = invoke::<_, ProjectConnectionStatus>(
       Invoke::PgsqlConnector.as_ref(),
-      &InvokePostgresConnectorArgs {
+      &InvokePgsqlConnectorArgs {
         project_id: &self.project_id.get(),
         key: connection_string.as_str(),
       },
     )
     .await
     .unwrap();
-    self.load_schemas().await;
+    if status == ProjectConnectionStatus::Connected {
+      self.load_schemas().await;
+    }
     self.status.update(|prev| *prev = status.clone());
     Ok(status)
   }
@@ -50,7 +52,7 @@ impl<'a> Pgsql<'a> {
   pub async fn load_schemas(&self) {
     let schemas = invoke::<_, Vec<String>>(
       Invoke::PgsqlLoadSchemas.as_ref(),
-      &InvokePostgresSchemasArgs {
+      &InvokePgsqlLoadSchemasArgs {
         project_id: &self.project_id.get(),
       },
     )
@@ -59,10 +61,12 @@ impl<'a> Pgsql<'a> {
     self.schemas.set(schemas);
   }
 
+  #[allow(dead_code)]
   pub async fn load_tables() {
     unimplemented!()
   }
 
+  #[allow(dead_code)]
   pub async fn run_query() {
     unimplemented!()
   }

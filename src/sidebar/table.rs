@@ -8,8 +8,8 @@ use crate::store::{active_project::ActiveProjectStore, tabs::TabsStore};
 
 #[component]
 pub fn Table(table: (String, String), project: String, schema: String) -> impl IntoView {
-  let tabs_store = Arc::new(Mutex::new(use_context::<TabsStore>().unwrap()));
-  let active_project = use_context::<ActiveProjectStore>().unwrap();
+  let tabs_store = Arc::new(Mutex::new(expect_context::<TabsStore>()));
+  let active_project = expect_context::<ActiveProjectStore>();
   let query = create_action(
     move |(schema, table, tabs_store): &(String, String, Arc<Mutex<TabsStore>>)| {
       let tabs_store = tabs_store.clone();

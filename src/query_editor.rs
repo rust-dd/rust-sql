@@ -19,7 +19,7 @@ pub const MODE_ID: &str = "pgsql";
 
 #[component]
 pub fn QueryEditor() -> impl IntoView {
-  let tabs_store = Rc::new(RefCell::new(use_context::<TabsStore>().unwrap()));
+  let tabs_store = Rc::new(RefCell::new(expect_context::<TabsStore>()));
   let show = create_rw_signal(false);
   let _ = use_event_listener(use_document(), ev::keydown, move |event| {
     if event.key() == "Escape" {
@@ -56,7 +56,7 @@ pub fn QueryEditor() -> impl IntoView {
     let e = Rc::new(RefCell::new(Some(e)));
     tabs_store_clone.borrow_mut().add_editor(e);
   });
-  let tabs_store = Arc::new(Mutex::new(use_context::<TabsStore>().unwrap()));
+  let tabs_store = Arc::new(Mutex::new(expect_context::<TabsStore>()));
   let run_query = create_action(move |tabs_store: &Arc<Mutex<TabsStore>>| {
     let tabs_store = tabs_store.clone();
     async move {

@@ -39,54 +39,7 @@ pub fn App() -> impl IntoView {
           <div class="flex h-screen">
               <Sidebar/>
               <div class="flex flex-col flex-1 overflow-hidden">
-                  <main class="flex-1 relative overflow-y-scroll">
-                      <Tabs value=tabs.selected_tab>
-                          <For
-                              each=move || (0..tabs.active_tabs.get())
-                              key=|index| index.to_string()
-                              children=move |index| {
-                                  view! {
-                                      <Tab key=index.to_string()>
-                                          <TabLabel slot>
-                                              <div class="flex flex-row items-center justify-between gap-2 h-full text-sm">
-                                                  <span>{format!("Tab {}", index + 1)}</span>
-                                                  <button
-                                                      class="rounded-full p-1 hover:bg-gray-100"
-                                                      on:click=move |_| { tabs.remove_editor(index) }
-                                                  >
-
-                                                      <Icon icon=icondata::CgClose width="16" height="16"/>
-                                                  </button>
-                                              </div>
-                                          </TabLabel>
-                                          <QueryEditor/>
-                                          <QueryTable/>
-                                      </Tab>
-                                  }
-                              }
-                          />
-
-                      </Tabs>
-                      <Button
-                          size=ButtonSize::Small
-                          icon=icondata::TbPlus
-                          class="absolute top-2 right-2 text-sm"
-                          on:click=move |_| {
-                              tabs.active_tabs.update(|prev| *prev += 1);
-                              tabs.selected_tab
-                                  .update(|prev| {
-                                      *prev = if *prev == "0" {
-                                          "1".to_string()
-                                      } else {
-                                          (tabs.active_tabs.get() - 1).to_string()
-                                      }
-                                  });
-                          }
-                      >
-
-                          {"Add Tab"}
-                      </Button>
-                  </main>
+                  <main class="flex-1 relative overflow-y-scroll"></main>
                   <Footer/>
               </div>
               <div class="w-[240px] bg-white border-l-1 border-neutral-200">

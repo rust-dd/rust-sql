@@ -9,17 +9,3 @@ pub struct QueryPerformanceAtom {
 
 pub type QueryPerformanceContext = RwSignal<Vec<QueryPerformanceAtom>>;
 
-#[derive(Debug, Default, Clone)]
-pub struct ActiveTabAtom {
-  pub id: usize,
-}
-
-pub type ActiveTabContext = RwSignal<ActiveTabAtom>;
-
-#[derive(Debug, Default, Clone)]
-pub struct SelectedTabAtom {
-  pub id: String,
-}
-
-pub type SelectedTabContext = RwSignal<SelectedTabAtom>;
-

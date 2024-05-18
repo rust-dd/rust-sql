@@ -14,6 +14,7 @@ pub enum Invoke {
   PgsqlConnector,
   PgsqlLoadSchemas,
   PgsqlLoadTables,
+  #[allow(dead_code)]
   PgsqlLoadRelations,
   PgsqlRunQuery,
 }

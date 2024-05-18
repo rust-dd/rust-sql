@@ -1,22 +1,16 @@
 use leptos::*;
-use leptos_icons::*;
 use leptos_toaster::{Toaster, ToasterPosition};
-use thaw::{Button, ButtonSize, Tab, TabLabel, Tabs};
 
 use crate::{
+  dashboard::index::Dashboard,
   enums::QueryTableLayout,
   footer::Footer,
-  query_editor::QueryEditor,
-  query_table::QueryTable,
   sidebar::index::Sidebar,
   store::{
-    atoms::{
-      ActiveTabAtom, ActiveTabContext, QueryPerformanceAtom, QueryPerformanceContext,
-      SelectedTabAtom, SelectedTabContext,
-    },
+    atoms::{QueryPerformanceAtom, QueryPerformanceContext},
     projects::ProjectsStore,
     query::QueryStore,
-    tabs::{self, TabsStore},
+    tabs::TabsStore,
   },
 };
 
@@ -29,17 +23,16 @@ pub fn App() -> impl IntoView {
   provide_context(ProjectsStore::default());
   provide_context(RwSignal::new(QueryTableLayout::Grid));
   provide_context::<QueryPerformanceContext>(RwSignal::new(Vec::<QueryPerformanceAtom>::new()));
-  provide_context::<ActiveTabContext>(RwSignal::new(ActiveTabAtom::default()));
-  provide_context::<SelectedTabContext>(RwSignal::new(SelectedTabAtom::default()));
   provide_context(TabsStore::default());
-  let mut tabs = expect_context::<tabs::TabsStore>();
 
   view! {
       <Toaster position=ToasterPosition::TopCenter>
           <div class="flex h-screen">
               <Sidebar/>
               <div class="flex flex-col flex-1 overflow-hidden">
-                  <main class="flex-1 relative overflow-y-scroll"></main>
+                  <main class="flex-1 relative overflow-y-scroll">
+                      <Dashboard/>
+                  </main>
                   <Footer/>
               </div>
               <div class="w-[240px] bg-white border-l-1 border-neutral-200">

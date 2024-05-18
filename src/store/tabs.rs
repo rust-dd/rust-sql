@@ -5,7 +5,7 @@ use leptos::{
 };
 use monaco::api::CodeEditor;
 
-use crate::query_editor::ModelCell;
+use crate::dashboard::query_editor::ModelCell;
 
 use super::{active_project::ActiveProjectStore, query::QueryStore};
 
@@ -20,7 +20,6 @@ struct QueryInfo {
 
 #[derive(Copy, Clone, Debug)]
 pub struct TabsStore {
-  pub active_tabs: RwSignal<usize>,
   pub selected_tab: RwSignal<String>,
   pub editors: RwSignal<Vec<ModelCell>>,
   #[allow(clippy::type_complexity)]
@@ -41,7 +40,6 @@ impl TabsStore {
   #[must_use]
   pub fn new() -> Self {
     Self {
-      active_tabs: create_rw_signal(1),
       selected_tab: create_rw_signal(String::from("0")),
       editors: create_rw_signal(Vec::new()),
       sql_results: create_rw_signal(Vec::new()),
@@ -118,13 +116,9 @@ impl TabsStore {
 
   #[allow(dead_code)]
   pub fn remove_editor(&mut self, index: usize) {
-    if self.active_tabs.get() == 1 {
+    if self.editors.get().len() == 1 {
       return;
     }
-
-    self.active_tabs.update(|prev| {
-      *prev -= 1;
-    });
 
     self.editors.update(|prev| {
       prev.remove(index);

@@ -87,6 +87,12 @@ pub fn QueryEditor() -> impl IntoView {
                   >
                       "Query"
                   </button>
+                  <button
+                      class="p-1 border-1 border-neutral-200 bg-white hover:bg-neutral-200 rounded-md"
+                      on:click=move |_| {}
+                  >
+                      "+ Tab"
+                  </button>
               </div>
           </div>
       </div>

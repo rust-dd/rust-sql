@@ -1,11 +1,19 @@
 use leptos::*;
+use leptos_icons::Icon;
+use thaw::{Tab, TabLabel, Tabs};
+
+use crate::store::tabs;
+
+use super::{query_editor::QueryEditor, query_table::QueryTable};
 
 #[component]
 pub fn Dashboard() -> impl IntoView {
+  let mut tabs = expect_context::<tabs::TabsStore>();
+
   view! {
       <Tabs value=tabs.selected_tab>
           <For
-              each=move || (0..tabs.active_tabs.get())
+              each=move || (0..(tabs.selected_tab.get().parse::<usize>().unwrap_or_default() + 1))
               key=|index| index.to_string()
               children=move |index| {
                   view! {
@@ -26,25 +34,6 @@ pub fn Dashboard() -> impl IntoView {
                               <QueryEditor/>
                               <QueryTable/>
                           </Tab>
-                          <Button
-                              size=ButtonSize::Small
-                              icon=icondata::TbPlus
-                              class="absolute top-2 right-2 text-sm"
-                              on:click=move |_| {
-                                  tabs.active_tabs.update(|prev| *prev += 1);
-                                  tabs.selected_tab
-                                      .update(|prev| {
-                                          *prev = if *prev == "0" {
-                                              "1".to_string()
-                                          } else {
-                                              (tabs.active_tabs.get() - 1).to_string()
-                                          }
-                                      });
-                              }
-                          >
-
-                              {"Add Tab"}
-                          </Button>
                       </div>
                   }
               }

@@ -18,7 +18,7 @@ pub fn Sidebar() -> impl IntoView {
       show.set(false);
     }
   });
-  create_resource(
+  let _ = create_resource(
     || {},
     move |_| async move {
       projects_store.load_projects().await;

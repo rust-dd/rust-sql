@@ -1,11 +1,11 @@
 use leptos::*;
 use leptos_icons::*;
 
-use crate::store::{query::QueryStore, tabs::TabsStore};
+use crate::store::{queries::QueriesStore, tabs::TabsStore};
 
 #[component]
 pub fn Query(key: String) -> impl IntoView {
-  let query_store = expect_context::<QueryStore>();
+  let query_store = expect_context::<QueriesStore>();
   let tabs_store = expect_context::<TabsStore>();
   let key_clone = key.clone();
   let splitted_key = create_memo(move |_| {
@@ -41,7 +41,7 @@ pub fn Query(key: String) -> impl IntoView {
                   move |_| {
                       let key = key.clone();
                       spawn_local(async move {
-                          query_store.delete_query(&key).await.unwrap();
+                          query_store.delete_query(&key).await;
                       })
                   }
               }

@@ -84,7 +84,7 @@ pub fn QueryEditor(index: usize) -> impl IntoView {
 
   view! {
       <div _ref=node_ref class="border-b-1 border-neutral-200 h-72 sticky">
-          // <AddCustomQuery show=show/>
+          <AddCustomQuery show=show/>
           <div class="absolute bottom-0 items-center text-xs flex justify-between px-4 left-0 w-full h-10 bg-gray-50">
               <Show when=move || active_project().is_some() fallback=|| view! { <div></div> }>
                   <div class="appearance-auto py-1 px-2 border-1 border-neutral-200 bg-white hover:bg-neutral-200 rounded-md">

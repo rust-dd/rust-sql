@@ -94,16 +94,13 @@ pub struct InvokeProjectDbDeleteArgs<'a> {
 }
 
 #[derive(Serialize, Deserialize)]
-pub struct InvokeInsertQueryArgs<'a> {
-  pub key: &'a str,
+pub struct InvokeQueryDbInsertArgs<'a> {
+  pub query_id: &'a str,
   pub sql: &'a str,
 }
 
 #[derive(Serialize, Deserialize)]
-pub struct InvokeSelectQueriesArgs;
-
-#[derive(Serialize, Deserialize)]
-pub struct InvokeDeleteQueryArgs<'a> {
-  pub key: &'a str,
+pub struct InvokeQueryDbDeleteArgs<'a> {
+  pub query_id: &'a str,
 }
 

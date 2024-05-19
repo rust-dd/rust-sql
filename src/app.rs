@@ -12,7 +12,7 @@ use crate::{
   store::{
     atoms::{QueryPerformanceAtom, QueryPerformanceContext, RunQueryAtom, RunQueryContext},
     projects::ProjectsStore,
-    query::QueryStore,
+    queries::QueriesStore,
     tabs::TabsStore,
   },
 };
@@ -22,8 +22,8 @@ use crate::{
 
 #[component]
 pub fn App() -> impl IntoView {
-  provide_context(QueryStore::default());
   provide_context(ProjectsStore::default());
+  provide_context(QueriesStore::default());
   provide_context(RwSignal::new(QueryTableLayout::Grid));
   provide_context::<QueryPerformanceContext>(
     RwSignal::new(VecDeque::<QueryPerformanceAtom>::new()),

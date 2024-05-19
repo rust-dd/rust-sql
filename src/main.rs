@@ -8,6 +8,7 @@ mod footer;
 mod grid_view;
 mod invoke;
 mod modals;
+mod performane;
 mod record_view;
 mod sidebar;
 mod store;

@@ -116,10 +116,17 @@ impl<'a> Pgsql<'a> {
         None => prev.push((cols, rows)),
       }
     });
+
     let qp_store = expect_context::<QueryPerformanceContext>();
     qp_store.update(|prev| {
-      prev.push(QueryPerformanceAtom {
-        message: Some(format!("Query executed in {:.2} seconds", query_time)),
+      prev.push_front(QueryPerformanceAtom {
+        id: prev.len(),
+        message: Some(format!(
+          "[{}]: {} is executed in {} ms",
+          chrono::Utc::now(),
+          sql,
+          query_time
+        )),
         execution_time: Some(query_time),
         query: Some(sql.to_string()),
       })

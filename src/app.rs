@@ -1,3 +1,5 @@
+use std::collections::VecDeque;
+
 use leptos::*;
 use leptos_toaster::{Toaster, ToasterPosition};
 
@@ -5,6 +7,7 @@ use crate::{
   dashboard::index::Dashboard,
   enums::QueryTableLayout,
   footer::Footer,
+  performane::Performance,
   sidebar::index::Sidebar,
   store::{
     atoms::{QueryPerformanceAtom, QueryPerformanceContext, RunQueryAtom, RunQueryContext},
@@ -22,7 +25,9 @@ pub fn App() -> impl IntoView {
   provide_context(QueryStore::default());
   provide_context(ProjectsStore::default());
   provide_context(RwSignal::new(QueryTableLayout::Grid));
-  provide_context::<QueryPerformanceContext>(RwSignal::new(Vec::<QueryPerformanceAtom>::new()));
+  provide_context::<QueryPerformanceContext>(
+    RwSignal::new(VecDeque::<QueryPerformanceAtom>::new()),
+  );
   provide_context::<RunQueryContext>(RwSignal::new(RunQueryAtom::default()));
   provide_context(TabsStore::default());
 
@@ -37,10 +42,7 @@ pub fn App() -> impl IntoView {
                   <Footer/>
               </div>
               <div class="w-[240px] bg-white border-l-1 border-neutral-200">
-                  <div class="p-4">
-                      <p class="font-semibold text-lg">Database performance</p>
-                      <div class="text-sm"></div>
-                  </div>
+                  <Performance/>
               </div>
           </div>
       </Toaster>

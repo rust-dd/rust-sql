@@ -53,7 +53,7 @@ impl<'a> Pgsql<'a> {
       Invoke::PgsqlConnector.as_ref(),
       &InvokePgsqlConnectorArgs {
         project_id: &self.project_id.get(),
-        key: connection_string.as_str(),
+        key: Some(&connection_string),
       },
     )
     .await

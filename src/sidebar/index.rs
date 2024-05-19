@@ -2,8 +2,9 @@ use leptos::*;
 use leptos_use::{use_document, use_event_listener};
 
 use crate::{
-  databases::pgsql::index::Pgsql, modals::add_pgsql_connection::AddPgsqlConnection,
-  store::projects::ProjectsStore,
+  databases::pgsql::index::Pgsql,
+  modals::add_pgsql_connection::AddPgsqlConnection,
+  store::{projects::ProjectsStore, queries::QueriesStore},
 };
 use common::enums::Drivers;
 
@@ -12,6 +13,7 @@ use super::queries::Queries;
 #[component]
 pub fn Sidebar() -> impl IntoView {
   let projects_store = expect_context::<ProjectsStore>();
+  let queries_store = expect_context::<QueriesStore>();
   let show = create_rw_signal(false);
   let _ = use_event_listener(use_document(), ev::keydown, move |event| {
     if event.key() == "Escape" {
@@ -22,6 +24,7 @@ pub fn Sidebar() -> impl IntoView {
     || {},
     move |_| async move {
       projects_store.load_projects().await;
+      queries_store.load_queries().await;
     },
   );
 
@@ -55,12 +58,14 @@ pub fn Sidebar() -> impl IntoView {
               />
 
           </div>
-          <div class="py-2">
-              <p class="font-semibold text-lg">Saved Queries</p>
-              <div class="text-sm">
-                  <Queries/>
+          <Show when=move || !queries_store.0.get().is_empty() fallback=|| view! { <div></div> }>
+              <div class="py-2">
+                  <p class="font-semibold text-lg">Saved Queries</p>
+                  <div class="text-sm">
+                      <Queries/>
+                  </div>
               </div>
-          </div>
+          </Show>
       </div>
   }
 }

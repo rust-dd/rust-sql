@@ -1,15 +1,14 @@
 use std::{cell::RefCell, rc::Rc};
 
-use leptos::{
-  create_rw_signal, error::Result, expect_context, RwSignal, SignalGet, SignalSet, SignalUpdate,
-};
+use common::enums::ProjectConnectionStatus;
+use leptos::{create_rw_signal, expect_context, RwSignal, SignalGet, SignalSet, SignalUpdate};
 use monaco::api::CodeEditor;
 use rsql::set_running_query;
 use tauri_sys::tauri::invoke;
 
 use crate::{
   dashboard::query_editor::ModelCell,
-  invoke::{Invoke, InvokePgsqlRunQueryArgs},
+  invoke::{Invoke, InvokePgsqlConnectorArgs, InvokePgsqlRunQueryArgs},
 };
 
 use super::atoms::{QueryPerformanceAtom, QueryPerformanceContext, RunQueryAtom, RunQueryContext};
@@ -52,7 +51,7 @@ impl TabsStore {
   }
 
   #[set_running_query]
-  pub async fn run_query(&self) -> Result<()> {
+  pub async fn run_query(&self) {
     let project_ids = self.selected_projects.get();
     let project_id = project_ids
       .get(self.convert_selected_tab_to_index())
@@ -76,7 +75,8 @@ impl TabsStore {
         sql: &sql.query,
       },
     )
-    .await?;
+    .await
+    .unwrap();
     self.sql_results.update(|prev| {
       let index = self.convert_selected_tab_to_index();
       match prev.get_mut(index) {
@@ -89,17 +89,35 @@ impl TabsStore {
       let new = QueryPerformanceAtom::new(prev.len(), &sql.query, query_time);
       prev.push_front(new);
     });
-    Ok(())
   }
 
-  pub fn load_query(&self, key: &str) -> Result<()> {
-    // let splitted_key = key.split(':').collect::<Vec<&str>>();
-    // active_project.0.set(Some(splitted_key[0].to_string()));
-    // let query_store = use_context::<QueryStore>().unwrap();
-    // let query_store = query_store.0.get();
-    // let query = query_store.get(key).unwrap();
-    //self.set_editor_value(query);
-    Ok(())
+  // TODO: Need to be more generic if we want to support other databases
+  pub async fn load_query(&self, query_id: &str, sql: &str) {
+    let splitted_key = query_id.split(':').collect::<Vec<&str>>();
+    let selected_projects = self.selected_projects.get();
+    let project_id = selected_projects.get(self.convert_selected_tab_to_index());
+    if !self.selected_projects.get().is_empty()
+      && project_id.is_some_and(|id| id.as_str() != splitted_key[0])
+    {
+      self.add_tab(&splitted_key[0]);
+    }
+    self.set_editor_value(sql);
+    self.selected_projects.update(|prev| {
+      let index = self.convert_selected_tab_to_index();
+      match prev.get_mut(index) {
+        Some(project) => *project = splitted_key[0].to_string(),
+        None => prev.push(splitted_key[0].to_string()),
+      }
+    });
+    let _ = invoke::<_, ProjectConnectionStatus>(
+      Invoke::PgsqlConnector.as_ref(),
+      &InvokePgsqlConnectorArgs {
+        project_id: splitted_key[0],
+        key: None,
+      },
+    )
+    .await;
+    self.run_query().await;
   }
 
   pub fn add_editor(&mut self, editor: Rc<RefCell<Option<CodeEditor>>>) {

@@ -28,8 +28,8 @@ pub fn Schema(schema: String) -> impl IntoView {
                   let schema = schema.clone();
                   move |_| {
                       set_is_loading(true);
-                      let schema = (*schema).clone();
-                      load_tables.dispatch(schema.clone());
+                      let schema = schema.clone();
+                      load_tables.dispatch(schema.clone().to_string());
                   }
               }
           >
@@ -43,7 +43,7 @@ pub fn Schema(schema: String) -> impl IntoView {
                   />
               </Show>
 
-              {(*schema).clone()}
+              {&*schema}
           </button>
           <div class="pl-2">
               <Show when=show fallback=|| view! {}>
@@ -51,7 +51,7 @@ pub fn Schema(schema: String) -> impl IntoView {
                       each={
                           let schema = schema.clone();
                           move || {
-                              let schema = (*schema).clone();
+                              let schema = schema.clone();
                               pgsql.select_tables_by_schema(&schema).unwrap()
                           }
                       }

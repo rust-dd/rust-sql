@@ -16,8 +16,8 @@ pub fn Queries() -> impl IntoView {
   view! {
       <For
           each=move || queries_store.0.get()
-          key=|(key, _)| key.clone()
-          children=move |(key, _)| view! { <Query key=key/> }
+          key=|(query_id, _)| query_id.clone()
+          children=move |(query_id, sql)| view! { <Query query_id sql/> }
       />
   }
 }

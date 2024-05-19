@@ -68,7 +68,7 @@ pub fn QueryEditor(index: usize) -> impl IntoView {
   let run_query = create_action(move |tabs_store: &Arc<Mutex<TabsStore>>| {
     let tabs_store = tabs_store.clone();
     async move {
-      tabs_store.lock().await.run_query().await.unwrap();
+      tabs_store.lock().await.run_query().await;
     }
   });
 
@@ -84,31 +84,34 @@ pub fn QueryEditor(index: usize) -> impl IntoView {
 
   view! {
       <div _ref=node_ref class="border-b-1 border-neutral-200 h-72 sticky">
-          <AddCustomQuery show=show/>
           <div class="absolute bottom-0 items-center text-xs flex justify-between px-4 left-0 w-full h-10 bg-gray-50">
               <Show when=move || active_project().is_some() fallback=|| view! { <div></div> }>
+                  <AddCustomQuery show=show project_id=active_project().unwrap()/>
                   <div class="appearance-auto py-1 px-2 border-1 border-neutral-200 bg-white hover:bg-neutral-200 rounded-md">
                       {active_project}
                   </div>
               </Show>
-              <div class="flex flex-row gap-2">
-                  <button
-                      class="p-1 border-1 border-neutral-200 bg-white hover:bg-neutral-200 rounded-md"
-                      on:click=move |_| show.set(true)
-                  >
-                      "Save Query"
-                  </button>
-                  <button
-                      class="p-1 border-1 border-neutral-200 bg-white hover:bg-neutral-200 rounded-md"
-                      on:click={
-                          let tabs_store = tabs_store_arc.clone();
-                          move |_| run_query.dispatch(tabs_store.clone())
-                      }
-                  >
+              <Show when=move || active_project().is_some() fallback=|| view! { <div></div> }>
 
-                      "Query"
-                  </button>
-              </div>
+                  <div class="flex flex-row gap-2">
+                      <button
+                          class="p-1 border-1 border-neutral-200 bg-white hover:bg-neutral-200 rounded-md"
+                          on:click=move |_| show.set(true)
+                      >
+                          "Save Query"
+                      </button>
+                      <button
+                          class="p-1 border-1 border-neutral-200 bg-white hover:bg-neutral-200 rounded-md"
+                          on:click={
+                              let tabs_store = tabs_store_arc.clone();
+                              move |_| run_query.dispatch(tabs_store.clone())
+                          }
+                      >
+
+                          "Query"
+                      </button>
+                  </div>
+              </Show>
           </div>
       </div>
   }

@@ -13,11 +13,43 @@ use crate::{utils::reflective_get, AppState};
 #[tauri::command(rename_all = "snake_case")]
 pub async fn pgsql_connector(
   project_id: &str,
-  key: &str,
+  key: Option<&str>,
   app: AppHandle,
 ) -> Result<ProjectConnectionStatus> {
   let app_state = app.state::<AppState>();
-  let connection = tokio_time::timeout(tokio_time::Duration::from_secs(10), connect(key, NoTls))
+  let mut clients = app_state.client.lock().await;
+
+  // check if connection already exists
+  if clients.as_ref().unwrap().contains_key(project_id) {
+    tracing::info!("Postgres connection already exists!");
+    return Ok(ProjectConnectionStatus::Connected);
+  }
+
+  let key = match key {
+    Some(key) => key.to_string(),
+    None => {
+      let projects_db = app_state.project_db.lock().await;
+      let projects_db = projects_db.as_ref().unwrap();
+      let project_details = projects_db.get(project_id).unwrap().unwrap().to_vec();
+      let project_details = String::from_utf8(project_details).unwrap();
+      let project_details = project_details.split(":").collect::<Vec<&str>>();
+      let project_details = project_details
+        .into_iter()
+        .skip(1)
+        .map(|s| {
+          let kv = s.split('=').collect::<Vec<&str>>();
+          kv[1].to_owned()
+        })
+        .collect::<Vec<String>>();
+      let project_details = format!(
+        "user={} password={} host={} port={}",
+        project_details[0], project_details[1], project_details[2], project_details[3]
+      );
+      project_details
+    }
+  };
+
+  let connection = tokio_time::timeout(tokio_time::Duration::from_secs(10), connect(&key, NoTls))
     .await
     .map_err(|_| PostgresqlError::ConnectionTimeout);
 
@@ -52,7 +84,6 @@ pub async fn pgsql_connector(
     return Ok(ProjectConnectionStatus::Failed);
   }
 
-  let mut clients = app_state.client.lock().await;
   let clients = clients.as_mut().unwrap();
   clients.insert(project_id.to_string(), client);
 

@@ -1,3 +1,5 @@
+use std::rc::Rc;
+
 use leptos::*;
 use leptos_icons::*;
 use leptos_toaster::{Toast, ToastId, ToastVariant, Toasts};
@@ -8,6 +10,7 @@ use common::enums::ProjectConnectionStatus;
 
 #[component]
 pub fn Pgsql(project_id: String) -> impl IntoView {
+  let project_id = Rc::new(project_id);
   let tabs_store = expect_context::<TabsStore>();
   let projects_store = expect_context::<ProjectsStore>();
   let project_details = projects_store.select_project_by_name(&project_id).unwrap();
@@ -25,7 +28,7 @@ pub fn Pgsql(project_id: String) -> impl IntoView {
     .collect::<Vec<String>>();
   let connection_params = Box::leak(connection_params.into_boxed_slice());
   // [user, password, host, port]
-  let mut pgsql = Pgsql::new(project_id.clone());
+  let mut pgsql = Pgsql::new(project_id.clone().to_string());
   {
     pgsql.load_connection_details(
       &connection_params[0],
@@ -133,7 +136,8 @@ pub fn Pgsql(project_id: String) -> impl IntoView {
                           on:click={
                               let project_id = project_id.clone();
                               move |_| {
-                                  delete_project.dispatch((projects_store, project_id.clone()));
+                                  delete_project
+                                      .dispatch((projects_store, project_id.clone().to_string()));
                               }
                           }
                       >

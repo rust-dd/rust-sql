@@ -8,12 +8,12 @@ use super::{query_editor::QueryEditor, query_table::QueryTable};
 
 #[component]
 pub fn Dashboard() -> impl IntoView {
-  let mut tabs = expect_context::<tabs::TabsStore>();
+  let tabs_store = expect_context::<tabs::TabsStore>();
 
   view! {
-      <Tabs value=tabs.selected_tab>
+      <Tabs value=tabs_store.selected_tab>
           <For
-              each=move || (0..(tabs.selected_tab.get().parse::<usize>().unwrap_or_default() + 1))
+              each=move || (0..(tabs_store.active_tabs.get()))
               key=|index| index.to_string()
               children=move |index| {
                   view! {
@@ -24,7 +24,7 @@ pub fn Dashboard() -> impl IntoView {
                                       <span>{format!("Tab {}", index + 1)}</span>
                                       <button
                                           class="rounded-full p-1 hover:bg-gray-100"
-                                          on:click=move |_| { tabs.remove_editor(index) }
+                                          on:click=move |_| { tabs_store.close_tab(index) }
                                       >
 
                                           <Icon icon=icondata::CgClose width="16" height="16"/>

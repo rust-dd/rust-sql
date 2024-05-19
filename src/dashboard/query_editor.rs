@@ -1,7 +1,7 @@
-use std::{cell::RefCell, rc::Rc, sync::Arc};
+use std::{borrow::Borrow, cell::RefCell, rc::Rc, sync::Arc};
 
 use futures::lock::Mutex;
-use leptos::*;
+use leptos::{svg::A, *};
 use leptos_use::{use_document, use_event_listener};
 use monaco::{
   api::{CodeEditor, CodeEditorOptions, TextModel},
@@ -19,7 +19,8 @@ pub const MODE_ID: &str = "pgsql";
 
 #[component]
 pub fn QueryEditor() -> impl IntoView {
-  let tabs_store = Rc::new(RefCell::new(expect_context::<TabsStore>()));
+  let tabs_store = expect_context::<TabsStore>();
+  let tabs_store_rc = Rc::new(RefCell::new(tabs_store));
   let show = create_rw_signal(false);
   let _ = use_event_listener(use_document(), ev::keydown, move |event| {
     if event.key() == "Escape" {
@@ -28,45 +29,55 @@ pub fn QueryEditor() -> impl IntoView {
   });
   let node_ref = create_node_ref();
 
-  let tabs_store_clone = tabs_store.clone();
-  node_ref.on_load(move |node| {
-    let div_element: &web_sys::HtmlDivElement = &node;
-    let html_element = div_element.unchecked_ref::<web_sys::HtmlElement>();
-    let options = CodeEditorOptions::default().to_sys_options();
-    let text_model =
-      TextModel::create("SELECT * FROM users LIMIT 100;", Some(MODE_ID), None).unwrap();
-    options.set_model(Some(text_model.as_ref()));
-    options.set_language(Some(MODE_ID));
-    options.set_automatic_layout(Some(true));
-    options.set_dimension(Some(&IDimension::new(0, 240)));
-    let minimap_settings = IEditorMinimapOptions::default();
-    minimap_settings.set_enabled(Some(false));
-    options.set_minimap(Some(&minimap_settings));
+  {
+    let tabs_store = tabs_store_rc.clone();
+    node_ref.on_load(move |node| {
+      let div_element: &web_sys::HtmlDivElement = &node;
+      let html_element = div_element.unchecked_ref::<web_sys::HtmlElement>();
+      let options = CodeEditorOptions::default().to_sys_options();
+      let text_model =
+        TextModel::create("SELECT * FROM users LIMIT 100;", Some(MODE_ID), None).unwrap();
+      options.set_model(Some(text_model.as_ref()));
+      options.set_language(Some(MODE_ID));
+      options.set_automatic_layout(Some(true));
+      options.set_dimension(Some(&IDimension::new(0, 240)));
+      let minimap_settings = IEditorMinimapOptions::default();
+      minimap_settings.set_enabled(Some(false));
+      options.set_minimap(Some(&minimap_settings));
 
-    let e = CodeEditor::create(html_element, Some(options));
-    let keycode = KeyMod::win_ctrl() as u32 | KeyCode::Enter.to_value();
-    // TODO: Fix this
-    e.as_ref().add_command(
-      keycode.into(),
-      Closure::<dyn Fn()>::new(|| ()).as_ref().unchecked_ref(),
-      None,
-    );
+      let e = CodeEditor::create(html_element, Some(options));
+      let keycode = KeyMod::win_ctrl() as u32 | KeyCode::Enter.to_value();
+      // TODO: Fix this
+      e.as_ref().add_command(
+        keycode.into(),
+        Closure::<dyn Fn()>::new(|| ()).as_ref().unchecked_ref(),
+        None,
+      );
 
-    // TODO: Fix this
-    let e = Rc::new(RefCell::new(Some(e)));
-    tabs_store_clone.borrow_mut().add_editor(e);
-  });
-  let tabs_store = Arc::new(Mutex::new(expect_context::<TabsStore>()));
-  let run_query = create_action(move |tabs_store: &Arc<Mutex<TabsStore>>| {
-    let tabs_store = tabs_store.clone();
-    async move {
-      //tabs_store.lock().await.run_query().await.unwrap();
+      // TODO: Fix this
+      let e = Rc::new(RefCell::new(Some(e)));
+      tabs_store.borrow_mut().add_editor(e);
+    });
+  };
+
+  let tabs_store_arc = Arc::new(Mutex::new(tabs_store));
+  let run_query = create_action({
+    let tabs_store = tabs_store_arc.clone();
+    move |tabs_store: &Arc<Mutex<TabsStore>>| {
+      let tabs_store = tabs_store.clone();
+      async move {
+        //tabs_store.lock().await.run_query().await.unwrap();
+      }
     }
   });
-  let tabs_store_clone = tabs_store.clone();
-  let _ = use_event_listener(node_ref, ev::keydown, move |event| {
-    if event.key() == "Enter" && event.ctrl_key() {
-      run_query.dispatch(tabs_store_clone.clone());
+
+  let _ = use_event_listener(node_ref, ev::keydown, {
+    let tabs_store = tabs_store_arc.clone();
+
+    move |event| {
+      if event.key() == "Enter" && event.ctrl_key() {
+        run_query.dispatch(tabs_store.clone());
+      }
     }
   });
 
@@ -83,14 +94,22 @@ pub fn QueryEditor() -> impl IntoView {
                   </button>
                   <button
                       class="p-1 border-1 border-neutral-200 bg-white hover:bg-neutral-200 rounded-md"
-                      on:click=move |_| run_query.dispatch(tabs_store.clone())
+                      on:click={
+                          let tabs_store = tabs_store_arc.clone();
+                          move |_| run_query.dispatch(tabs_store.clone())
+                      }
                   >
+
                       "Query"
                   </button>
                   <button
                       class="p-1 border-1 border-neutral-200 bg-white hover:bg-neutral-200 rounded-md"
-                      on:click=move |_| {}
+                      on:click=move |_| {
+                          let tabs_store = tabs_store_rc.clone();
+                          tabs_store.borrow_mut().add_tab();
+                      }
                   >
+
                       "+ Tab"
                   </button>
               </div>

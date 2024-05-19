@@ -21,6 +21,7 @@ struct QueryInfo {
 #[derive(Copy, Clone, Debug)]
 pub struct TabsStore {
   pub selected_tab: RwSignal<String>,
+  pub active_tabs: RwSignal<usize>,
   pub editors: RwSignal<Vec<ModelCell>>,
   #[allow(clippy::type_complexity)]
   pub sql_results: RwSignal<Vec<(Vec<String>, Vec<Vec<String>>)>>,
@@ -41,6 +42,7 @@ impl TabsStore {
   pub fn new() -> Self {
     Self {
       selected_tab: create_rw_signal(String::from("0")),
+      active_tabs: create_rw_signal(1),
       editors: create_rw_signal(Vec::new()),
       sql_results: create_rw_signal(Vec::new()),
       is_loading: create_rw_signal(false),
@@ -109,22 +111,32 @@ impl TabsStore {
     self.editors.update(|prev| {
       prev.push(editor);
     });
-    self.sql_results.update(|prev| {
-      prev.push((Vec::new(), Vec::new()));
+  }
+
+  pub fn add_tab(&self) {
+    self.active_tabs.update(|prev| {
+      *prev += 1;
+    });
+
+    self.selected_tab.update(|prev| {
+      *prev = (self.active_tabs.get() - 1).to_string();
     });
   }
 
-  #[allow(dead_code)]
-  pub fn remove_editor(&mut self, index: usize) {
-    if self.editors.get().len() == 1 {
+  pub fn close_tab(&self, index: usize) {
+    if self.active_tabs.get() == 1 {
       return;
     }
 
-    self.editors.update(|prev| {
-      prev.remove(index);
+    self.selected_tab.update(|prev| {
+      *prev = (index - 1).to_string();
     });
 
-    self.sql_results.update(|prev| {
+    self.active_tabs.update(|prev| {
+      *prev -= 1;
+    });
+
+    self.editors.update(|prev| {
       prev.remove(index);
     });
   }

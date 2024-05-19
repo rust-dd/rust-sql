@@ -1,5 +1,6 @@
 use std::collections::BTreeMap;
 
+use common::enums::Drivers;
 use leptos::*;
 use tauri_sys::tauri::invoke;
 
@@ -31,13 +32,13 @@ impl QueriesStore {
     });
   }
 
-  pub async fn insert_query(&self, project_id: &str, title: &str) {
+  pub async fn insert_query(&self, project_id: &str, title: &str, driver: &Drivers) {
     let tabs_store = expect_context::<TabsStore>();
     let sql = tabs_store.select_active_editor_value();
     let _ = invoke::<_, ()>(
       Invoke::QueryDbInsert.as_ref(),
       &InvokeQueryDbInsertArgs {
-        query_id: &format!("{}:{}", project_id, title),
+        query_id: &format!("{}:{}:{}", project_id, driver, title),
         sql: &sql,
       },
     )

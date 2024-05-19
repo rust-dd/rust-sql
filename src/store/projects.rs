@@ -1,5 +1,6 @@
 use std::collections::BTreeMap;
 
+use common::enums::Drivers;
 use leptos::{RwSignal, SignalGet, SignalSet};
 use tauri_sys::tauri::invoke;
 
@@ -22,6 +23,21 @@ impl ProjectsStore {
 
   pub fn select_project_by_name(&self, project_id: &str) -> Option<String> {
     self.0.get().get(project_id).cloned()
+  }
+
+  pub fn select_driver_by_project(&self, project_id: Option<&str>) -> Drivers {
+    if project_id.is_none() {
+      return Drivers::PGSQL;
+    }
+
+    let project = self.select_project_by_name(project_id.unwrap()).unwrap();
+    let driver = project.split(':').next().unwrap();
+    let driver = driver.split('=').last();
+
+    match driver {
+      Some("PGSQL") => Drivers::PGSQL,
+      _ => unreachable!(),
+    }
   }
 
   pub async fn load_projects(&self) {

@@ -12,7 +12,10 @@ use monaco::{
 };
 use wasm_bindgen::{closure::Closure, JsCast};
 
-use crate::{modals::add_custom_query::AddCustomQuery, store::tabs::TabsStore};
+use crate::{
+  modals::add_custom_query::AddCustomQuery,
+  store::{projects::ProjectsStore, tabs::TabsStore},
+};
 
 pub type ModelCell = Rc<RefCell<Option<CodeEditor>>>;
 pub const MODE_ID: &str = "pgsql";
@@ -24,6 +27,8 @@ pub fn QueryEditor(index: usize) -> impl IntoView {
     Some(project) => Some(project.clone()),
     _ => None,
   };
+  let projects_store = expect_context::<ProjectsStore>();
+  let project_driver = projects_store.select_driver_by_project(active_project().as_deref());
   let tabs_store_rc = Rc::new(RefCell::new(tabs_store));
   let show = create_rw_signal(false);
   let _ = use_event_listener(use_document(), ev::keydown, move |event| {
@@ -86,7 +91,11 @@ pub fn QueryEditor(index: usize) -> impl IntoView {
       <div _ref=node_ref class="border-b-1 border-neutral-200 h-72 sticky">
           <div class="absolute bottom-0 items-center text-xs flex justify-between px-4 left-0 w-full h-10 bg-gray-50">
               <Show when=move || active_project().is_some() fallback=|| view! { <div></div> }>
-                  <AddCustomQuery show=show project_id=active_project().unwrap()/>
+                  <AddCustomQuery
+                      show=show
+                      project_id=active_project().unwrap()
+                      driver=project_driver
+                  />
                   <div class="appearance-auto py-1 px-2 border-1 border-neutral-200 bg-white hover:bg-neutral-200 rounded-md">
                       {active_project}
                   </div>

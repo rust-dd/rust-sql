@@ -13,6 +13,7 @@ use std::{collections::BTreeMap, sync::Arc};
 use tauri::Manager;
 use tokio::sync::Mutex;
 use tokio_postgres::Client;
+use tracing::Level;
 use utils::create_or_open_local_db;
 
 pub struct AppState {
@@ -32,6 +33,13 @@ impl Default for AppState {
 }
 
 fn main() {
+  tracing_subscriber::fmt()
+    .with_file(true)
+    .with_line_number(true)
+    .with_level(true)
+    .with_max_level(Level::INFO)
+    .init();
+
   tauri::Builder::default()
     .manage(AppState::default())
     .setup(|app| {
@@ -57,16 +65,17 @@ fn main() {
       Ok(())
     })
     .invoke_handler(tauri::generate_handler![
-      dbs::project::delete_project,
-      dbs::project::insert_project,
-      dbs::project::select_projects,
-      dbs::query::delete_query,
-      dbs::query::insert_query,
-      dbs::query::select_queries,
-      drivers::postgresql::postgresql_connector,
-      drivers::postgresql::select_schema_relations,
-      drivers::postgresql::select_schema_tables,
-      drivers::postgresql::select_sql_result,
+      dbs::project::project_db_select,
+      dbs::project::project_db_insert,
+      dbs::project::project_db_delete,
+      dbs::query::query_db_select,
+      dbs::query::query_db_insert,
+      dbs::query::query_db_delete,
+      drivers::pgsql::pgsql_connector,
+      drivers::pgsql::pgsql_load_relations,
+      drivers::pgsql::pgsql_load_schemas,
+      drivers::pgsql::pgsql_load_tables,
+      drivers::pgsql::pgsql_run_query,
     ])
     .run(tauri::generate_context!())
     .expect("error while running tauri application");

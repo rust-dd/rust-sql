@@ -1,47 +1,36 @@
-use common::enums::Project;
 use leptos::*;
 use leptos_use::{use_document, use_event_listener};
-use tauri_sys::tauri::invoke;
 
 use crate::{
-  context_menu::siderbar::context_menu,
-  hooks::use_context_menu,
-  invoke::{Invoke, InvokeSelectProjectsArgs},
-  modals::connection::Connection,
-  store::projects::ProjectsStore,
+  databases::pgsql::index::Pgsql,
+  modals::add_pgsql_connection::AddPgsqlConnection,
+  store::{projects::ProjectsStore, queries::QueriesStore},
 };
+use common::enums::Drivers;
 
-use super::{project::Project, queries::Queries};
+use super::queries::Queries;
 
 #[component]
 pub fn Sidebar() -> impl IntoView {
-  let projects_state = use_context::<ProjectsStore>().unwrap();
-  let node_ref = use_context_menu::use_context_menu(context_menu);
+  let projects_store = expect_context::<ProjectsStore>();
+  let queries_store = expect_context::<QueriesStore>();
   let show = create_rw_signal(false);
   let _ = use_event_listener(use_document(), ev::keydown, move |event| {
     if event.key() == "Escape" {
       show.set(false);
     }
   });
-  create_resource(
-    move || projects_state.0.get(),
+  let _ = create_resource(
+    || {},
     move |_| async move {
-      let projects = invoke::<_, Vec<(String, Project)>>(
-        &Invoke::select_projects.to_string(),
-        &InvokeSelectProjectsArgs,
-      )
-      .await
-      .unwrap();
-      projects_state.set_projects(projects).unwrap()
+      projects_store.load_projects().await;
+      queries_store.load_queries().await;
     },
   );
 
   view! {
-      <div
-          _ref=node_ref
-          class="flex border-r-1 min-w-[320px] justify-between border-neutral-200 flex-col p-4"
-      >
-          <Connection show=show/>
+      <div class="flex border-r-1 min-w-[400px] justify-between border-neutral-200 flex-col p-4">
+          <AddPgsqlConnection show=show/>
           <div class="flex flex-col overflow-auto">
               <div class="flex flex-row justify-between items-center">
                   <p class="font-semibold text-lg">Projects</p>
@@ -53,17 +42,30 @@ pub fn Sidebar() -> impl IntoView {
                   </button>
               </div>
               <For
-                  each=move || projects_state.0.get()
+                  each=move || projects_store.0.get()
                   key=|(project, _)| project.clone()
-                  children=|(project, _)| view! { <Project project=project/> }
+                  children=|(project_id, project_details)| {
+                      if project_details.contains(Drivers::PGSQL.as_ref()) {
+                          view! {
+                              <div>
+                                  <Pgsql project_id/>
+                              </div>
+                          }
+                      } else {
+                          view! { <div></div> }
+                      }
+                  }
               />
+
           </div>
-          <div class="py-2">
-              <p class="font-semibold text-lg">Saved Queries</p>
-              <div class="text-sm">
-                  <Queries/>
+          <Show when=move || !queries_store.0.get().is_empty() fallback=|| view! { <div></div> }>
+              <div class="py-2">
+                  <p class="font-semibold text-lg">Saved Queries</p>
+                  <div class="text-sm">
+                      <Queries/>
+                  </div>
               </div>
-          </div>
+          </Show>
       </div>
   }
 }

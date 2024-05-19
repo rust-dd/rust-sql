@@ -1,21 +1,23 @@
-use crate::store::query::QueryStore;
+use crate::store::queries::QueriesStore;
 use leptos::*;
 
 use super::query::Query;
 
 #[component]
 pub fn Queries() -> impl IntoView {
-  let query_state = use_context::<QueryStore>().unwrap();
-  let queries = create_resource(
-    move || query_state.0.get(),
-    move |_| async move { query_state.select_queries().await.unwrap() },
+  let queries_store = expect_context::<QueriesStore>();
+  let _ = create_resource(
+    move || queries_store.0.get(),
+    move |_| async move {
+      queries_store.load_queries().await;
+    },
   );
 
   view! {
       <For
-          each=move || queries.get().unwrap_or_default()
-          key=|(key, _)| key.clone()
-          children=move |(key, _)| view! { <Query key=key/> }
+          each=move || queries_store.0.get()
+          key=|(query_id, _)| query_id.clone()
+          children=move |(query_id, sql)| view! { <Query query_id sql/> }
       />
   }
 }

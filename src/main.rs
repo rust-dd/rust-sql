@@ -1,13 +1,14 @@
+#![feature(pattern)]
+
 mod app;
-mod context_menu;
+mod dashboard;
+mod databases;
 mod enums;
 mod footer;
 mod grid_view;
-mod hooks;
 mod invoke;
 mod modals;
-mod query_editor;
-mod query_table;
+mod performane;
 mod record_view;
 mod sidebar;
 mod store;

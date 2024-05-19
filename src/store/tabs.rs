@@ -1,8 +1,7 @@
 use std::{cell::RefCell, rc::Rc};
 
 use leptos::{
-  create_rw_signal, error::Result, expect_context, logging::log, use_context, RwSignal, SignalGet,
-  SignalSet, SignalUpdate,
+  create_rw_signal, error::Result, expect_context, RwSignal, SignalGet, SignalSet, SignalUpdate,
 };
 use monaco::api::CodeEditor;
 use rsql::set_running_query;
@@ -13,18 +12,12 @@ use crate::{
   invoke::{Invoke, InvokePgsqlRunQueryArgs},
 };
 
-use super::{
-  atoms::{RunQueryAtom, RunQueryContext},
-  query::QueryStore,
-};
+use super::atoms::{QueryPerformanceAtom, QueryPerformanceContext, RunQueryAtom, RunQueryContext};
 
-#[derive(Clone, Debug)]
 struct QueryInfo {
   query: String,
-  #[allow(dead_code)]
-  start_line: f64,
-  #[allow(dead_code)]
-  end_line: f64,
+  _start_line: f64,
+  _end_line: f64,
 }
 
 #[derive(Copy, Clone, Debug)]
@@ -76,7 +69,7 @@ impl TabsStore {
     let sql = self
       .find_query_for_line(&sql, position.line_number())
       .unwrap();
-    let (cols, rows, elasped) = invoke::<_, (Vec<String>, Vec<Vec<String>>, f32)>(
+    let (cols, rows, query_time) = invoke::<_, (Vec<String>, Vec<Vec<String>>, f32)>(
       &Invoke::PgsqlRunQuery.to_string(),
       &InvokePgsqlRunQueryArgs {
         project_id,
@@ -84,8 +77,6 @@ impl TabsStore {
       },
     )
     .await?;
-    let sql_timer = use_context::<RwSignal<f32>>().unwrap();
-    sql_timer.set(elasped);
     self.sql_results.update(|prev| {
       let index = self.convert_selected_tab_to_index();
       match prev.get_mut(index) {
@@ -93,7 +84,11 @@ impl TabsStore {
         None => prev.push((cols, rows)),
       }
     });
-
+    let qp_store = expect_context::<QueryPerformanceContext>();
+    qp_store.update(|prev| {
+      let new = QueryPerformanceAtom::new(prev.len(), &sql.query, query_time);
+      prev.push_front(new);
+    });
     Ok(())
   }
 
@@ -114,6 +109,13 @@ impl TabsStore {
   }
 
   pub fn add_tab(&self, project_id: &str) {
+    if self.editors.get().len() == 1 && self.selected_projects.get().is_empty() {
+      self.selected_projects.update(|prev| {
+        prev.push(project_id.to_string());
+      });
+      return;
+    }
+
     self.active_tabs.update(|prev| {
       *prev += 1;
     });
@@ -143,10 +145,6 @@ impl TabsStore {
     self.editors.update(|prev| {
       prev.remove(index);
     });
-  }
-
-  pub fn select_active_project(&self, index: usize) -> Option<String> {
-    self.selected_projects.get().get(index).cloned()
   }
 
   pub fn select_active_editor_sql_result(&self) -> Option<(Vec<String>, Vec<Vec<String>>)> {
@@ -198,7 +196,6 @@ impl TabsStore {
     self.selected_tab.get().parse::<usize>().unwrap()
   }
 
-  // TODO: improve this
   pub(self) fn find_query_for_line(&self, queries: &str, line_number: f64) -> Option<QueryInfo> {
     let mut start_line = 1f64;
     let mut end_line = 1f64;
@@ -215,8 +212,8 @@ impl TabsStore {
         if line_number >= start_line && line_number < end_line {
           return Some(QueryInfo {
             query: current_query.clone(),
-            start_line,
-            end_line: end_line - 1f64,
+            _start_line: start_line,
+            _end_line: end_line - 1f64,
           });
         }
         start_line = end_line;

@@ -65,13 +65,10 @@ pub fn QueryEditor(index: usize) -> impl IntoView {
   };
 
   let tabs_store_arc = Arc::new(Mutex::new(tabs_store));
-  let run_query = create_action({
-    let tabs_store = tabs_store_arc.clone();
-    move |tabs_store: &Arc<Mutex<TabsStore>>| {
-      let tabs_store = tabs_store.clone();
-      async move {
-        //tabs_store.lock().await.run_query().await.unwrap();
-      }
+  let run_query = create_action(move |tabs_store: &Arc<Mutex<TabsStore>>| {
+    let tabs_store = tabs_store.clone();
+    async move {
+      tabs_store.lock().await.run_query().await.unwrap();
     }
   });
 

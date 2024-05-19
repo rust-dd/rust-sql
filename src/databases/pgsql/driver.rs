@@ -3,9 +3,7 @@ use common::{
   enums::ProjectConnectionStatus,
   types::pgsql::{PgsqlLoadSchemas, PgsqlLoadTables, PgsqlRunQuery},
 };
-use leptos::{
-  error::Result, expect_context, logging::log, RwSignal, SignalGet, SignalSet, SignalUpdate,
-};
+use leptos::{error::Result, expect_context, RwSignal, SignalGet, SignalSet, SignalUpdate};
 use rsql::set_running_query;
 use tauri_sys::tauri::invoke;
 
@@ -138,15 +136,8 @@ impl<'a> Pgsql<'a> {
     });
     let qp_store = expect_context::<QueryPerformanceContext>();
     qp_store.update(|prev| {
-      prev.push_front(QueryPerformanceAtom {
-        id: prev.len(),
-        message: Some(format!(
-          "[{}]: {} is executed in {} ms",
-          chrono::Utc::now(),
-          sql,
-          query_time
-        )),
-      })
+      let new = QueryPerformanceAtom::new(prev.len(), sql, query_time);
+      prev.push_front(new);
     });
   }
 

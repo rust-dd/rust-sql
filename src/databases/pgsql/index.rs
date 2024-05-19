@@ -68,6 +68,12 @@ pub fn Pgsql(project_id: String) -> impl IntoView {
       }
     },
   );
+  let connect = move || {
+    if pgsql.status.get() == ProjectConnectionStatus::Connected {
+      return;
+    }
+    connect.dispatch(pgsql);
+  };
 
   view! {
       <Provider value=pgsql>
@@ -76,12 +82,7 @@ pub fn Pgsql(project_id: String) -> impl IntoView {
                   <button
                       class="hover:font-semibold flex flex-row items-center gap-1 disabled:opacity-50 disabled:font-normal"
                       disabled=move || { pgsql.status.get() == ProjectConnectionStatus::Connecting }
-                      on:click=move |_| {
-                          if pgsql.status.get() == ProjectConnectionStatus::Connected {
-                              return;
-                          }
-                          connect.dispatch(pgsql);
-                      }
+                      on:click=move |_| connect()
                   >
 
                       {move || match pgsql.status.get() {
@@ -120,6 +121,7 @@ pub fn Pgsql(project_id: String) -> impl IntoView {
                               let project_id = project_id.clone();
                               move |_| {
                                   tabs_store.add_tab(&project_id);
+                                  connect();
                               }
                           }
                       >

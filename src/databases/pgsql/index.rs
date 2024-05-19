@@ -3,11 +3,12 @@ use leptos_icons::*;
 use leptos_toaster::{Toast, ToastId, ToastVariant, Toasts};
 
 use super::{driver::Pgsql, schema::Schema};
-use crate::store::projects::ProjectsStore;
+use crate::store::{projects::ProjectsStore, tabs::TabsStore};
 use common::enums::ProjectConnectionStatus;
 
 #[component]
 pub fn Pgsql(project_id: String) -> impl IntoView {
+  let tabs_store = expect_context::<TabsStore>();
   let projects_store = expect_context::<ProjectsStore>();
   let project_details = projects_store.select_project_by_name(&project_id).unwrap();
   let connection_params = project_details
@@ -112,18 +113,32 @@ pub fn Pgsql(project_id: String) -> impl IntoView {
 
                       {pgsql.project_id}
                   </button>
-                  <button
-                      class="px-2 rounded-full hover:bg-gray-200"
-                      on:click={
-                          let project_id = project_id.clone();
-                          move |_| {
-                              delete_project.dispatch((projects_store, project_id.clone()));
+                  <div>
+                      <button
+                          class="p-1 rounded-full hover:bg-gray-200"
+                          on:click={
+                              let project_id = project_id.clone();
+                              move |_| {
+                                  tabs_store.add_tab(&project_id);
+                              }
                           }
-                      }
-                  >
+                      >
 
-                      "-"
-                  </button>
+                          <Icon icon=icondata::HiCircleStackOutlineLg width="12" height="12"/>
+                      </button>
+                      <button
+                          class="p-1 rounded-full hover:bg-gray-200"
+                          on:click={
+                              let project_id = project_id.clone();
+                              move |_| {
+                                  delete_project.dispatch((projects_store, project_id.clone()));
+                              }
+                          }
+                      >
+
+                          <Icon icon=icondata::HiTrashOutlineLg width="12" height="12"/>
+                      </button>
+                  </div>
               </div>
               <div class="pl-4">
                   <Show when=move || !pgsql.schemas.get().is_empty() fallback=|| view! {}>

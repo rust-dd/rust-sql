@@ -1,9 +1,7 @@
 use leptos::*;
 use thaw::{Modal, ModalFooter};
 
-use crate::store::{
-  active_project::ActiveProjectStore, projects::ProjectsStore, query::QueryStore,
-};
+use crate::store::{projects::ProjectsStore, query::QueryStore};
 
 #[component]
 pub fn AddCustomQuery(show: RwSignal<bool>) -> impl IntoView {
@@ -11,8 +9,8 @@ pub fn AddCustomQuery(show: RwSignal<bool>) -> impl IntoView {
   let query_store = expect_context::<QueryStore>();
   let (query_title, set_query_title) = create_signal(String::new());
   //let projects = create_memo(move |_| projects_store.get_projects().unwrap());
-  let active_project = expect_context::<ActiveProjectStore>();
-  let (project_name, set_project_name) = create_signal(active_project.0.get().unwrap_or_default());
+
+  let (project_name, set_project_name) = create_signal("".to_string());
   //   create_effect(move |_| {
   //     if !projects.get().is_empty() {
   //       set_project_name(projects.get()[0].clone());

@@ -1,14 +1,22 @@
 use std::{cell::RefCell, rc::Rc};
 
 use leptos::{
-  create_rw_signal, error::Result, logging::log, use_context, RwSignal, SignalGet, SignalSet,
-  SignalUpdate,
+  create_rw_signal, error::Result, expect_context, logging::log, use_context, RwSignal, SignalGet,
+  SignalSet, SignalUpdate,
 };
 use monaco::api::CodeEditor;
+use rsql::set_running_query;
+use tauri_sys::tauri::invoke;
 
-use crate::dashboard::query_editor::ModelCell;
+use crate::{
+  dashboard::query_editor::ModelCell,
+  invoke::{Invoke, InvokePgsqlRunQueryArgs},
+};
 
-use super::{active_project::ActiveProjectStore, query::QueryStore};
+use super::{
+  atoms::{RunQueryAtom, RunQueryContext},
+  query::QueryStore,
+};
 
 #[derive(Clone, Debug)]
 struct QueryInfo {
@@ -26,6 +34,7 @@ pub struct TabsStore {
   pub editors: RwSignal<Vec<ModelCell>>,
   #[allow(clippy::type_complexity)]
   pub sql_results: RwSignal<Vec<(Vec<String>, Vec<Vec<String>>)>>,
+  pub selected_projects: RwSignal<Vec<String>>,
 }
 
 unsafe impl Send for TabsStore {}
@@ -45,65 +54,57 @@ impl TabsStore {
       active_tabs: create_rw_signal(1),
       editors: create_rw_signal(Vec::new()),
       sql_results: create_rw_signal(Vec::new()),
+      selected_projects: create_rw_signal(vec![String::new()]),
     }
   }
 
-  // pub async fn run_query(&self) -> Result<()> {
-  //   self.is_loading.set(true);
-  //   let active_project = use_context::<ActiveProjectStore>().unwrap();
-  //   let active_project = active_project.0.get().unwrap();
-  //   let projects_store = use_context::<ProjectsStore>().unwrap();
-  //   projects_store.(&active_project).await?;
-  //   let active_editor = self.select_active_editor();
-  //   let position = active_editor
-  //     .borrow()
-  //     .as_ref()
-  //     .unwrap()
-  //     .as_ref()
-  //     .get_position()
-  //     .unwrap();
-  //   let sql = self.select_active_editor_value();
-  //   let sql = self
-  //     .find_query_for_line(&sql, position.line_number())
-  //     .unwrap();
-  //   let (cols, rows, elasped) = invoke::<_, (Vec<String>, Vec<Vec<String>>, f32)>(
-  //     &Invoke::pgsql_run_query.to_string(),
-  //     &InvokeSqlResultArgs {
-  //       project_name: &active_project,
-  //       sql: &sql.query,
-  //     },
-  //   )
-  //   .await?;
-  //   let sql_timer = use_context::<RwSignal<f32>>().unwrap();
-  //   sql_timer.set(elasped);
-  //   self.sql_results.update(|prev| {
-  //     let index = self.convert_selected_tab_to_index();
-  //     match prev.get_mut(index) {
-  //       Some(sql_result) => *sql_result = (cols, rows),
-  //       None => prev.push((cols, rows)),
-  //     }
-  //   });
-  //   self.is_loading.set(false);
-  //   Ok(())
-  // }
+  #[set_running_query]
+  pub async fn run_query(&self) -> Result<()> {
+    let project_ids = self.selected_projects.get();
+    let project_id = project_ids
+      .get(self.convert_selected_tab_to_index())
+      .unwrap();
+    let active_editor = self.select_active_editor();
+    let position = active_editor
+      .borrow()
+      .as_ref()
+      .unwrap()
+      .as_ref()
+      .get_position()
+      .unwrap();
+    let sql = self.select_active_editor_value();
+    let sql = self
+      .find_query_for_line(&sql, position.line_number())
+      .unwrap();
+    let (cols, rows, elasped) = invoke::<_, (Vec<String>, Vec<Vec<String>>, f32)>(
+      &Invoke::PgsqlRunQuery.to_string(),
+      &InvokePgsqlRunQueryArgs {
+        project_id,
+        sql: &sql.query,
+      },
+    )
+    .await?;
+    let sql_timer = use_context::<RwSignal<f32>>().unwrap();
+    sql_timer.set(elasped);
+    self.sql_results.update(|prev| {
+      let index = self.convert_selected_tab_to_index();
+      match prev.get_mut(index) {
+        Some(sql_result) => *sql_result = (cols, rows),
+        None => prev.push((cols, rows)),
+      }
+    });
 
-  pub fn load_query(&self, key: &str) -> Result<()> {
-    let active_project = use_context::<ActiveProjectStore>().unwrap();
-    let splitted_key = key.split(':').collect::<Vec<&str>>();
-    active_project.0.set(Some(splitted_key[0].to_string()));
-    let query_store = use_context::<QueryStore>().unwrap();
-    let query_store = query_store.0.get();
-    let query = query_store.get(key).unwrap();
-    //self.set_editor_value(query);
     Ok(())
   }
 
-  pub fn select_active_editor_sql_result(&self) -> Option<(Vec<String>, Vec<Vec<String>>)> {
-    self
-      .sql_results
-      .get()
-      .get(self.convert_selected_tab_to_index())
-      .cloned()
+  pub fn load_query(&self, key: &str) -> Result<()> {
+    // let splitted_key = key.split(':').collect::<Vec<&str>>();
+    // active_project.0.set(Some(splitted_key[0].to_string()));
+    // let query_store = use_context::<QueryStore>().unwrap();
+    // let query_store = query_store.0.get();
+    // let query = query_store.get(key).unwrap();
+    //self.set_editor_value(query);
+    Ok(())
   }
 
   pub fn add_editor(&mut self, editor: Rc<RefCell<Option<CodeEditor>>>) {
@@ -112,8 +113,7 @@ impl TabsStore {
     });
   }
 
-  pub fn add_tab(&self) {
-    log!("Adding tab");
+  pub fn add_tab(&self, project_id: &str) {
     self.active_tabs.update(|prev| {
       *prev += 1;
     });
@@ -121,10 +121,13 @@ impl TabsStore {
     self.selected_tab.update(|prev| {
       *prev = (self.active_tabs.get() - 1).to_string();
     });
+
+    self.selected_projects.update(|prev| {
+      prev.push(project_id.to_string());
+    });
   }
 
   pub fn close_tab(&self, index: usize) {
-    log!("Closing tab");
     if self.active_tabs.get() == 1 {
       return;
     }
@@ -142,6 +145,18 @@ impl TabsStore {
     });
   }
 
+  pub fn select_active_project(&self, index: usize) -> Option<String> {
+    self.selected_projects.get().get(index).cloned()
+  }
+
+  pub fn select_active_editor_sql_result(&self) -> Option<(Vec<String>, Vec<Vec<String>>)> {
+    self
+      .sql_results
+      .get()
+      .get(self.convert_selected_tab_to_index())
+      .cloned()
+  }
+
   pub fn select_active_editor(&self) -> ModelCell {
     self
       .editors
@@ -151,19 +166,19 @@ impl TabsStore {
       .clone()
   }
 
-  // // pub fn select_active_editor_value(&self) -> String {
-  // //   self
-  // //     .editors
-  // //     .get()
-  // //     .get(self.convert_selected_tab_to_index())
-  // //     .unwrap()
-  // //     .borrow()
-  // //     .as_ref()
-  // //     .unwrap()
-  // //     .get_model()
-  // //     .unwrap()
-  // //     .get_value()
-  // // }
+  pub fn select_active_editor_value(&self) -> String {
+    self
+      .editors
+      .get()
+      .get(self.convert_selected_tab_to_index())
+      .unwrap()
+      .borrow()
+      .as_ref()
+      .unwrap()
+      .get_model()
+      .unwrap()
+      .get_value()
+  }
 
   pub fn set_editor_value(&self, value: &str) {
     self

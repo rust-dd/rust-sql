@@ -33,7 +33,7 @@ pub fn Dashboard() -> impl IntoView {
                                   </button>
                               </div>
                           </TabLabel>
-                          <QueryEditor/>
+                          <QueryEditor index/>
                           <QueryTable/>
                       </Tab>
                   }

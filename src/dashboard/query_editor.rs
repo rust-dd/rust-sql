@@ -18,8 +18,12 @@ pub type ModelCell = Rc<RefCell<Option<CodeEditor>>>;
 pub const MODE_ID: &str = "pgsql";
 
 #[component]
-pub fn QueryEditor() -> impl IntoView {
+pub fn QueryEditor(index: usize) -> impl IntoView {
   let tabs_store = expect_context::<TabsStore>();
+  let active_project = move || match tabs_store.selected_projects.get().get(index) {
+    Some(project) => Some(project.clone()),
+    _ => None,
+  };
   let tabs_store_rc = Rc::new(RefCell::new(tabs_store));
   let show = create_rw_signal(false);
   let _ = use_event_listener(use_document(), ev::keydown, move |event| {
@@ -84,8 +88,16 @@ pub fn QueryEditor() -> impl IntoView {
   view! {
       <div _ref=node_ref class="border-b-1 border-neutral-200 h-72 sticky">
           // <AddCustomQuery show=show/>
-          <div class="absolute bottom-0 items-center flex justify-end px-4 left-0 w-full h-10 bg-gray-50">
-              <div class="flex flex-row gap-2 text-xs">
+          <div class="absolute bottom-0 items-center text-xs flex justify-between px-4 left-0 w-full h-10 bg-gray-50">
+              <Show
+                  when=move || active_project().is_some() && !active_project().unwrap().is_empty()
+                  fallback=|| view! { <div></div> }
+              >
+                  <div class="appearance-auto py-1 px-2 border-1 border-neutral-200 bg-white hover:bg-neutral-200 rounded-md">
+                      {active_project}
+                  </div>
+              </Show>
+              <div class="flex flex-row gap-2">
                   <button
                       class="p-1 border-1 border-neutral-200 bg-white hover:bg-neutral-200 rounded-md"
                       on:click=move |_| show.set(true)
@@ -101,16 +113,6 @@ pub fn QueryEditor() -> impl IntoView {
                   >
 
                       "Query"
-                  </button>
-                  <button
-                      class="p-1 border-1 border-neutral-200 bg-white hover:bg-neutral-200 rounded-md"
-                      on:click=move |_| {
-                          let tabs_store = tabs_store_rc.clone();
-                          tabs_store.borrow_mut().add_tab();
-                      }
-                  >
-
-                      "+ Tab"
                   </button>
               </div>
           </div>

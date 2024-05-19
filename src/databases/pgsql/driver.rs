@@ -99,6 +99,14 @@ impl<'a> Pgsql<'a> {
   pub async fn run_default_table_query(&self, sql: &str) {
     let tabs_store = expect_context::<TabsStore>();
     tabs_store.set_editor_value(sql);
+    tabs_store.selected_projects.update(|prev| {
+      let index = tabs_store.convert_selected_tab_to_index();
+      match prev.get_mut(index) {
+        Some(project) => *project = self.project_id.get().clone(),
+        None => prev.push(self.project_id.get().clone()),
+      }
+    });
+
     let query = invoke::<_, PgsqlRunQuery>(
       Invoke::PgsqlRunQuery.as_ref(),
       &InvokePgsqlRunQueryArgs {
@@ -116,7 +124,6 @@ impl<'a> Pgsql<'a> {
         None => prev.push((cols, rows)),
       }
     });
-
     let qp_store = expect_context::<QueryPerformanceContext>();
     qp_store.update(|prev| {
       prev.push_front(QueryPerformanceAtom {

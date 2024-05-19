@@ -45,34 +45,28 @@ pub fn Schema(schema: String) -> impl IntoView {
 
               {(*schema).clone()}
           </button>
+          <div class="pl-2">
+              <Show when=show fallback=|| view! {}>
+                  <For
+                      each={
+                          let schema = schema.clone();
+                          move || {
+                              let schema = (*schema).clone();
+                              pgsql.select_tables_by_schema(&schema).unwrap()
+                          }
+                      }
 
-          {
-              view! {
-                  <div class="pl-2">
-                      <Show when=show fallback=|| view! {}>
-                          <For
-                              each={
-                                  let schema = schema.clone();
-                                  move || {
-                                      let schema = (*schema).clone();
-                                      pgsql.select_tables_by_schema(&schema).unwrap()
-                                  }
-                              }
+                      key=|table| table.0.clone()
+                      children={
+                          let schema = schema.clone();
+                          move |table| {
+                              view! { <Table table schema=schema.to_string()/> }
+                          }
+                      }
+                  />
 
-                              key=|table| table.0.clone()
-                              children={
-                                  let schema = schema.clone();
-                                  move |table| {
-                                      view! { <Table table schema=schema.to_string()/> }
-                                  }
-                              }
-                          />
-
-                      </Show>
-                  </div>
-              }
-          }
-
+              </Show>
+          </div>
       </div>
   }
 }

@@ -1,13 +1,14 @@
-use ahash::AHashMap;
+use std::collections::BTreeMap;
+
 use tauri::{Result, State};
 
 use crate::AppState;
 
 #[tauri::command(rename_all = "snake_case")]
-pub async fn project_db_select(app_state: State<'_, AppState>) -> Result<AHashMap<String, String>> {
+pub async fn project_db_select(app_state: State<'_, AppState>) -> Result<BTreeMap<String, String>> {
   let project_db = app_state.project_db.lock().await;
   let db = project_db.clone().unwrap();
-  let mut projects = AHashMap::new();
+  let mut projects = BTreeMap::new();
 
   if db.is_empty() {
     tracing::info!("No projects found in the database");
@@ -45,3 +46,4 @@ pub async fn project_db_delete(project_id: &str, app_state: State<'_, AppState>)
   db.remove(project_id).unwrap();
   Ok(())
 }
+

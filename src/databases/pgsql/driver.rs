@@ -3,7 +3,9 @@ use common::{
   enums::ProjectConnectionStatus,
   types::pgsql::{PgsqlLoadSchemas, PgsqlLoadTables, PgsqlRunQuery},
 };
-use leptos::{error::Result, expect_context, RwSignal, SignalGet, SignalSet, SignalUpdate};
+use leptos::{
+  error::Result, expect_context, logging::log, RwSignal, SignalGet, SignalSet, SignalUpdate,
+};
 use rsql::set_running_query;
 use tauri_sys::tauri::invoke;
 
@@ -98,6 +100,16 @@ impl<'a> Pgsql<'a> {
   #[set_running_query]
   pub async fn run_default_table_query(&self, sql: &str) {
     let tabs_store = expect_context::<TabsStore>();
+
+    let selected_projects = tabs_store.selected_projects.get();
+    let project_id = selected_projects.get(tabs_store.convert_selected_tab_to_index());
+
+    if !selected_projects.is_empty()
+      && project_id.is_some_and(|id| id.as_str() != &self.project_id.get())
+    {
+      tabs_store.add_tab(&self.project_id.get());
+    }
+
     tabs_store.set_editor_value(sql);
     tabs_store.selected_projects.update(|prev| {
       let index = tabs_store.convert_selected_tab_to_index();

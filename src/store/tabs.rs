@@ -54,7 +54,7 @@ impl TabsStore {
       active_tabs: create_rw_signal(1),
       editors: create_rw_signal(Vec::new()),
       sql_results: create_rw_signal(Vec::new()),
-      selected_projects: create_rw_signal(vec![String::new()]),
+      selected_projects: create_rw_signal(Vec::new()),
     }
   }
 

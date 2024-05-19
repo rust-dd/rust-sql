@@ -1,11 +1,12 @@
-use ahash::AHashMap;
+use std::collections::BTreeMap;
+
 use leptos::{RwSignal, SignalGet, SignalSet};
 use tauri_sys::tauri::invoke;
 
 use crate::invoke::{Invoke, InvokeProjectDbDeleteArgs, InvokeProjectDbInsertArgs};
 
 #[derive(Clone, Copy, Debug)]
-pub struct ProjectsStore(pub RwSignal<AHashMap<String, String>>);
+pub struct ProjectsStore(pub RwSignal<BTreeMap<String, String>>);
 
 impl Default for ProjectsStore {
   fn default() -> Self {
@@ -24,7 +25,7 @@ impl ProjectsStore {
   }
 
   pub async fn load_projects(&self) {
-    let projects = invoke::<_, AHashMap<String, String>>(Invoke::ProjectDbSelect.as_ref(), &())
+    let projects = invoke::<_, BTreeMap<String, String>>(Invoke::ProjectDbSelect.as_ref(), &())
       .await
       .unwrap();
     self.0.set(projects);

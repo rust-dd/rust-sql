@@ -4,6 +4,7 @@ use common::{
   types::pgsql::{PgsqlLoadSchemas, PgsqlLoadTables, PgsqlRunQuery},
 };
 use leptos::{error::Result, expect_context, RwSignal, SignalGet, SignalSet, SignalUpdate};
+use rsql::set_running_query;
 use tauri_sys::tauri::invoke;
 
 use crate::{
@@ -11,7 +12,10 @@ use crate::{
     Invoke, InvokePgsqlConnectorArgs, InvokePgsqlLoadSchemasArgs, InvokePgsqlLoadTablesArgs,
     InvokePgsqlRunQueryArgs,
   },
-  store::atoms::{QueryPerformanceAtom, QueryPerformanceContext},
+  store::{
+    atoms::{QueryPerformanceAtom, QueryPerformanceContext, RunQueryAtom, RunQueryContext},
+    tabs::TabsStore,
+  },
 };
 
 #[derive(Debug, Clone, Copy)]
@@ -91,7 +95,10 @@ impl<'a> Pgsql<'a> {
     });
   }
 
-  pub async fn run_query(&self, sql: &str) {
+  #[set_running_query]
+  pub async fn run_default_table_query(&self, sql: &str) {
+    let tabs_store = expect_context::<TabsStore>();
+    tabs_store.set_editor_value(sql);
     let query = invoke::<_, PgsqlRunQuery>(
       Invoke::PgsqlRunQuery.as_ref(),
       &InvokePgsqlRunQueryArgs {
@@ -102,6 +109,13 @@ impl<'a> Pgsql<'a> {
     .await
     .unwrap();
     let (cols, rows, query_time) = query;
+    tabs_store.sql_results.update(|prev| {
+      let index = tabs_store.convert_selected_tab_to_index();
+      match prev.get_mut(index) {
+        Some(sql_result) => *sql_result = (cols, rows),
+        None => prev.push((cols, rows)),
+      }
+    });
     let qp_store = expect_context::<QueryPerformanceContext>();
     qp_store.update(|prev| {
       prev.push(QueryPerformanceAtom {

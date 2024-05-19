@@ -1,41 +1,31 @@
-use futures::lock::Mutex;
 use leptos::*;
 use leptos_icons::*;
 
-use crate::store::{active_project::ActiveProjectStore, tabs::TabsStore};
+use crate::databases::pgsql::driver::Pgsql;
 
 #[component]
-pub fn Table(
-  table: (String, String),
-  project: Option<String>,
-  schema: Option<String>,
-) -> impl IntoView {
-  // let tabs_store = Arc::new(Mutex::new(expect_context::<TabsStore>()));
-  // let active_project = expect_context::<ActiveProjectStore>();
-  // let query = create_action(
-  //   move |(schema, table, tabs_store): &(String, String, Arc<Mutex<TabsStore>>)| {
-  //     let tabs_store = tabs_store.clone();
-  //     let project = project.clone();
-  //     let schema = schema.clone();
-  //     let table = table.clone();
-  //     active_project.0.set(Some(project.clone()));
+pub fn Table(table: (String, String), schema: String) -> impl IntoView {
+  let pgsql = expect_context::<Pgsql>();
+  let query = create_action(move |(schema, table, pgsql): &(String, String, Pgsql)| {
+    let pgsql = pgsql.clone();
+    let schema = schema.clone();
+    let table = table.clone();
 
-  //     async move {
-  //       tabs_store
-  //         .lock()
-  //         .await
-  //         .set_editor_value(&format!("SELECT * FROM {}.{} LIMIT 100;", schema, table));
-  //       //tabs_store.lock().await.run_query().await.unwrap()
-  //     }
-  //   },
-  // );
+    async move {
+      pgsql
+        .run_default_table_query(&format!("SELECT * FROM {}.{} LIMIT 100;", schema, table))
+        .await;
+    }
+  });
 
   view! {
-      <div class="flex flex-row justify-between items-center hover:font-semibold cursor-pointer">
-          // on:click={
-          // let table = table.clone();
-          // move |_| { query.dispatch((schema.clone(), table.0.clone(), tabs_store.clone())) }
-          // }
+      <div
+          class="flex flex-row justify-between items-center hover:font-semibold cursor-pointer"
+          on:click={
+              let table = table.clone();
+              move |_| { query.dispatch((schema.clone(), table.0.clone(), pgsql)) }
+          }
+      >
 
           <div class="flex flex-row items-center gap-1">
               <Icon icon=icondata::HiTableCellsOutlineLg width="12" height="12"/>

@@ -39,16 +39,16 @@ impl QueryStore {
 
   pub async fn insert_query(&self, key: &str, project_name: &str) -> Result<()> {
     let tabs_store = expect_context::<TabsStore>();
-    let sql = tabs_store.select_active_editor_value();
-    invoke(
-      &Invoke::QueryDbInsert.to_string(),
-      &InvokeInsertQueryArgs {
-        key: &format!("{}:{}", project_name, key),
-        sql: sql.as_str(),
-      },
-    )
-    .await?;
-    self.select_queries().await?;
+    // let sql = tabs_store.select_active_editor_value();
+    // invoke(
+    //   &Invoke::QueryDbInsert.to_string(),
+    //   &InvokeInsertQueryArgs {
+    //     key: &format!("{}:{}", project_name, key),
+    //     sql: sql.as_str(),
+    //   },
+    // )
+    // .await?;
+    // self.select_queries().await?;
     Ok(())
   }
 

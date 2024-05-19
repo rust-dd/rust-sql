@@ -1,7 +1,7 @@
-use std::{borrow::Borrow, cell::RefCell, rc::Rc, sync::Arc};
+use std::{cell::RefCell, rc::Rc, sync::Arc};
 
 use futures::lock::Mutex;
-use leptos::{svg::A, *};
+use leptos::*;
 use leptos_use::{use_document, use_event_listener};
 use monaco::{
   api::{CodeEditor, CodeEditorOptions, TextModel},
@@ -36,7 +36,7 @@ pub fn QueryEditor() -> impl IntoView {
       let html_element = div_element.unchecked_ref::<web_sys::HtmlElement>();
       let options = CodeEditorOptions::default().to_sys_options();
       let text_model =
-        TextModel::create("SELECT * FROM users LIMIT 100;", Some(MODE_ID), None).unwrap();
+        TextModel::create("# Add your SQL query here...", Some(MODE_ID), None).unwrap();
       options.set_model(Some(text_model.as_ref()));
       options.set_language(Some(MODE_ID));
       options.set_automatic_layout(Some(true));

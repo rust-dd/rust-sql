@@ -1,5 +1,5 @@
 [package]
-name = "rust-sql-gui"
+name = "rsql_tauri"
 version = "1.0.0-alpha.9"
 description = "PostgreSQL GUI written in Rust"
 authors = ["Daniel Boros"]

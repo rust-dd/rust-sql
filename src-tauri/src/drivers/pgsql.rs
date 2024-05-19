@@ -139,14 +139,14 @@ pub async fn pgsql_load_tables(
 
 #[tauri::command(rename_all = "snake_case")]
 pub async fn pgsql_run_query(
-  project_name: &str,
-  sql: String,
+  project_id: &str,
+  sql: &str,
   app_state: State<'_, AppState>,
 ) -> Result<(Vec<String>, Vec<Vec<String>>, f32)> {
   let start = Instant::now();
   let clients = app_state.client.lock().await;
-  let client = clients.as_ref().unwrap().get(project_name).unwrap();
-  let rows = client.query(sql.as_str(), &[]).await.unwrap();
+  let client = clients.as_ref().unwrap().get(project_id).unwrap();
+  let rows = client.query(sql, &[]).await.unwrap();
 
   if rows.is_empty() {
     return Ok((Vec::new(), Vec::new(), 0.0f32));

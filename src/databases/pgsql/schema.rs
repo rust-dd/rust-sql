@@ -60,8 +60,11 @@ pub fn Schema(schema: String) -> impl IntoView {
                               }
 
                               key=|table| table.0.clone()
-                              children=move |table| {
-                                  view! { <Table table schema=None project=None/> }
+                              children={
+                                  let schema = schema.clone();
+                                  move |table| {
+                                      view! { <Table table schema=schema.to_string()/> }
+                                  }
                               }
                           />
 

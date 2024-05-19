@@ -1,7 +1,8 @@
 use std::{cell::RefCell, rc::Rc};
 
 use leptos::{
-  create_rw_signal, error::Result, use_context, RwSignal, SignalGet, SignalSet, SignalUpdate,
+  create_rw_signal, error::Result, logging::log, use_context, RwSignal, SignalGet, SignalSet,
+  SignalUpdate,
 };
 use monaco::api::CodeEditor;
 
@@ -95,7 +96,7 @@ impl TabsStore {
     let query_store = use_context::<QueryStore>().unwrap();
     let query_store = query_store.0.get();
     let query = query_store.get(key).unwrap();
-    self.set_editor_value(query);
+    //self.set_editor_value(query);
     Ok(())
   }
 
@@ -114,6 +115,7 @@ impl TabsStore {
   }
 
   pub fn add_tab(&self) {
+    log!("Adding tab");
     self.active_tabs.update(|prev| {
       *prev += 1;
     });
@@ -124,6 +126,7 @@ impl TabsStore {
   }
 
   pub fn close_tab(&self, index: usize) {
+    log!("Closing tab");
     if self.active_tabs.get() == 1 {
       return;
     }
@@ -150,19 +153,19 @@ impl TabsStore {
       .clone()
   }
 
-  pub fn select_active_editor_value(&self) -> String {
-    self
-      .editors
-      .get()
-      .get(self.convert_selected_tab_to_index())
-      .unwrap()
-      .borrow()
-      .as_ref()
-      .unwrap()
-      .get_model()
-      .unwrap()
-      .get_value()
-  }
+  // // pub fn select_active_editor_value(&self) -> String {
+  // //   self
+  // //     .editors
+  // //     .get()
+  // //     .get(self.convert_selected_tab_to_index())
+  // //     .unwrap()
+  // //     .borrow()
+  // //     .as_ref()
+  // //     .unwrap()
+  // //     .get_model()
+  // //     .unwrap()
+  // //     .get_value()
+  // // }
 
   pub fn set_editor_value(&self, value: &str) {
     self
@@ -178,7 +181,7 @@ impl TabsStore {
       .set_value(value);
   }
 
-  pub(self) fn convert_selected_tab_to_index(&self) -> usize {
+  pub fn convert_selected_tab_to_index(&self) -> usize {
     self.selected_tab.get().parse::<usize>().unwrap()
   }
 

@@ -7,7 +7,7 @@ use crate::{
   footer::Footer,
   sidebar::index::Sidebar,
   store::{
-    atoms::{QueryPerformanceAtom, QueryPerformanceContext},
+    atoms::{QueryPerformanceAtom, QueryPerformanceContext, RunQueryAtom, RunQueryContext},
     projects::ProjectsStore,
     query::QueryStore,
     tabs::TabsStore,
@@ -23,6 +23,7 @@ pub fn App() -> impl IntoView {
   provide_context(ProjectsStore::default());
   provide_context(RwSignal::new(QueryTableLayout::Grid));
   provide_context::<QueryPerformanceContext>(RwSignal::new(Vec::<QueryPerformanceAtom>::new()));
+  provide_context::<RunQueryContext>(RwSignal::new(RunQueryAtom::default()));
   provide_context(TabsStore::default());
 
   view! {

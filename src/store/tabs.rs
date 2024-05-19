@@ -26,7 +26,6 @@ pub struct TabsStore {
   pub editors: RwSignal<Vec<ModelCell>>,
   #[allow(clippy::type_complexity)]
   pub sql_results: RwSignal<Vec<(Vec<String>, Vec<Vec<String>>)>>,
-  pub is_loading: RwSignal<bool>,
 }
 
 unsafe impl Send for TabsStore {}
@@ -46,7 +45,6 @@ impl TabsStore {
       active_tabs: create_rw_signal(1),
       editors: create_rw_signal(Vec::new()),
       sql_results: create_rw_signal(Vec::new()),
-      is_loading: create_rw_signal(false),
     }
   }
 

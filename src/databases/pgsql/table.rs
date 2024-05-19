@@ -7,7 +7,7 @@ use crate::databases::pgsql::driver::Pgsql;
 pub fn Table(table: (String, String), schema: String) -> impl IntoView {
   let pgsql = expect_context::<Pgsql>();
   let query = create_action(move |(schema, table, pgsql): &(String, String, Pgsql)| {
-    let pgsql = pgsql.clone();
+    let pgsql = *pgsql;
     let schema = schema.clone();
     let table = table.clone();
 

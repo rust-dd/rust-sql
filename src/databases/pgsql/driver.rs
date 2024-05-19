@@ -127,8 +127,6 @@ impl<'a> Pgsql<'a> {
           sql,
           query_time
         )),
-        execution_time: Some(query_time),
-        query: Some(sql.to_string()),
       })
     });
   }

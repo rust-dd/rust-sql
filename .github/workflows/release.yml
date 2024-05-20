@@ -32,7 +32,7 @@ jobs:
           node-version: lts/*
       
       - name: install Rust
-        uses: dtolnay/rust-toolchain
+        uses: dtolnay/rust-toolchain@nightly
         with:
           toolchain: nightly-2024-05-04 # 1.80.0-nightly (e82c861d7 2024-05-04)
           target: wasm32-unknown-unknown

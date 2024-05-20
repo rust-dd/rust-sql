@@ -26,7 +26,10 @@ pub fn Dashboard() -> impl IntoView {
                                   <span>{format!("Tab {}", index + 1)}</span>
                                   <button
                                       class="rounded-full p-1 hover:bg-gray-100"
-                                      on:click=move |_| { tabs_store.close_tab(index) }
+                                      on:click=move |e| {
+                                          e.stop_propagation();
+                                          tabs_store.close_tab(index)
+                                      }
                                   >
 
                                       <Icon icon=icondata::CgClose width="16" height="16"/>

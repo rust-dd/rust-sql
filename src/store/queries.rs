@@ -1,4 +1,7 @@
-use std::collections::BTreeMap;
+use std::{
+  collections::BTreeMap,
+  ops::{Deref, DerefMut},
+};
 
 use common::enums::Drivers;
 use leptos::*;
@@ -6,10 +9,10 @@ use tauri_sys::tauri::invoke;
 
 use crate::invoke::{Invoke, InvokeQueryDbDeleteArgs, InvokeQueryDbInsertArgs};
 
-use super::tabs::TabsStore;
+use super::{tabs::TabsStore, BTreeStore};
 
 #[derive(Clone, Copy, Debug)]
-pub struct QueriesStore(pub RwSignal<BTreeMap<String, String>>);
+pub struct QueriesStore(pub BTreeStore);
 
 impl Default for QueriesStore {
   fn default() -> Self {
@@ -17,17 +20,31 @@ impl Default for QueriesStore {
   }
 }
 
+impl Deref for QueriesStore {
+  type Target = BTreeStore;
+
+  fn deref(&self) -> &Self::Target {
+    &self.0
+  }
+}
+
+impl DerefMut for QueriesStore {
+  fn deref_mut(&mut self) -> &mut Self::Target {
+    &mut self.0
+  }
+}
+
 impl QueriesStore {
   #[must_use]
   pub fn new() -> Self {
-    Self(create_rw_signal(BTreeMap::new()))
+    Self(RwSignal::default())
   }
 
   pub async fn load_queries(&self) {
     let saved_queries = invoke::<_, BTreeMap<String, String>>(Invoke::QueryDbSelect.as_ref(), &())
       .await
       .unwrap();
-    self.0.update(|prev| {
+    self.update(|prev| {
       *prev = saved_queries.into_iter().collect();
     });
   }

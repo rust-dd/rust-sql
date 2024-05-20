@@ -1,9 +1,0 @@
-{
-  "devDependencies": {
-    "tailwindcss": "^3.3.5"
-  },
-  "dependencies": {
-    "monaco-editor": "^0.45.0",
-    "monaco-sql-languages": "^0.12.0-beta.10"
-  }
-}

@@ -1,6 +1,6 @@
 [package]
 name = "rsql_tauri"
-version = "1.0.0-beta.0"
+version = "1.0.0-beta.2"
 description = "PostgreSQL GUI written in Rust"
 authors = ["Daniel Boros"]
 license = ""

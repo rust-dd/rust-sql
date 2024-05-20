@@ -42,7 +42,7 @@ pub fn Sidebar() -> impl IntoView {
                   </button>
               </div>
               <For
-                  each=move || projects_store.0.get()
+                  each=move || projects_store.get()
                   key=|(project, _)| project.clone()
                   children=|(project_id, project_details)| {
                       if project_details.contains(Drivers::PGSQL.as_ref()) {
@@ -58,7 +58,7 @@ pub fn Sidebar() -> impl IntoView {
               />
 
           </div>
-          <Show when=move || !queries_store.0.get().is_empty() fallback=|| view! { <div></div> }>
+          <Show when=move || !queries_store.get().is_empty() fallback=|| view! { <div></div> }>
               <div class="py-2">
                   <p class="font-semibold text-lg">Saved Queries</p>
                   <div class="text-sm">

@@ -1,4 +1,7 @@
-use std::collections::BTreeMap;
+use std::{
+  collections::BTreeMap,
+  ops::{Deref, DerefMut},
+};
 
 use common::enums::Drivers;
 use leptos::{RwSignal, SignalGet, SignalSet};
@@ -6,12 +9,28 @@ use tauri_sys::tauri::invoke;
 
 use crate::invoke::{Invoke, InvokeProjectDbDeleteArgs, InvokeProjectDbInsertArgs};
 
+use super::BTreeStore;
+
 #[derive(Clone, Copy, Debug)]
-pub struct ProjectsStore(pub RwSignal<BTreeMap<String, String>>);
+pub struct ProjectsStore(pub BTreeStore);
 
 impl Default for ProjectsStore {
   fn default() -> Self {
     Self::new()
+  }
+}
+
+impl Deref for ProjectsStore {
+  type Target = BTreeStore;
+
+  fn deref(&self) -> &Self::Target {
+    &self.0
+  }
+}
+
+impl DerefMut for ProjectsStore {
+  fn deref_mut(&mut self) -> &mut Self::Target {
+    &mut self.0
   }
 }
 
@@ -22,7 +41,7 @@ impl ProjectsStore {
   }
 
   pub fn select_project_by_name(&self, project_id: &str) -> Option<String> {
-    self.0.get().get(project_id).cloned()
+    self.get().get(project_id).cloned()
   }
 
   pub fn select_driver_by_project(&self, project_id: Option<&str>) -> Drivers {
@@ -44,7 +63,7 @@ impl ProjectsStore {
     let projects = invoke::<_, BTreeMap<String, String>>(Invoke::ProjectDbSelect.as_ref(), &())
       .await
       .unwrap();
-    self.0.set(projects);
+    self.set(projects);
   }
 
   pub async fn insert_project(&self, project_id: &str, project_details: &str) {

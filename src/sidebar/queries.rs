@@ -7,7 +7,7 @@ use super::query::Query;
 pub fn Queries() -> impl IntoView {
   let queries_store = expect_context::<QueriesStore>();
   let _ = create_resource(
-    move || queries_store.0.get(),
+    move || queries_store.get(),
     move |_| async move {
       queries_store.load_queries().await;
     },
@@ -15,7 +15,7 @@ pub fn Queries() -> impl IntoView {
 
   view! {
       <For
-          each=move || queries_store.0.get()
+          each=move || queries_store.get()
           key=|(query_id, _)| query_id.clone()
           children=move |(query_id, sql)| view! { <Query query_id sql/> }
       />

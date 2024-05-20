@@ -9,9 +9,6 @@ use super::{query_editor::QueryEditor, query_table::QueryTable};
 #[component]
 pub fn Dashboard() -> impl IntoView {
   let tabs_store = expect_context::<tabs::TabsStore>();
-  create_effect(move |_| {
-    log!("Selected tab: {}", tabs_store.selected_tab.get());
-  });
 
   view! {
       <Tabs value=tabs_store.selected_tab>

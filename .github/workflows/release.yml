@@ -24,7 +24,7 @@ jobs:
       - name: install Rust
         uses: actions-rs/toolchain@v1
         with:
-          toolchain: nightly-2023-12-10 # 1.76.0-nightly-2021-12-10
+          toolchain: nightly-2024-05-04 # 1.80.0-nightly (e82c861d7 2024-05-04)
           target: wasm32-unknown-unknown
           default: true
       - name: install Tauri cli

@@ -1,4 +1,4 @@
-use leptos::{logging::log, *};
+use leptos::*;
 use leptos_icons::Icon;
 use thaw::{Tab, TabLabel, Tabs};
 

@@ -103,7 +103,7 @@ impl<'a> Pgsql<'a> {
     let project_id = selected_projects.get(tabs_store.convert_selected_tab_to_index());
 
     if !selected_projects.is_empty()
-      && project_id.is_some_and(|id| id.as_str() != &self.project_id.get())
+      && project_id.is_some_and(|id| id.as_str() != self.project_id.get())
     {
       tabs_store.add_tab(&self.project_id.get());
     }
@@ -112,7 +112,7 @@ impl<'a> Pgsql<'a> {
     tabs_store.selected_projects.update(|prev| {
       let index = tabs_store.convert_selected_tab_to_index();
       match prev.get_mut(index) {
-        Some(project) => *project = self.project_id.get().clone(),
+        Some(project) => project.clone_from(&self.project_id.get()),
         None => prev.push(self.project_id.get().clone()),
       }
     });

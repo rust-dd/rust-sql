@@ -17,7 +17,7 @@ pub fn AddCustomQuery(show: RwSignal<bool>, project_id: String, driver: Drivers)
       let query_db_clone = *query_db;
       let project_id = project_id.clone();
       let title = title.clone();
-      let driver = driver.clone();
+      let driver = *driver;
       async move {
         query_db_clone
           .insert_query(&project_id, &title, &driver)
@@ -45,7 +45,6 @@ pub fn AddCustomQuery(show: RwSignal<bool>, project_id: String, driver: Drivers)
                       class="px-4 py-2 border-1 border-neutral-200 hover:bg-neutral-200 rounded-md"
                       on:click={
                           let project_id = project_id.clone();
-                          let driver = driver.clone();
                           move |_| {
                               insert_query
                                   .dispatch((query_store, project_id.to_string(), title(), driver));

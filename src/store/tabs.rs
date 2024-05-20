@@ -69,7 +69,7 @@ impl TabsStore {
       .find_query_for_line(&sql, position.line_number())
       .unwrap();
     let (cols, rows, query_time) = invoke::<_, (Vec<String>, Vec<Vec<String>>, f32)>(
-      &Invoke::PgsqlRunQuery.to_string(),
+      Invoke::PgsqlRunQuery.as_ref(),
       &InvokePgsqlRunQueryArgs {
         project_id,
         sql: &sql.query,
@@ -99,7 +99,7 @@ impl TabsStore {
     if !self.selected_projects.get().is_empty()
       && project_id.is_some_and(|id| id.as_str() != splitted_key[0])
     {
-      self.add_tab(&splitted_key[0]);
+      self.add_tab(splitted_key[0]);
     }
     self.set_editor_value(sql);
     self.selected_projects.update(|prev| {

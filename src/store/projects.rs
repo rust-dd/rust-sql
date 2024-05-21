@@ -3,16 +3,14 @@ use std::{
   ops::{Deref, DerefMut},
 };
 
-use common::enums::Drivers;
+use common::{enums::Drivers, types::BTreeVecStore};
 use leptos::{RwSignal, SignalGet, SignalSet};
 use tauri_sys::tauri::invoke;
 
 use crate::invoke::{Invoke, InvokeProjectDbDeleteArgs, InvokeProjectDbInsertArgs};
 
-use super::BTreeStore;
-
 #[derive(Clone, Copy, Debug)]
-pub struct ProjectsStore(pub BTreeStore);
+pub struct ProjectsStore(pub RwSignal<BTreeVecStore>);
 
 impl Default for ProjectsStore {
   fn default() -> Self {
@@ -21,7 +19,7 @@ impl Default for ProjectsStore {
 }
 
 impl Deref for ProjectsStore {
-  type Target = BTreeStore;
+  type Target = RwSignal<BTreeVecStore>;
 
   fn deref(&self) -> &Self::Target {
     &self.0
@@ -40,7 +38,7 @@ impl ProjectsStore {
     Self(RwSignal::default())
   }
 
-  pub fn select_project_by_name(&self, project_id: &str) -> Option<String> {
+  pub fn select_project_by_name(&self, project_id: &str) -> Option<Vec<String>> {
     self.get().get(project_id).cloned()
   }
 
@@ -50,23 +48,23 @@ impl ProjectsStore {
     }
 
     let project = self.select_project_by_name(project_id.unwrap()).unwrap();
-    let driver = project.split(':').next().unwrap();
-    let driver = driver.split('=').last();
+    let driver = project.first().unwrap();
 
-    match driver {
-      Some("PGSQL") => Drivers::PGSQL,
+    match driver.as_str() {
+      "PGSQL" => Drivers::PGSQL,
       _ => unreachable!(),
     }
   }
 
   pub async fn load_projects(&self) {
-    let projects = invoke::<_, BTreeMap<String, String>>(Invoke::ProjectDbSelect.as_ref(), &())
-      .await
-      .unwrap();
+    let projects =
+      invoke::<_, BTreeMap<String, Vec<String>>>(Invoke::ProjectDbSelect.as_ref(), &())
+        .await
+        .unwrap();
     self.set(projects);
   }
 
-  pub async fn insert_project(&self, project_id: &str, project_details: &str) {
+  pub async fn insert_project(&self, project_id: &str, project_details: Vec<String>) {
     let _ = invoke::<_, ()>(
       Invoke::ProjectDbInsert.as_ref(),
       &InvokeProjectDbInsertArgs {

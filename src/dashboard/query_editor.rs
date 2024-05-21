@@ -23,10 +23,7 @@ pub const MODE_ID: &str = "pgsql";
 #[component]
 pub fn QueryEditor(index: usize) -> impl IntoView {
   let tabs_store = expect_context::<TabsStore>();
-  let active_project = move || match tabs_store.selected_projects.get().get(index) {
-    Some(project) => Some(project.clone()),
-    _ => None,
-  };
+  let active_project = move || tabs_store.selected_projects.get().get(index).cloned();
   let projects_store = expect_context::<ProjectsStore>();
   let project_driver = projects_store.select_driver_by_project(active_project().as_deref());
   let tabs_store_rc = Rc::new(RefCell::new(tabs_store));

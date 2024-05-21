@@ -13,6 +13,7 @@
     "editor.semanticHighlighting.enabled": false
   },
   "rust-analyzer.rustfmt.overrideCommand": ["leptosfmt", "--stdin", "--rustfmt"],
+  "rust-analyzer.procMacro.attributes.enable": true,
   "editor.tokenColorCustomizations": {
     "[LaserWave High Contrast]": {
       "textMateRules": [

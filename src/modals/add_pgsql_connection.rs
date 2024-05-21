@@ -1,52 +1,24 @@
-use common::enums::Drivers;
 use leptos::*;
 use thaw::{Modal, ModalFooter};
 
-use crate::store::projects::ProjectsStore;
-
-#[derive(Default, Clone)]
-struct ConnectionDetails {
-  pub project_id: String,
-  pub driver: Drivers,
-  pub user: String,
-  pub password: String,
-  pub host: String,
-  pub port: String,
-}
-
-impl IntoIterator for ConnectionDetails {
-  type Item = String;
-  type IntoIter = std::vec::IntoIter<String>;
-
-  fn into_iter(self) -> Self::IntoIter {
-    vec![
-      self.project_id.to_owned(),
-      self.user.to_owned(),
-      self.password.to_owned(),
-      self.host.to_owned(),
-      self.port.to_owned(),
-    ]
-    .into_iter()
-  }
-}
+use crate::store::{atoms::PgsqlConnectionDetailsContext, projects::ProjectsStore};
 
 #[component]
 pub fn AddPgsqlConnection(show: RwSignal<bool>) -> impl IntoView {
   let projects_store = expect_context::<ProjectsStore>();
-  let params = create_rw_signal(ConnectionDetails {
-    driver: Drivers::PGSQL,
-    ..Default::default()
-  });
-  let save_project = create_action(move |(project_id, project_details): &(String, String)| {
-    let project_id = project_id.clone();
-    let project_details = project_details.clone();
-    async move {
-      projects_store
-        .insert_project(&project_id, &project_details)
-        .await;
-      show.set(false);
-    }
-  });
+  let params = expect_context::<PgsqlConnectionDetailsContext>();
+  let save_project = create_action(
+    move |(project_id, project_details): &(String, Vec<String>)| {
+      let project_id = project_id.clone();
+      let project_details = project_details.clone();
+      async move {
+        projects_store
+          .insert_project(&project_id, project_details)
+          .await;
+        show.set(false);
+      }
+    },
+  );
 
   view! {
       <Modal show=show title="Add new project">
@@ -103,15 +75,14 @@ pub fn AddPgsqlConnection(show: RwSignal<bool>) -> impl IntoView {
                           save_project
                               .dispatch((
                                   params.get().project_id,
-                                  format!(
-                                      "driver={}:user={}:password={}:host={}:port={}",
-                                      params.get().driver.as_ref(),
+                                  vec![
+                                      params.get().driver.to_string(),
                                       params.get().user,
                                       params.get().password,
                                       params.get().host,
                                       params.get().port,
-                                  ),
-                              ))
+                                  ],
+                              ));
                       }
                   >
 
@@ -121,6 +92,7 @@ pub fn AddPgsqlConnection(show: RwSignal<bool>) -> impl IntoView {
                       class="px-4 py-2 border-1 border-neutral-200 hover:bg-neutral-200 rounded-md"
                       on:click=move |_| show.set(false)
                   >
+
                       Cancel
                   </button>
               </div>

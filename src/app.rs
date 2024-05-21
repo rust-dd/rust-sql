@@ -10,7 +10,10 @@ use crate::{
   performane::Performance,
   sidebar::index::Sidebar,
   store::{
-    atoms::{QueryPerformanceAtom, QueryPerformanceContext, RunQueryAtom, RunQueryContext},
+    atoms::{
+      PgsqlConnectionDetailsAtom, PgsqlConnectionDetailsContext, QueryPerformanceAtom,
+      QueryPerformanceContext, RunQueryAtom, RunQueryContext,
+    },
     projects::ProjectsStore,
     queries::QueriesStore,
     tabs::TabsStore,
@@ -29,6 +32,9 @@ pub fn App() -> impl IntoView {
     RwSignal::new(VecDeque::<QueryPerformanceAtom>::new()),
   );
   provide_context::<RunQueryContext>(RwSignal::new(RunQueryAtom::default()));
+  provide_context::<PgsqlConnectionDetailsContext>(RwSignal::new(
+    PgsqlConnectionDetailsAtom::default(),
+  ));
   provide_context(TabsStore::default());
 
   view! {

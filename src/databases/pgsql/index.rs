@@ -5,7 +5,10 @@ use leptos_icons::*;
 use leptos_toaster::{Toast, ToastId, ToastVariant, Toasts};
 
 use super::{driver::Pgsql, schema::Schema};
-use crate::store::{projects::ProjectsStore, tabs::TabsStore};
+use crate::{
+  modals::add_pgsql_connection::AddPgsqlConnection,
+  store::{projects::ProjectsStore, tabs::TabsStore},
+};
 use common::enums::ProjectConnectionStatus;
 
 #[component]
@@ -14,29 +17,18 @@ pub fn Pgsql(project_id: String) -> impl IntoView {
   let tabs_store = expect_context::<TabsStore>();
   let projects_store = expect_context::<ProjectsStore>();
   let project_details = projects_store.select_project_by_name(&project_id).unwrap();
-  let connection_params = project_details
-    .split(':')
-    .map(String::from)
-    .collect::<Vec<String>>();
-  let connection_params = connection_params
-    .into_iter()
-    .skip(1)
-    .map(|s| {
-      let kv = s.split('=').collect::<Vec<&str>>();
-      kv[1].to_owned()
-    })
-    .collect::<Vec<String>>();
-  let connection_params = Box::leak(connection_params.into_boxed_slice());
+  let project_details = Box::leak(Box::new(project_details));
   // [user, password, host, port]
   let mut pgsql = Pgsql::new(project_id.clone().to_string());
   {
     pgsql.load_connection_details(
-      &connection_params[0],
-      &connection_params[1],
-      &connection_params[2],
-      &connection_params[3],
+      &project_details[1],
+      &project_details[2],
+      &project_details[3],
+      &project_details[4],
     );
   }
+  let show = create_rw_signal(false);
   let toast_context = expect_context::<Toasts>();
   let create_toast = move |variant: ToastVariant, title: String| {
     let toast_id = ToastId::new();
@@ -80,6 +72,7 @@ pub fn Pgsql(project_id: String) -> impl IntoView {
 
   view! {
       <Provider value=pgsql>
+          <AddPgsqlConnection show=show/>
           <div class="pl-1 text-xs">
               <div class="flex flex-row justify-between items-center">
                   <button
@@ -130,6 +123,16 @@ pub fn Pgsql(project_id: String) -> impl IntoView {
                       >
 
                           <Icon icon=icondata::HiCircleStackOutlineLg width="12" height="12"/>
+                      </button>
+                      <button
+                          class="p-1 rounded-full hover:bg-gray-200"
+                          on:click=move |_| {
+                              pgsql.edit_connection_details();
+                              show.set(true);
+                          }
+                      >
+
+                          <Icon icon=icondata::HiPencilSquareOutlineLg width="12" height="12"/>
                       </button>
                       <button
                           class="p-1 rounded-full hover:bg-gray-200"

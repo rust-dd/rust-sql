@@ -13,7 +13,7 @@ use crate::{utils::reflective_get, AppState};
 #[tauri::command(rename_all = "snake_case")]
 pub async fn pgsql_connector(
   project_id: &str,
-  key: Option<&str>,
+  key: Option<[&str; 4]>,
   app: AppHandle,
 ) -> Result<ProjectConnectionStatus> {
   let app_state = app.state::<AppState>();
@@ -26,24 +26,21 @@ pub async fn pgsql_connector(
   }
 
   let key = match key {
-    Some(key) => key.to_string(),
+    Some(key) => format!(
+      "user={} password={} host={} port={}",
+      key[0], key[1], key[2], key[3]
+    ),
     None => {
       let projects_db = app_state.project_db.lock().await;
       let projects_db = projects_db.as_ref().unwrap();
-      let project_details = projects_db.get(project_id).unwrap().unwrap().to_vec();
-      let project_details = String::from_utf8(project_details).unwrap();
-      let project_details = project_details.split(":").collect::<Vec<&str>>();
-      let project_details = project_details
-        .into_iter()
-        .skip(1)
-        .map(|s| {
-          let kv = s.split('=').collect::<Vec<&str>>();
-          kv[1].to_owned()
-        })
-        .collect::<Vec<String>>();
+      let project_details = projects_db.get(project_id).unwrap();
+      let project_details = match project_details {
+        Some(bytes) => bincode::deserialize::<Vec<String>>(&bytes).unwrap(),
+        _ => Vec::new(),
+      };
       let project_details = format!(
         "user={} password={} host={} port={}",
-        project_details[0], project_details[1], project_details[2], project_details[3]
+        project_details[1], project_details[2], project_details[3], project_details[4]
       );
       project_details
     }

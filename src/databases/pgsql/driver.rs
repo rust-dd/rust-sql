@@ -13,7 +13,10 @@ use crate::{
     InvokePgsqlRunQueryArgs,
   },
   store::{
-    atoms::{QueryPerformanceAtom, QueryPerformanceContext, RunQueryAtom, RunQueryContext},
+    atoms::{
+      PgsqlConnectionDetailsContext, QueryPerformanceAtom, QueryPerformanceContext, RunQueryAtom,
+      RunQueryContext,
+    },
     tabs::TabsStore,
   },
 };
@@ -48,12 +51,16 @@ impl<'a> Pgsql<'a> {
     self
       .status
       .update(|prev| *prev = ProjectConnectionStatus::Connecting);
-    let connection_string = self.generate_connection_string();
     let status = invoke::<_, ProjectConnectionStatus>(
       Invoke::PgsqlConnector.as_ref(),
       &InvokePgsqlConnectorArgs {
         project_id: &self.project_id.get(),
-        key: Some(&connection_string),
+        key: Some([
+          self.user.unwrap(),
+          self.password.unwrap(),
+          self.host.unwrap(),
+          self.port.unwrap(),
+        ]),
       },
     )
     .await
@@ -158,15 +165,15 @@ impl<'a> Pgsql<'a> {
     self.port = Some(port);
   }
 
-  fn generate_connection_string(&self) -> String {
-    let connection_string = format!(
-      "user={} password={} host={} port={}",
-      self.user.as_ref().unwrap(),
-      self.password.as_ref().unwrap(),
-      self.host.as_ref().unwrap(),
-      self.port.as_ref().unwrap(),
-    );
-    connection_string
+  pub fn edit_connection_details(&self) {
+    let atom = expect_context::<PgsqlConnectionDetailsContext>();
+    atom.update(|prev| {
+      prev.project_id = self.project_id.get().clone();
+      prev.user = self.user.unwrap().to_string();
+      prev.password = self.password.unwrap().to_string();
+      prev.host = self.host.unwrap().to_string();
+      prev.port = self.port.unwrap().to_string();
+    });
   }
 }
 

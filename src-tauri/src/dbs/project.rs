@@ -3,9 +3,10 @@ use std::collections::BTreeMap;
 use tauri::{Result, State};
 
 use crate::AppState;
+use common::types::BTreeVecStore;
 
 #[tauri::command(rename_all = "snake_case")]
-pub async fn project_db_select(app_state: State<'_, AppState>) -> Result<BTreeMap<String, String>> {
+pub async fn project_db_select(app_state: State<'_, AppState>) -> Result<BTreeVecStore> {
   let project_db = app_state.project_db.lock().await;
   let db = project_db.clone().unwrap();
   let mut projects = BTreeMap::new();
@@ -20,7 +21,7 @@ pub async fn project_db_select(app_state: State<'_, AppState>) -> Result<BTreeMa
 
     let project = (
       String::from_utf8(project.0.to_vec()).unwrap(),
-      String::from_utf8(project.1.to_vec()).unwrap(),
+      bincode::deserialize(&project.1).unwrap(),
     );
     projects.insert(project.0, project.1);
   }
@@ -30,11 +31,13 @@ pub async fn project_db_select(app_state: State<'_, AppState>) -> Result<BTreeMa
 #[tauri::command(rename_all = "snake_case")]
 pub async fn project_db_insert(
   project_id: &str,
-  project_details: &str,
+  project_details: Vec<String>,
   app_state: State<'_, AppState>,
 ) -> Result<()> {
   let project_db = app_state.project_db.lock().await;
   let db = project_db.clone().unwrap();
+  let project_details = bincode::serialize(&project_details).unwrap();
+  // project_id - [driver, user, password, host, port]
   db.insert(project_id, project_details).unwrap();
   Ok(())
 }

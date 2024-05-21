@@ -62,7 +62,7 @@ impl AsRef<str> for Invoke {
 #[derive(Serialize, Deserialize)]
 pub struct InvokePgsqlConnectorArgs<'a> {
   pub project_id: &'a str,
-  pub key: Option<&'a str>,
+  pub key: Option<[&'a str; 4]>,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -85,7 +85,7 @@ pub struct InvokePgsqlRunQueryArgs<'a> {
 #[derive(Serialize, Deserialize)]
 pub struct InvokeProjectDbInsertArgs<'a> {
   pub project_id: &'a str,
-  pub project_details: &'a str,
+  pub project_details: Vec<String>,
 }
 
 #[derive(Serialize, Deserialize)]

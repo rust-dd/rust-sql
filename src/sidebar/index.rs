@@ -45,7 +45,7 @@ pub fn Sidebar() -> impl IntoView {
                   each=move || projects_store.get()
                   key=|(project, _)| project.clone()
                   children=|(project_id, project_details)| {
-                      if project_details.contains(Drivers::PGSQL.as_ref()) {
+                      if project_details.first().unwrap() == Drivers::PGSQL.as_ref() {
                           view! {
                               <div>
                                   <Pgsql project_id/>

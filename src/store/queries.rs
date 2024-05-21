@@ -3,16 +3,16 @@ use std::{
   ops::{Deref, DerefMut},
 };
 
-use common::enums::Drivers;
+use common::{enums::Drivers, types::BTreeStore};
 use leptos::*;
 use tauri_sys::tauri::invoke;
 
 use crate::invoke::{Invoke, InvokeQueryDbDeleteArgs, InvokeQueryDbInsertArgs};
 
-use super::{tabs::TabsStore, BTreeStore};
+use super::tabs::TabsStore;
 
 #[derive(Clone, Copy, Debug)]
-pub struct QueriesStore(pub BTreeStore);
+pub struct QueriesStore(pub RwSignal<BTreeStore>);
 
 impl Default for QueriesStore {
   fn default() -> Self {
@@ -21,7 +21,7 @@ impl Default for QueriesStore {
 }
 
 impl Deref for QueriesStore {
-  type Target = BTreeStore;
+  type Target = RwSignal<BTreeStore>;
 
   fn deref(&self) -> &Self::Target {
     &self.0

@@ -25,8 +25,8 @@ use crate::{
 
 #[component]
 pub fn App() -> impl IntoView {
-  provide_context(ProjectsStore::default());
-  provide_context(QueriesStore::default());
+  provide_context(ProjectsStore::new());
+  provide_context(QueriesStore::new());
   provide_context(RwSignal::new(QueryTableLayout::Grid));
   provide_context::<QueryPerformanceContext>(
     RwSignal::new(VecDeque::<QueryPerformanceAtom>::new()),

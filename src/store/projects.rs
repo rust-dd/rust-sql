@@ -12,12 +12,6 @@ use crate::invoke::{Invoke, InvokeProjectDbDeleteArgs, InvokeProjectDbInsertArgs
 #[derive(Clone, Copy, Debug)]
 pub struct ProjectsStore(pub RwSignal<BTreeVecStore>);
 
-impl Default for ProjectsStore {
-  fn default() -> Self {
-    Self::new()
-  }
-}
-
 impl Deref for ProjectsStore {
   type Target = RwSignal<BTreeVecStore>;
 

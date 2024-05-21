@@ -14,11 +14,6 @@ use super::tabs::TabsStore;
 #[derive(Clone, Copy, Debug)]
 pub struct QueriesStore(pub RwSignal<BTreeStore>);
 
-impl Default for QueriesStore {
-  fn default() -> Self {
-    Self::new()
-  }
-}
 
 impl Deref for QueriesStore {
   type Target = RwSignal<BTreeStore>;

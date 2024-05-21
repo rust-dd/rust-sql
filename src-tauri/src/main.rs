@@ -71,6 +71,7 @@ fn main() {
       dbs::query::query_db_select,
       dbs::query::query_db_insert,
       dbs::query::query_db_delete,
+      drivers::bigquery::bigquery_connector,
       drivers::pgsql::pgsql_connector,
       drivers::pgsql::pgsql_load_relations,
       drivers::pgsql::pgsql_load_schemas,

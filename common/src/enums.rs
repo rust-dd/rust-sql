@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Copy, Serialize, Deserialize, Default)]
 pub enum Drivers {
+  BIGQUERY,
   #[default]
   PGSQL,
 }
@@ -11,6 +12,7 @@ pub enum Drivers {
 impl Display for Drivers {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
     match self {
+      Drivers::BIGQUERY => write!(f, "BIGQUERY"),
       Drivers::PGSQL => write!(f, "PGSQL"),
     }
   }
@@ -19,6 +21,7 @@ impl Display for Drivers {
 impl AsRef<str> for Drivers {
   fn as_ref(&self) -> &str {
     match self {
+      Drivers::BIGQUERY => "BIGQUERY",
       Drivers::PGSQL => "PGSQL",
     }
   }

@@ -11,10 +11,11 @@ pub enum Invoke {
   QueryDbInsert,
   QueryDbDelete,
 
+  BigQueryConnector,
+
   PgsqlConnector,
   PgsqlLoadSchemas,
   PgsqlLoadTables,
-  #[allow(dead_code)]
   PgsqlLoadRelations,
   PgsqlRunQuery,
 }
@@ -29,6 +30,8 @@ impl Display for Invoke {
       Invoke::QueryDbSelect => write!(f, "query_db_select"),
       Invoke::QueryDbInsert => write!(f, "query_db_insert"),
       Invoke::QueryDbDelete => write!(f, "query_db_delete"),
+
+      Invoke::BigQueryConnector => write!(f, "bigquery_connector"),
 
       Invoke::PgsqlConnector => write!(f, "pgsql_connector"),
       Invoke::PgsqlLoadRelations => write!(f, "pgsql_load_relations"),
@@ -49,6 +52,8 @@ impl AsRef<str> for Invoke {
       Invoke::QueryDbSelect => "query_db_select",
       Invoke::QueryDbInsert => "query_db_insert",
       Invoke::QueryDbDelete => "query_db_delete",
+
+      Invoke::BigQueryConnector => "bigquery_connector",
 
       Invoke::PgsqlConnector => "pgsql_connector",
       Invoke::PgsqlLoadSchemas => "pgsql_load_schemas",

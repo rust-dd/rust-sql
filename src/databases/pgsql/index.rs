@@ -26,6 +26,7 @@ pub fn Pgsql(project_id: String) -> impl IntoView {
       &project_details[2],
       &project_details[3],
       &project_details[4],
+      &project_details[5],
     );
   }
   let show = create_rw_signal(false);

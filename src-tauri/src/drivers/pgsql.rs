@@ -13,7 +13,7 @@ use crate::{utils::reflective_get, AppState};
 #[tauri::command(rename_all = "snake_case")]
 pub async fn pgsql_connector(
   project_id: &str,
-  key: Option<[&str; 4]>,
+  key: Option<[&str; 5]>,
   app: AppHandle,
 ) -> Result<ProjectConnectionStatus> {
   let app_state = app.state::<AppState>();
@@ -27,8 +27,8 @@ pub async fn pgsql_connector(
 
   let key = match key {
     Some(key) => format!(
-      "user={} password={} host={} port={}",
-      key[0], key[1], key[2], key[3]
+      "postgresql://{}:{}@{}:{}/{}",
+      key[0], key[1], key[3], key[4], key[2]
     ),
     None => {
       let projects_db = app_state.project_db.lock().await;
@@ -39,8 +39,12 @@ pub async fn pgsql_connector(
         _ => Vec::new(),
       };
       let project_details = format!(
-        "user={} password={} host={} port={}",
-        project_details[1], project_details[2], project_details[3], project_details[4]
+        "postgresql://{}:{}@{}:{}/{}",
+        project_details[1],
+        project_details[2],
+        project_details[4],
+        project_details[5],
+        project_details[3],
       );
       project_details
     }

@@ -26,6 +26,7 @@ pub fn QueryEditor(index: usize) -> impl IntoView {
   let active_project = move || tabs_store.selected_projects.get().get(index).cloned();
   let projects_store = expect_context::<ProjectsStore>();
   let project_driver = projects_store.select_driver_by_project(active_project().as_deref());
+  let project_database = projects_store.select_database_by_project(active_project().as_deref());
   let tabs_store_rc = Rc::new(RefCell::new(tabs_store));
   let show = create_rw_signal(false);
   let _ = use_event_listener(use_document(), ev::keydown, move |event| {
@@ -92,6 +93,7 @@ pub fn QueryEditor(index: usize) -> impl IntoView {
                       show=show
                       project_id=active_project().unwrap()
                       driver=project_driver
+                      database=project_database.to_owned()
                   />
                   <div class="appearance-auto py-1 px-2 border-1 border-neutral-200 bg-white hover:bg-neutral-200 rounded-md">
                       {active_project}

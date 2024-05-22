@@ -50,6 +50,15 @@ impl ProjectsStore {
     }
   }
 
+  pub fn select_database_by_project(&self, project_id: Option<&str>) -> String {
+    if project_id.is_none() {
+      return String::new();
+    }
+
+    let project = self.select_project_by_name(project_id.unwrap()).unwrap();
+    project.get(3).unwrap().clone()
+  }
+
   pub async fn load_projects(&self) {
     let projects =
       invoke::<_, BTreeMap<String, Vec<String>>>(Invoke::ProjectDbSelect.as_ref(), &())

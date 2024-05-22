@@ -39,6 +39,7 @@ pub struct PgsqlConnectionDetailsAtom {
   pub driver: Drivers,
   pub user: String,
   pub password: String,
+  pub database: String,
   pub host: String,
   pub port: String,
 }
@@ -50,6 +51,7 @@ impl Default for PgsqlConnectionDetailsAtom {
       driver: Drivers::PGSQL,
       user: String::new(),
       password: String::new(),
+      database: String::new(),
       host: String::new(),
       port: String::new(),
     }

@@ -26,6 +26,7 @@ pub struct Pgsql<'a> {
   pub project_id: RwSignal<String>,
   user: Option<&'a str>,
   password: Option<&'a str>,
+  database: Option<&'a str>,
   host: Option<&'a str>,
   port: Option<&'a str>,
   pub status: RwSignal<ProjectConnectionStatus>,
@@ -42,6 +43,7 @@ impl<'a> Pgsql<'a> {
       tables: RwSignal::default(),
       user: None,
       password: None,
+      database: None,
       host: None,
       port: None,
     }
@@ -58,6 +60,7 @@ impl<'a> Pgsql<'a> {
         key: Some([
           self.user.unwrap(),
           self.password.unwrap(),
+          self.database.unwrap(),
           self.host.unwrap(),
           self.port.unwrap(),
         ]),
@@ -156,11 +159,13 @@ impl<'a> Pgsql<'a> {
     &mut self,
     user: &'a str,
     password: &'a str,
+    database: &'a str,
     host: &'a str,
     port: &'a str,
   ) {
     self.user = Some(user);
     self.password = Some(password);
+    self.database = Some(database);
     self.host = Some(host);
     self.port = Some(port);
   }
@@ -171,6 +176,7 @@ impl<'a> Pgsql<'a> {
       prev.project_id = self.project_id.get().clone();
       prev.user = self.user.unwrap().to_string();
       prev.password = self.password.unwrap().to_string();
+      prev.database = self.database.unwrap().to_string();
       prev.host = self.host.unwrap().to_string();
       prev.port = self.port.unwrap().to_string();
     });

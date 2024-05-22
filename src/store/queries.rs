@@ -14,7 +14,6 @@ use super::tabs::TabsStore;
 #[derive(Clone, Copy, Debug)]
 pub struct QueriesStore(pub RwSignal<BTreeStore>);
 
-
 impl Deref for QueriesStore {
   type Target = RwSignal<BTreeStore>;
 
@@ -44,13 +43,19 @@ impl QueriesStore {
     });
   }
 
-  pub async fn insert_query(&self, project_id: &str, title: &str, driver: &Drivers) {
+  pub async fn insert_query(
+    &self,
+    project_id: &str,
+    title: &str,
+    driver: &Drivers,
+    database: &str,
+  ) {
     let tabs_store = expect_context::<TabsStore>();
     let sql = tabs_store.select_active_editor_value();
     let _ = invoke::<_, ()>(
       Invoke::QueryDbInsert.as_ref(),
       &InvokeQueryDbInsertArgs {
-        query_id: &format!("{}:{}:{}", project_id, driver, title),
+        query_id: &format!("{}:{}:{}:{}", project_id, database, driver, title),
         sql: &sql,
       },
     )

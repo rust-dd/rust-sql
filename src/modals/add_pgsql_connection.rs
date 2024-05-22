@@ -52,6 +52,14 @@ pub fn AddPgsqlConnection(show: RwSignal<bool>) -> impl IntoView {
               <input
                   class="border-1 border-neutral-200 p-1 rounded-md"
                   type="text"
+                  value=params.get().database
+                  placeholder="database"
+                  on:input=move |e| params.update(|p| p.database = event_target_value(&e))
+              />
+
+              <input
+                  class="border-1 border-neutral-200 p-1 rounded-md"
+                  type="text"
                   value=params.get().host
                   placeholder="host"
                   on:input=move |e| params.update(|p| p.host = event_target_value(&e))
@@ -79,6 +87,7 @@ pub fn AddPgsqlConnection(show: RwSignal<bool>) -> impl IntoView {
                                       params.get().driver.to_string(),
                                       params.get().user,
                                       params.get().password,
+                                      params.get().database,
                                       params.get().host,
                                       params.get().port,
                                   ],

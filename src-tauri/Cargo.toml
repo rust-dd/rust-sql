@@ -1,6 +1,6 @@
 [package]
 name = "backend"
-version = "1.0.0-beta.2"
+version = "1.0.0-beta.3"
 description = "PostgreSQL GUI written in Rust"
 authors = ["Daniel Boros"]
 license = ""

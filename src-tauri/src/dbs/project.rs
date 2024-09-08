@@ -37,7 +37,6 @@ pub async fn project_db_insert(
   let project_db = app_state.project_db.lock().await;
   let db = project_db.clone().unwrap();
   let project_details = bincode::serialize(&project_details).unwrap();
-  // project_id - [driver, user, password, host, port]
   db.insert(project_id, project_details).unwrap();
   Ok(())
 }
@@ -49,4 +48,3 @@ pub async fn project_db_delete(project_id: &str, app_state: State<'_, AppState>)
   db.remove(project_id).unwrap();
   Ok(())
 }
-

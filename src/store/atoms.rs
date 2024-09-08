@@ -2,7 +2,7 @@ use std::collections::VecDeque;
 
 use common::enums::Drivers;
 use leptos::RwSignal;
-use rsql::StructIntoIterator;
+use rsql_proc_macros::StructIntoIterator;
 
 #[derive(Debug, Default, Clone)]
 pub struct QueryPerformanceAtom {
@@ -59,4 +59,3 @@ impl Default for PgsqlConnectionDetailsAtom {
 }
 
 pub type PgsqlConnectionDetailsContext = RwSignal<PgsqlConnectionDetailsAtom>;
-

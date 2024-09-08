@@ -3,7 +3,7 @@ use std::{cell::RefCell, rc::Rc};
 use common::enums::ProjectConnectionStatus;
 use leptos::{create_rw_signal, expect_context, RwSignal, SignalGet, SignalSet, SignalUpdate};
 use monaco::api::CodeEditor;
-use rsql::set_running_query;
+use rsql_proc_macros::set_running_query;
 use tauri_sys::tauri::invoke;
 
 use crate::{
@@ -242,4 +242,3 @@ impl TabsStore {
     None
   }
 }
-

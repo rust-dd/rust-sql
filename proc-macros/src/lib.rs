@@ -76,4 +76,3 @@ pub fn into_iterator_derive(input: TokenStream) -> TokenStream {
 
   gen.into()
 }
-

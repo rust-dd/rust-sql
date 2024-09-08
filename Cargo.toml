@@ -24,14 +24,9 @@ async-stream = "0.3.5"
 icondata = "0.3.0"
 ahash = { version = "0.8.11", features = ["serde"] }
 leptos_toaster = { version = "0.1.6", features = ["builtin_toast"] }
-proc-macro2 = "1.0.82"
-quote = "1.0.36"
-syn = { version = "2.0.64", features = ["full"] }
 chrono = "0.4.38"
+proc-macros = { path = "./proc-macros" }
 
 
 [workspace]
-members = ["src-tauri", "common"]
-
-[lib]
-proc-macro = true
+members = ["src-tauri", "common", "proc-macros"]

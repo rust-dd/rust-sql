@@ -4,7 +4,7 @@ use common::{
   types::pgsql::{PgsqlLoadSchemas, PgsqlLoadTables, PgsqlRunQuery},
 };
 use leptos::{error::Result, expect_context, RwSignal, SignalGet, SignalSet, SignalUpdate};
-use rsql::set_running_query;
+use rsql_proc_macros::set_running_query;
 use tauri_sys::tauri::invoke;
 
 use crate::{
@@ -182,4 +182,3 @@ impl<'a> Pgsql<'a> {
     });
   }
 }
-

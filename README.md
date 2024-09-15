@@ -26,13 +26,13 @@ Welcome to the Tauri-Leptos PostgreSQL GUI, a fully Rust-based application for e
 ### Prerequisites
 
 - Rust Environment: Ensure Rust is installed on your system. Install from [rustup.rs](https://rustup.rs/).
-- Tauri Setup: Set up your development environment for Tauri following the [Tauri setup guide](https://tauri.studio/en/docs/getting-started/intro).
+- Tauri Setup: Set up your development environment for Tauri following the [Tauri setup guide](https://tauri.app/v1/guides/getting-started/prerequisites).
+- Install Tauri CLI: Run `cargo install tauri-cli` to install the Tauri CLI.
 
 ### Installation and Running
 
 1. **Clone the Repository:** Download the project to your local machine.
-2. **Install Dependencies:** Navigate to the project directory and run `cargo install` to install the required Rust dependencies.
-3. **Build and Run:** Execute `cargo tauri build` to build the application. Once the build is complete, you can start the application.
+2. **Build and Run:** Execute `cargo tauri dev` to build the application. Once the build is complete, you can start the application.
 
 
 

@@ -5,7 +5,7 @@ use std::{
 
 use common::{enums::Drivers, types::BTreeVecStore};
 use leptos::{RwSignal, SignalGet, SignalSet};
-use tauri_sys::tauri::invoke;
+use tauri_sys::core::invoke;
 
 use crate::invoke::{Invoke, InvokeProjectDbDeleteArgs, InvokeProjectDbInsertArgs};
 
@@ -61,14 +61,12 @@ impl ProjectsStore {
 
   pub async fn load_projects(&self) {
     let projects =
-      invoke::<_, BTreeMap<String, Vec<String>>>(Invoke::ProjectDbSelect.as_ref(), &())
-        .await
-        .unwrap();
+      invoke::<BTreeMap<String, Vec<String>>>(Invoke::ProjectDbSelect.as_ref(), &()).await;
     self.set(projects);
   }
 
   pub async fn insert_project(&self, project_id: &str, project_details: Vec<String>) {
-    let _ = invoke::<_, ()>(
+    let _ = invoke::<()>(
       Invoke::ProjectDbInsert.as_ref(),
       &InvokeProjectDbInsertArgs {
         project_id,
@@ -80,7 +78,7 @@ impl ProjectsStore {
   }
 
   pub async fn delete_project(&self, project_id: &str) {
-    let _ = invoke::<_, ()>(
+    let _ = invoke::<()>(
       Invoke::ProjectDbDelete.as_ref(),
       &InvokeProjectDbDeleteArgs { project_id },
     )
@@ -88,4 +86,3 @@ impl ProjectsStore {
     self.load_projects().await;
   }
 }
-

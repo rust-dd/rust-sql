@@ -5,7 +5,7 @@ use common::{
 };
 use leptos::{error::Result, expect_context, RwSignal, SignalGet, SignalSet, SignalUpdate};
 use rsql_proc_macros::set_running_query;
-use tauri_sys::tauri::invoke;
+use tauri_sys::core::invoke;
 
 use crate::{
   invoke::{
@@ -53,7 +53,7 @@ impl<'a> Pgsql<'a> {
     self
       .status
       .update(|prev| *prev = ProjectConnectionStatus::Connecting);
-    let status = invoke::<_, ProjectConnectionStatus>(
+    let status = invoke::<ProjectConnectionStatus>(
       Invoke::PgsqlConnector.as_ref(),
       &InvokePgsqlConnectorArgs {
         project_id: &self.project_id.get(),
@@ -66,8 +66,7 @@ impl<'a> Pgsql<'a> {
         ]),
       },
     )
-    .await
-    .unwrap();
+    .await;
     if status == ProjectConnectionStatus::Connected {
       self.load_schemas().await;
     }
@@ -76,14 +75,13 @@ impl<'a> Pgsql<'a> {
   }
 
   pub async fn load_schemas(&self) {
-    let schemas = invoke::<_, PgsqlLoadSchemas>(
+    let schemas = invoke::<PgsqlLoadSchemas>(
       Invoke::PgsqlLoadSchemas.as_ref(),
       &InvokePgsqlLoadSchemasArgs {
         project_id: &self.project_id.get(),
       },
     )
-    .await
-    .unwrap();
+    .await;
     self.schemas.set(schemas);
   }
 
@@ -91,15 +89,14 @@ impl<'a> Pgsql<'a> {
     if self.tables.get().contains_key(schema) {
       return;
     }
-    let tables = invoke::<_, PgsqlLoadTables>(
+    let tables = invoke::<PgsqlLoadTables>(
       Invoke::PgsqlLoadTables.as_ref(),
       &InvokePgsqlLoadTablesArgs {
         project_id: &self.project_id.get(),
         schema,
       },
     )
-    .await
-    .unwrap();
+    .await;
     self.tables.update(|prev| {
       prev.insert(schema.to_owned(), tables);
     });
@@ -127,15 +124,14 @@ impl<'a> Pgsql<'a> {
       }
     });
 
-    let query = invoke::<_, PgsqlRunQuery>(
+    let query = invoke::<PgsqlRunQuery>(
       Invoke::PgsqlRunQuery.as_ref(),
       &InvokePgsqlRunQueryArgs {
         project_id: &self.project_id.get(),
         sql,
       },
     )
-    .await
-    .unwrap();
+    .await;
     let (cols, rows, query_time) = query;
     tabs_store.sql_results.update(|prev| {
       let index = tabs_store.convert_selected_tab_to_index();

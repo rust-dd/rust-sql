@@ -54,4 +54,3 @@ pub fn App() -> impl IntoView {
       </Toaster>
   }
 }
-

@@ -37,4 +37,3 @@ pub async fn query_db_delete(query_id: &str, app_state: State<'_, AppState>) -> 
   };
   Ok(())
 }
-

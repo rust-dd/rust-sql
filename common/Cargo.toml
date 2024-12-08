@@ -1,9 +1,7 @@
 [package]
 name = "common"
-version = "1.0.0-beta.3"
+version = "1.0.0"
 edition = "2021"
 
 [dependencies]
-js-sys = "0.3.67"
 serde = "1.0.193"
-wasm-bindgen = "0.2.90"

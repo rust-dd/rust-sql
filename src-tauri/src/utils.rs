@@ -60,4 +60,3 @@ pub fn reflective_get(row: &Row, index: usize) -> String {
   };
   value.unwrap_or("null".to_string())
 }
-

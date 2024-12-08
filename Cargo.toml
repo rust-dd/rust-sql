@@ -1,6 +1,6 @@
 [package]
 name = "rsql"
-version = "1.0.0-beta.3"
+version = "1.0.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -8,19 +8,16 @@ edition = "2021"
 leptos = { version = "0.6", features = ["csr", "nightly"] }
 leptos_devtools = { git = "https://github.com/luoxiaozero/leptos-devtools" }
 serde = { version = "1.0.192", features = ["derive"] }
-serde-wasm-bindgen = "0.6.3"
-wasm-bindgen = { version ="0.2.91", features = ["serde-serialize"] }
-js-sys = "0.3.68"
+wasm-bindgen = { version = "0.2.91", features = ["serde-serialize"] }
 leptos-use = { version = "^0.13.4" }
 leptos_icons = "0.3.0" # https://carlosted.github.io/icondata/
-serde_json = "1.0.113"
-wasm-bindgen-futures = "0.4.39"
 monaco = "0.4.0"
-tauri-sys = { git = "https://github.com/JonasKruckenberg/tauri-sys", features = ["all"] }
+tauri-sys = { git = "https://github.com/JonasKruckenberg/tauri-sys", features = [
+    "all",
+], branch = "v2" }
 thaw = { version = "0.3", features = ["csr"] }
 common = { path = "common" }
 futures = "0.3.30"
-async-stream = "0.3.5"
 icondata = "0.3.0"
 ahash = { version = "0.8.11", features = ["serde"] }
 leptos_toaster = { version = "0.1.6", features = ["builtin_toast"] }

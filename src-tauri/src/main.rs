@@ -41,12 +41,14 @@ fn main() {
     .init();
 
   tauri::Builder::default()
+    .plugin(tauri_plugin_fs::init())
+    .plugin(tauri_plugin_shell::init())
     .manage(AppState::default())
     .setup(|app| {
       let app_handle = app.handle();
 
-      tauri::async_runtime::spawn(async move {
-        let app_dir = app_handle.path_resolver().app_data_dir().unwrap();
+      tauri::async_runtime::block_on(async move {
+        let app_dir = app_handle.path().app_data_dir().unwrap();
         let app_state = app_handle.state::<AppState>();
         let project_db = create_or_open_local_db(PROJECT_DB_PATH, &app_dir);
         let query_db = create_or_open_local_db(QUERY_DB_PATH, &app_dir);
@@ -57,7 +59,7 @@ fn main() {
       // open devtools if we are in debug mode
       #[cfg(debug_assertions)]
       {
-        let window = app.get_window("main").unwrap();
+        let window = app.get_webview_window("main").unwrap();
         window.open_devtools();
         window.close_devtools();
       }
@@ -80,4 +82,3 @@ fn main() {
     .run(tauri::generate_context!())
     .expect("error while running tauri application");
 }
-

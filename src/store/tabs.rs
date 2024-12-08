@@ -4,7 +4,7 @@ use common::enums::ProjectConnectionStatus;
 use leptos::{create_rw_signal, expect_context, RwSignal, SignalGet, SignalSet, SignalUpdate};
 use monaco::api::CodeEditor;
 use rsql_proc_macros::set_running_query;
-use tauri_sys::tauri::invoke;
+use tauri_sys::core::invoke;
 
 use crate::{
   dashboard::query_editor::ModelCell,
@@ -68,15 +68,14 @@ impl TabsStore {
     let sql = self
       .find_query_for_line(&sql, position.line_number())
       .unwrap();
-    let (cols, rows, query_time) = invoke::<_, (Vec<String>, Vec<Vec<String>>, f32)>(
+    let (cols, rows, query_time) = invoke::<(Vec<String>, Vec<Vec<String>>, f32)>(
       Invoke::PgsqlRunQuery.as_ref(),
       &InvokePgsqlRunQueryArgs {
         project_id,
         sql: &sql.query,
       },
     )
-    .await
-    .unwrap();
+    .await;
     self.sql_results.update(|prev| {
       let index = self.convert_selected_tab_to_index();
       match prev.get_mut(index) {
@@ -109,7 +108,7 @@ impl TabsStore {
         None => prev.push(splitted_key[0].to_string()),
       }
     });
-    let _ = invoke::<_, ProjectConnectionStatus>(
+    let _ = invoke::<ProjectConnectionStatus>(
       Invoke::PgsqlConnector.as_ref(),
       &InvokePgsqlConnectorArgs {
         project_id: splitted_key[0],

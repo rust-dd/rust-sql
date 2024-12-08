@@ -5,7 +5,7 @@ use std::{
 
 use common::{enums::Drivers, types::BTreeStore};
 use leptos::*;
-use tauri_sys::tauri::invoke;
+use tauri_sys::core::invoke;
 
 use crate::invoke::{Invoke, InvokeQueryDbDeleteArgs, InvokeQueryDbInsertArgs};
 
@@ -35,9 +35,8 @@ impl QueriesStore {
   }
 
   pub async fn load_queries(&self) {
-    let saved_queries = invoke::<_, BTreeMap<String, String>>(Invoke::QueryDbSelect.as_ref(), &())
-      .await
-      .unwrap();
+    let saved_queries =
+      invoke::<BTreeMap<String, String>>(Invoke::QueryDbSelect.as_ref(), &()).await;
     self.update(|prev| {
       *prev = saved_queries.into_iter().collect();
     });
@@ -52,7 +51,7 @@ impl QueriesStore {
   ) {
     let tabs_store = expect_context::<TabsStore>();
     let sql = tabs_store.select_active_editor_value();
-    let _ = invoke::<_, ()>(
+    let _ = invoke::<()>(
       Invoke::QueryDbInsert.as_ref(),
       &InvokeQueryDbInsertArgs {
         query_id: &format!("{}:{}:{}:{}", project_id, database, driver, title),
@@ -64,7 +63,7 @@ impl QueriesStore {
   }
 
   pub async fn delete_query(&self, query_id: &str) {
-    let _ = invoke::<_, ()>(
+    let _ = invoke::<()>(
       Invoke::QueryDbDelete.as_ref(),
       &InvokeQueryDbDeleteArgs { query_id },
     )
@@ -72,4 +71,3 @@ impl QueriesStore {
     self.load_queries().await;
   }
 }
-

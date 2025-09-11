@@ -26,3 +26,7 @@ dist-ssr
 # Rust/Tauri build output
 /target
 /src-tauri/target
+
+# Local sled databases
+project_db
+query_db

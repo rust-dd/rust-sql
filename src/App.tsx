@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useEffect } from "react";
 import type * as Monaco from "monaco-editor";
 import { useKeyPressEvent } from "react-use";
-import { Database, Play, Save, Settings, ChevronRight, ChevronDown, Server, Table, Plus, X, PanelLeftClose, PanelLeft, CheckCircle2, Clock } from "lucide-react";
+import { Database, Play, Save, Settings, ChevronRight, ChevronDown, Server, Table, Plus, X, CheckCircle2, Clock } from "lucide-react";
 import Editor from "@monaco-editor/react";
 import { Button } from "@/components/ui/button";
 import { ResizeHandle } from "@/components/resize-handle";
@@ -72,7 +72,7 @@ function ServerSidebar({
           const connectionStatus = status[projectId];
           const projectSchemas = schemas[projectId] || [];
           const isProjectExpanded = expandedProjects[projectId] ?? (connectionStatus === ProjectConnectionStatus.Connected);
-          
+
           return (
             <div key={projectId}>
               {/* Server/Project Level */}
@@ -104,17 +104,21 @@ function ServerSidebar({
               {isProjectExpanded && (
                 <div>
                   {/* Database Level */}
-                  <button
-                    onClick={() => onConnect(projectId)}
+                  <div
                     className={cn(
                       "flex w-full items-center gap-2 px-2 py-1.5 text-left text-sm hover:bg-sidebar-accent",
-                      "transition-colors rounded-sm"
+                      "transition-colors rounded-sm cursor-pointer"
                     )}
                     style={{ paddingLeft: "20px" }}
                   >
-                    <span className="w-3" />
-                    <span className="text-muted-foreground"><Database className="h-4 w-4" /></span>
-                    <span className="flex-1 font-mono text-xs">{details[3]}</span>
+                    <button
+                      onClick={() => onConnect(projectId)}
+                      className="flex items-center gap-2 flex-1"
+                    >
+                      <span className="w-3" />
+                      <span className="text-muted-foreground"><Database className="h-4 w-4" /></span>
+                      <span className="font-mono text-xs">{details[3]}</span>
+                    </button>
                     <div className="flex gap-1">
                       <Button
                         variant="ghost"
@@ -133,7 +137,7 @@ function ServerSidebar({
                         <X className="h-3 w-3" />
                       </Button>
                     </div>
-                  </button>
+                  </div>
 
                   {/* Schema Level */}
                   {connectionStatus === ProjectConnectionStatus.Connected && projectSchemas.map((schema) => {
@@ -206,7 +210,7 @@ function ServerSidebar({
 }
 
 export default function App() {
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const sidebarOpen = true;
   const [sidebarWidth, setSidebarWidth] = useState(280);
   const [editorHeight, setEditorHeight] = useState(50);
   const [connectionModalOpen, setConnectionModalOpen] = useState(false);
@@ -539,15 +543,6 @@ export default function App() {
       </div>
 
       <div className="flex flex-1 overflow-hidden">
-        <Button
-          variant="ghost"
-          size="icon"
-          className="absolute left-2 top-16 z-10 h-8 w-8"
-          onClick={() => setSidebarOpen(!sidebarOpen)}
-        >
-          {sidebarOpen ? <PanelLeftClose className="h-4 w-4 text-white" /> : <PanelLeft className="h-4 w-4 text-white" />}
-        </Button>
-
         {sidebarOpen && (
           <>
             <div style={{ width: `${sidebarWidth}px` }} className="flex-shrink-0">
@@ -608,12 +603,18 @@ export default function App() {
               </Button>
             </div>
             {/* SQL Editor */}
-            <div className="relative flex-1 overflow-hidden bg-[var(--color-editor-bg)]">
-              <div className="absolute inset-0 overflow-auto">
+            <div className="relative flex-1 overflow-hidden bg-[var(--color-editor-bg)]" suppressHydrationWarning>
+              <div className="absolute inset-0 overflow-auto bg-[#1e1e1e]">
                 <Editor
                   height="100%"
                   defaultLanguage="pgsql"
                   language="pgsql"
+                  theme="vs-dark"
+                  loading={
+                    <div className="flex h-full w-full items-center justify-center bg-[#1e1e1e]">
+                      <span className="text-muted-foreground text-sm">Loading editor...</span>
+                    </div>
+                  }
                   beforeMount={registerContextAwareCompletions}
                   options={{
                     automaticLayout: true,

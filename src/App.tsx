@@ -1,17 +1,16 @@
-import Editor from "@monaco-editor/react";
+import React, { useState, useCallback, useEffect } from "react";
 import type * as Monaco from "monaco-editor";
-import React, { useCallback, useEffect, useState } from "react";
 import { useKeyPressEvent } from "react-use";
-import { Play, Save, Database, PanelLeftClose, PanelLeft, Plus, Table as TableIcon, X } from "lucide-react";
+import { Database, Play, Save, Settings, ChevronRight, ChevronDown, Server, Table, Plus, X, PanelLeftClose, PanelLeft, CheckCircle2, Clock } from "lucide-react";
+import Editor from "@monaco-editor/react";
 import { Button } from "@/components/ui/button";
 import { ResizeHandle } from "@/components/resize-handle";
 import { ConnectionModal, type ConnectionConfig } from "@/components/connection-modal";
+import { cn } from "@/lib/utils";
 import "@/monaco/setup";
 import {
   deleteProject,
-  deleteQuery,
   getProjects,
-  getQueries,
   insertProject,
   insertQuery,
   pgsqlConnector,
@@ -21,7 +20,6 @@ import {
   pgsqlRunQuery,
   ProjectConnectionStatus,
   ProjectMap,
-  QueryMap,
   TableInfo,
 } from "@/tauri";
 
@@ -32,6 +30,181 @@ type Tab = {
   result?: { columns: string[]; rows: string[][]; time: number };
 };
 
+interface ServerSidebarProps {
+  projects: ProjectMap;
+  status: Record<string, ProjectConnectionStatus>;
+  schemas: Record<string, string[]>;
+  tables: Record<string, TableInfo[]>;
+  onAddConnection: () => void;
+  onConnect: (projectId: string) => void;
+  onDeleteProject: (projectId: string) => void;
+  onOpenProjectTab: (projectId: string) => void;
+  onLoadTables: (projectId: string, schema: string) => void;
+  onOpenTableQuery: (projectId: string, schema: string, table: string) => void;
+}
+
+function ServerSidebar({
+  projects,
+  status,
+  schemas,
+  tables,
+  onAddConnection,
+  onConnect,
+  onDeleteProject,
+  onOpenProjectTab,
+  onLoadTables,
+  onOpenTableQuery,
+}: ServerSidebarProps) {
+  const [expandedProjects, setExpandedProjects] = React.useState<Record<string, boolean>>({});
+  const [expandedSchemas, setExpandedSchemas] = React.useState<Record<string, boolean>>({});
+
+  return (
+    <div className="flex h-full flex-col border-r border-sidebar-border bg-sidebar">
+      <div className="flex h-12 items-center justify-between border-b border-sidebar-border px-3">
+        <span className="font-mono text-xs font-semibold text-sidebar-foreground">CONNECTIONS</span>
+        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={onAddConnection}>
+          <Plus className="h-3 w-3" />
+        </Button>
+      </div>
+      <div className="flex-1 overflow-y-auto p-2">
+        {/* Projects - Tree Structure */}
+        {Object.entries(projects).map(([projectId, details]) => {
+          const connectionStatus = status[projectId];
+          const projectSchemas = schemas[projectId] || [];
+          const isProjectExpanded = expandedProjects[projectId] ?? (connectionStatus === ProjectConnectionStatus.Connected);
+          
+          return (
+            <div key={projectId}>
+              {/* Server/Project Level */}
+              <button
+                onClick={() => setExpandedProjects((prev) => ({ ...prev, [projectId]: !prev[projectId] }))}
+                className={cn(
+                  "flex w-full items-center gap-2 px-2 py-1.5 text-left text-sm hover:bg-sidebar-accent",
+                  "transition-colors rounded-sm"
+                )}
+              >
+                {isProjectExpanded ? (
+                  <ChevronDown className="h-3 w-3 text-muted-foreground" />
+                ) : (
+                  <ChevronRight className="h-3 w-3 text-muted-foreground" />
+                )}
+                <span className="text-primary"><Server className="h-4 w-4" /></span>
+                <span className="flex-1 font-mono text-xs font-semibold">{projectId}</span>
+                <div
+                  className={cn(
+                    "h-2 w-2 rounded-full",
+                    connectionStatus === ProjectConnectionStatus.Connected && "bg-success",
+                    connectionStatus === ProjectConnectionStatus.Connecting && "bg-warning",
+                    connectionStatus === ProjectConnectionStatus.Failed && "bg-destructive",
+                    !connectionStatus && "bg-muted"
+                  )}
+                />
+              </button>
+
+              {isProjectExpanded && (
+                <div>
+                  {/* Database Level */}
+                  <button
+                    onClick={() => onConnect(projectId)}
+                    className={cn(
+                      "flex w-full items-center gap-2 px-2 py-1.5 text-left text-sm hover:bg-sidebar-accent",
+                      "transition-colors rounded-sm"
+                    )}
+                    style={{ paddingLeft: "20px" }}
+                  >
+                    <span className="w-3" />
+                    <span className="text-muted-foreground"><Database className="h-4 w-4" /></span>
+                    <span className="flex-1 font-mono text-xs">{details[3]}</span>
+                    <div className="flex gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-5 w-5"
+                        onClick={(e) => { e.stopPropagation(); onOpenProjectTab(projectId); }}
+                      >
+                        <Plus className="h-3 w-3" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-5 w-5"
+                        onClick={(e) => { e.stopPropagation(); onDeleteProject(projectId); }}
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  </button>
+
+                  {/* Schema Level */}
+                  {connectionStatus === ProjectConnectionStatus.Connected && projectSchemas.map((schema) => {
+                    const schemaKey = `${projectId}::${schema}`;
+                    const schemaTables = tables[schemaKey];
+                    const isSchemaExpanded = expandedSchemas[schemaKey];
+                    const hasChildren = schemaTables && schemaTables.length > 0;
+
+                    return (
+                      <div key={schema}>
+                        <button
+                          onClick={() => {
+                            if (!schemaTables) {
+                              onLoadTables(projectId, schema);
+                            }
+                            setExpandedSchemas((prev) => ({ ...prev, [schemaKey]: !prev[schemaKey] }));
+                          }}
+                          className={cn(
+                            "flex w-full items-center gap-2 px-2 py-1.5 text-left text-sm hover:bg-sidebar-accent",
+                            "transition-colors rounded-sm"
+                          )}
+                          style={{ paddingLeft: "32px" }}
+                        >
+                          {hasChildren ? (
+                            isSchemaExpanded ? (
+                              <ChevronDown className="h-3 w-3 text-muted-foreground" />
+                            ) : (
+                              <ChevronRight className="h-3 w-3 text-muted-foreground" />
+                            )
+                          ) : (
+                            <span className="w-3" />
+                          )}
+                          <span className="text-muted-foreground"><Database className="h-4 w-4" /></span>
+                          <span className="flex-1 font-mono text-xs">{schema}</span>
+                        </button>
+
+                        {/* Table Level */}
+                        {isSchemaExpanded && schemaTables && (
+                          <div>
+                            {schemaTables.map(([tableName, size]) => (
+                              <div key={tableName}>
+                                <button
+                                  onClick={() => onOpenTableQuery(projectId, schema, tableName)}
+                                  className={cn(
+                                    "flex w-full items-center gap-2 px-2 py-1.5 text-left text-sm hover:bg-sidebar-accent",
+                                    "transition-colors rounded-sm"
+                                  )}
+                                  style={{ paddingLeft: "44px" }}
+                                >
+                                  <span className="w-3" />
+                                  <span className="text-muted-foreground"><Table className="h-4 w-4" /></span>
+                                  <span className="flex-1 font-mono text-xs">{tableName}</span>
+                                  <span className="rounded bg-muted px-1 py-0.5 font-mono text-[10px] text-muted-foreground">{size}</span>
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 export default function App() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [sidebarWidth, setSidebarWidth] = useState(280);
@@ -41,7 +214,6 @@ export default function App() {
   const [selectedRow, setSelectedRow] = useState<number>(0);
 
   const [projects, setProjects] = useState<ProjectMap>({});
-  const [queries, setQueries] = useState<QueryMap>({});
   const [status, setStatus] = useState<Record<string, ProjectConnectionStatus>>({});
   const [schemas, setSchemas] = useState<Record<string, string[]>>({});
   const [tables, setTables] = useState<Record<string, TableInfo[]>>({});
@@ -110,7 +282,7 @@ export default function App() {
         });
         const context = textUntilPosition.slice(-1000);
         const aliasMap = extractAliasMap(context);
-        const suggestions: Monaco.languages.CompletionItem[] = [];
+        const suggestions: any[] = [];
         const add = (label: string, kind: Monaco.languages.CompletionItemKind, insert?: string, snippet?: boolean) => {
           const item: any = { label, kind, insertText: insert ?? label, range: undefined };
           if (snippet) {
@@ -211,7 +383,6 @@ export default function App() {
   useEffect(() => {
     (async () => {
       setProjects(await getProjects());
-      setQueries(await getQueries());
     })();
   }, []);
 
@@ -235,7 +406,6 @@ export default function App() {
   });
 
   const reloadProjects = useCallback(async () => setProjects(await getProjects()), []);
-  const reloadQueries = useCallback(async () => setQueries(await getQueries()), []);
 
   const onConnect = useCallback(async (project_id: string) => {
     const d = projects[project_id];
@@ -288,8 +458,7 @@ export default function App() {
     const driver = "PGSQL";
     const queryId = `${activeProject}:${activeDatabase}:${driver}:${title}`;
     await insertQuery(queryId, activeTab?.editorValue ?? "");
-    await reloadQueries();
-  }, [activeProject, activeDatabase, activeTab?.editorValue, reloadQueries]);
+  }, [activeProject, activeDatabase, activeTab?.editorValue]);
 
   const onDeleteProject = useCallback(async (project_id: string) => {
     await deleteProject(project_id);
@@ -312,125 +481,88 @@ export default function App() {
 
   return (
     <div className="flex h-screen flex-col bg-background text-foreground">
+      {/* Top Bar */}
       <div className="flex h-12 items-center justify-between border-b border-border bg-card px-4">
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2">
-            <Database className="h-5 w-5 text-primary" />
-            <span className="font-mono text-sm font-semibold">PostgresGUI</span>
+            <Database className="h-5 w-5 text-white" />
+            <span className="font-mono text-sm font-semibold text-white">PostgresGUI</span>
           </div>
-          {activeProject && (
+          {activeProject && activeProjectDetails ? (
             <>
               <div className="h-4 w-px bg-border" />
               <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                <div className={`h-2 w-2 rounded-full ${status[activeProject] === ProjectConnectionStatus.Connected ? "bg-success" : "bg-destructive"}`} />
-                <span className="font-mono">{activeProject}</span>
-                {activeProjectDetails && (
-                  <>
-                    <span className="text-muted-foreground/50">•</span>
-                    <span>{activeProjectDetails[4]}:{activeProjectDetails[5]}</span>
-                  </>
-                )}
+                <div className={cn(
+                  "h-2 w-2 rounded-full",
+                  status[activeProject] === ProjectConnectionStatus.Connected && "bg-success",
+                  status[activeProject] === ProjectConnectionStatus.Connecting && "bg-warning",
+                  status[activeProject] === ProjectConnectionStatus.Failed && "bg-destructive",
+                  !status[activeProject] && "bg-destructive"
+                )} />
+                <span className="font-mono text-white">{activeProject}</span>
+                <span className="text-muted-foreground/50">•</span>
+                <span className="text-white">{activeProjectDetails[4]}:{activeProjectDetails[5]}</span>
               </div>
             </>
-          )}
+          ) : null}
         </div>
+
         <div className="flex items-center gap-2">
-          <Button variant="ghost" size="sm" className="h-8 gap-2" onClick={() => { const title = prompt("Query title?"); if (title) void saveQuery(title); }}>
-            <Save className="h-4 w-4" />
-            <span className="text-xs">Save</span>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 gap-2"
+            onClick={() => {
+              const title = prompt("Query title?");
+              if (title) void saveQuery(title);
+            }}
+            disabled={!activeProject}
+          >
+            <Save className="h-4 w-4 text-white" />
+            <span className="text-xs text-white">Save</span>
           </Button>
-          <Button variant="default" size="sm" className="h-8 gap-2 bg-primary text-primary-foreground" onClick={async () => await runQuery()}>
-            <Play className="h-4 w-4" />
-            <span className="text-xs">Execute (⌘+Enter)</span>
+          <Button
+            variant="default"
+            size="sm"
+            className="h-8 gap-2 bg-primary text-primary-foreground"
+            onClick={() => void runQuery()}
+            disabled={!activeProject}
+          >
+            <Play className="h-4 w-4 text-white" />
+            <span className="text-xs text-white">Execute (⌘+Enter)</span>
+          </Button>
+          <div className="h-4 w-px bg-border" />
+          <Button variant="ghost" size="icon" className="h-8 w-8">
+            <Settings className="h-4 w-4 text-white" />
           </Button>
         </div>
       </div>
 
       <div className="flex flex-1 overflow-hidden">
-        <Button variant="ghost" size="icon" className="absolute left-2 top-16 z-10 h-8 w-8" onClick={() => setSidebarOpen(!sidebarOpen)}>
-          {sidebarOpen ? <PanelLeftClose className="h-4 w-4" /> : <PanelLeft className="h-4 w-4" />}
+        <Button
+          variant="ghost"
+          size="icon"
+          className="absolute left-2 top-16 z-10 h-8 w-8"
+          onClick={() => setSidebarOpen(!sidebarOpen)}
+        >
+          {sidebarOpen ? <PanelLeftClose className="h-4 w-4 text-white" /> : <PanelLeft className="h-4 w-4 text-white" />}
         </Button>
 
         {sidebarOpen && (
           <>
             <div style={{ width: `${sidebarWidth}px` }} className="flex-shrink-0">
-              <div className="flex h-full flex-col border-r border-sidebar-border bg-sidebar">
-                <div className="flex h-12 items-center justify-between border-b border-sidebar-border px-3">
-                  <span className="font-mono text-xs font-semibold text-sidebar-foreground">CONNECTIONS</span>
-                  <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setConnectionModalOpen(true)}>
-                    <Plus className="h-3 w-3" />
-                  </Button>
-                </div>
-                <div className="flex-1 overflow-y-auto p-2">
-                {Object.entries(projects).map(([project_id]) => {
-                    const st = status[project_id] ?? ProjectConnectionStatus.Disconnected;
-                    const projectSchemas = schemas[project_id] ?? [];
-                    return (
-                      <div key={project_id} className="mb-2">
-                        <div className="flex items-center justify-between px-2 py-1.5">
-                          <button onClick={() => onConnect(project_id)} disabled={st === ProjectConnectionStatus.Connecting} className="flex items-center gap-2 text-xs font-mono font-semibold hover:text-primary">
-                            <div className={`h-2 w-2 rounded-full ${st === ProjectConnectionStatus.Connected ? "bg-success" : st === ProjectConnectionStatus.Connecting ? "bg-warning" : "bg-destructive"}`} />
-                            {project_id}
-                          </button>
-                          <div className="flex gap-1">
-                            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => onOpenProjectTab(project_id)}><Plus className="h-3 w-3" /></Button>
-                            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => onDeleteProject(project_id)}><X className="h-3 w-3" /></Button>
-                          </div>
-                        </div>
-                        {st === ProjectConnectionStatus.Connected && (
-                          <div className="ml-4 mt-1">
-                            {projectSchemas.length === 0 ? (
-                              <Button variant="ghost" size="sm" className="h-6 text-xs" onClick={() => onConnect(project_id)}>Load Schemas</Button>
-                            ) : (
-                              <div>
-                                {projectSchemas.map((schema) => {
-                                  const key = `${project_id}::${schema}`;
-                                  const t = tables[key];
-                                  return (
-                                    <div key={schema} className="mb-1">
-                                      <div className="flex items-center gap-2">
-                                        <span className="text-xs font-semibold font-mono">{schema}</span>
-                                        {!t && <Button variant="ghost" size="sm" className="h-5 text-[10px]" onClick={() => onLoadTables(project_id, schema)}>Load</Button>}
-                                      </div>
-                                      {t && (
-                                        <ul className="ml-2 mt-1">
-                                          {t.map(([tableName, size]) => (
-                                            <li key={tableName}>
-                                              <button onClick={() => onOpenDefaultTableQuery(project_id, schema, tableName)} className="text-[10px] font-mono hover:text-primary flex items-center gap-1">
-                                                <TableIcon className="h-3 w-3" />
-                                                {tableName} <span className="text-muted-foreground">({size})</span>
-                                              </button>
-                                            </li>
-                                          ))}
-                                        </ul>
-                                      )}
-                                    </div>
-                                  );
-                                })}
-                              </div>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-                {Object.keys(queries).length > 0 && (
-                  <div className="border-t border-sidebar-border p-2">
-                    <h4 className="text-xs font-semibold mb-2 font-mono">SAVED QUERIES</h4>
-                    <ul>
-                      {Object.entries(queries).map(([id, sql]) => (
-                        <li key={id} className="mb-1">
-                          <div className="flex items-center justify-between">
-                            <button onClick={() => { setTabs((ts) => [...ts, { id: ts.length + 1, editorValue: sql }]); setSelectedTab((i) => i + 1); }} className="text-[10px] font-mono hover:text-primary truncate flex-1 text-left">{id}</button>
-                            <Button variant="ghost" size="icon" className="h-5 w-5" onClick={async () => { await deleteQuery(id); await reloadQueries(); }}><X className="h-2 w-2" /></Button>
-                          </div>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-              </div>
+              <ServerSidebar
+                projects={projects}
+                status={status}
+                schemas={schemas}
+                tables={tables}
+                onAddConnection={() => setConnectionModalOpen(true)}
+                onConnect={onConnect}
+                onDeleteProject={onDeleteProject}
+                onOpenProjectTab={onOpenProjectTab}
+                onLoadTables={onLoadTables}
+                onOpenTableQuery={onOpenDefaultTableQuery}
+              />
             </div>
             <ResizeHandle direction="horizontal" onResize={handleSidebarResize} />
           </>
@@ -438,53 +570,157 @@ export default function App() {
 
         <div className="flex flex-1 flex-col overflow-hidden">
           <div style={{ height: `${editorHeight}%` }} className="flex flex-col overflow-hidden">
+            {/* Editor Tabs */}
             <div className="flex items-center border-b border-border bg-card">
               <div className="flex flex-1 items-center overflow-x-auto">
                 {tabs.map((tab, idx) => (
-                  <div key={tab.id} className={`group flex items-center gap-2 border-r border-border px-4 py-2.5 transition-colors ${selectedTab === idx ? "bg-editor-bg text-foreground" : "bg-card text-muted-foreground hover:bg-accent"}`}>
-                    <button onClick={() => setSelectedTab(idx)} className="font-mono text-xs">Tab {idx + 1}</button>
+                  <div
+                    key={tab.id}
+                    className={cn(
+                      "group flex items-center gap-2 border-r border-border px-4 py-2.5 transition-colors",
+                      selectedTab === idx
+                        ? "bg-editor-bg text-foreground"
+                        : "bg-card text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                    )}
+                  >
+                    <button onClick={() => setSelectedTab(idx)} className="font-mono text-xs text-white">
+                      Query {idx + 1}
+                    </button>
                     {tabs.length > 1 && (
-                      <button onClick={(e) => { e.stopPropagation(); const newTabs = tabs.filter((_, i) => i !== idx); setTabs(newTabs); if (selectedTab === idx && newTabs.length > 0) setSelectedTab(Math.min(idx, newTabs.length - 1)); }} className="opacity-0 group-hover:opacity-100"><X className="h-3 w-3" /></button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const newTabs = tabs.filter((_, i) => i !== idx);
+                          setTabs(newTabs);
+                          if (selectedTab === idx && newTabs.length > 0)
+                            setSelectedTab(Math.min(idx, newTabs.length - 1));
+                        }}
+                        className="opacity-0 transition-opacity hover:text-foreground group-hover:opacity-100"
+                      >
+                        <X className="h-3 w-3 text-white" />
+                      </button>
                     )}
                   </div>
                 ))}
               </div>
-              <Button variant="ghost" size="icon" onClick={() => setTabs((ts) => [...ts, { id: ts.length + 1, editorValue: "" }])} className="h-9 w-9 shrink-0"><Plus className="h-4 w-4" /></Button>
+              <Button variant="ghost" size="icon" onClick={() => setTabs((ts) => [...ts, { id: ts.length + 1, editorValue: "" }])} className="h-9 w-9 shrink-0">
+                <Plus className="h-4 w-4 text-white" />
+              </Button>
             </div>
-            <div className="relative flex-1 overflow-hidden bg-editor-bg">
-              <Editor height="100%" defaultLanguage="pgsql" language="pgsql" beforeMount={registerContextAwareCompletions} options={{ automaticLayout: true, minimap: { enabled: false }, scrollBeyondLastLine: false, fontSize: 13, quickSuggestions: { other: true, comments: false, strings: true }, suggestOnTriggerCharacters: true, theme: "vs-dark" }} value={activeTab?.editorValue} onChange={(v) => { const value = v ?? ""; setTabs((ts) => { const copy = ts.slice(); copy[selectedTab] = { ...copy[selectedTab], editorValue: value }; return copy; }); }} onMount={(editor, monaco) => { editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, () => void runQuery()); editor.addAction({ id: "run-query", label: "Run Query", keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter], run: () => void runQuery() }); editor.onKeyDown((e) => { if (e.equals(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter)) { e.preventDefault(); void runQuery(); } }); }} />
+            {/* SQL Editor */}
+            <div className="relative flex-1 overflow-hidden bg-[var(--color-editor-bg)]">
+              <div className="absolute inset-0 overflow-auto">
+                <Editor
+                  height="100%"
+                  defaultLanguage="pgsql"
+                  language="pgsql"
+                  beforeMount={registerContextAwareCompletions}
+                  options={{
+                    automaticLayout: true,
+                    minimap: { enabled: false },
+                    scrollBeyondLastLine: false,
+                    fontSize: 13,
+                    lineNumbers: "on",
+                    quickSuggestions: { other: true, comments: false, strings: true },
+                    suggestOnTriggerCharacters: true,
+                    theme: "vs-dark",
+                  }}
+                  value={activeTab?.editorValue}
+                  onChange={(v) => {
+                    const value = v ?? "";
+                    setTabs((ts) => {
+                      const copy = ts.slice();
+                      copy[selectedTab] = { ...copy[selectedTab], editorValue: value };
+                      return copy;
+                    });
+                  }}
+                  onMount={(editor, monaco) => {
+                    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, () => void runQuery());
+                    editor.addAction({
+                      id: "run-query",
+                      label: "Run Query",
+                      keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter],
+                      run: () => void runQuery(),
+                    });
+                    editor.onKeyDown((e) => {
+                      if (e.equals(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter)) {
+                        e.preventDefault();
+                        void runQuery();
+                      }
+                    });
+                  }}
+                />
+              </div>
             </div>
           </div>
           <ResizeHandle direction="vertical" onResize={handleEditorResize} />
+          {/* Query Results */}
           <div className="flex-1 min-h-0">
             {!activeTab?.result ? (
-              <div className="flex h-full items-center justify-center text-muted-foreground">No data to display</div>
+              <div className="flex h-full items-center justify-center text-muted-foreground">
+                No data to display
+              </div>
             ) : (
               <div className="flex h-full flex-col border-t border-border bg-card">
                 <div className="flex items-center justify-between border-b border-border px-4 py-2 flex-shrink-0">
                   <div className="flex items-center gap-3">
                     <span className="font-mono text-xs font-semibold text-foreground">RESULTS</span>
                     <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <CheckCircle2 className="h-3 w-3 text-success" />
                       <span>{activeTab.result.rows.length} rows</span>
-                      <span>•</span>
+                      <span className="text-muted-foreground/50">•</span>
+                      <Clock className="h-3 w-3" />
                       <span>{activeTab.result.time.toFixed(0)}ms</span>
                     </div>
                   </div>
                   <div className="flex gap-2">
-                    <Button variant={viewMode === "grid" ? "default" : "outline"} size="sm" onClick={() => setViewMode("grid")}>Grid</Button>
-                    <Button variant={viewMode === "record" ? "default" : "outline"} size="sm" disabled={!activeTab.result.rows.length} onClick={() => setViewMode("record")}>Record</Button>
+                    <Button
+                      variant={viewMode === "grid" ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setViewMode("grid")}
+                    >
+                      Grid
+                    </Button>
+                    <Button
+                      variant={viewMode === "record" ? "default" : "outline"}
+                      size="sm"
+                      disabled={!activeTab.result.rows.length}
+                      onClick={() => setViewMode("record")}
+                    >
+                      Record
+                    </Button>
                   </div>
                 </div>
                 {viewMode === "grid" ? (
                   <div className="flex-1 overflow-auto min-h-0">
                     <table className="w-full border-collapse font-mono text-xs">
                       <thead className="sticky top-0 bg-secondary z-10">
-                        <tr>{activeTab.result.columns.map((c) => (<th key={c} className="border-b border-r border-border px-4 py-2 text-left font-semibold whitespace-nowrap">{c}</th>))}</tr>
+                        <tr>
+                          {activeTab.result.columns.map((c) => (
+                            <th
+                              key={c}
+                              className="border-b border-r border-border px-4 py-2 text-left font-semibold text-secondary-foreground whitespace-nowrap"
+                            >
+                              {c}
+                            </th>
+                          ))}
+                        </tr>
                       </thead>
                       <tbody>
                         {activeTab.result.rows.map((r, i) => (
-                          <tr key={i} className={`${selectedRow === i ? "bg-accent" : ""} hover:bg-accent/50 cursor-pointer`} onClick={() => setSelectedRow(i)}>
-                            {r.map((cell, j) => (<td key={j} className="border-b border-r border-border px-4 py-2 whitespace-nowrap">{cell}</td>))}
+                          <tr
+                            key={i}
+                            className="hover:bg-accent/50 transition-colors"
+                            onClick={() => setSelectedRow(i)}
+                          >
+                            {r.map((cell, j) => (
+                              <td
+                                key={j}
+                                className="border-b border-r border-border px-4 py-2 text-foreground whitespace-nowrap"
+                              >
+                                {cell}
+                              </td>
+                            ))}
                           </tr>
                         ))}
                       </tbody>
@@ -493,20 +729,44 @@ export default function App() {
                 ) : (
                   <div className="flex-1 overflow-auto p-4">
                     {activeTab.result.rows.length === 0 ? (
-                      <div className="flex items-center justify-center p-4 text-muted-foreground">No row selected</div>
+                      <div className="flex items-center justify-center p-4 text-muted-foreground">
+                        No row selected
+                      </div>
                     ) : (
                       <div className="flex flex-col gap-2">
                         <div className="flex items-center gap-2">
-                          <Button variant="outline" size="sm" onClick={() => setSelectedRow((i) => Math.max(0, i - 1))}>Prev</Button>
-                          <span className="text-sm text-muted-foreground">Row {selectedRow + 1} of {activeTab.result.rows.length}</span>
-                          <Button variant="outline" size="sm" onClick={() => setSelectedRow((i) => Math.min((activeTab?.result?.rows.length ?? 1) - 1, i + 1))}>Next</Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setSelectedRow((i) => Math.max(0, i - 1))}
+                          >
+                            Prev
+                          </Button>
+                          <span className="text-sm text-muted-foreground">
+                            Row {selectedRow + 1} of {activeTab.result.rows.length}
+                          </span>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() =>
+                              setSelectedRow((i) =>
+                                Math.min((activeTab?.result?.rows.length ?? 1) - 1, i + 1)
+                              )
+                            }
+                          >
+                            Next
+                          </Button>
                         </div>
                         <table className="w-full border-collapse">
                           <tbody>
                             {activeTab.result.columns.map((col, idx) => (
                               <tr key={col}>
-                                <td className="w-1/3 border-b border-border px-2 py-1 font-medium">{col}</td>
-                                <td className="border-b border-border px-2 py-1">{activeTab?.result?.rows[selectedRow]?.[idx] ?? ""}</td>
+                                <td className="w-1/3 border-b border-border px-2 py-1 font-medium text-foreground">
+                                  {col}
+                                </td>
+                                <td className="border-b border-border px-2 py-1 text-foreground">
+                                  {activeTab?.result?.rows[selectedRow]?.[idx] ?? ""}
+                                </td>
                               </tr>
                             ))}
                           </tbody>
@@ -520,7 +780,11 @@ export default function App() {
           </div>
         </div>
       </div>
-      <ConnectionModal open={connectionModalOpen} onOpenChange={setConnectionModalOpen} onSave={handleSaveConnection} />
+      <ConnectionModal
+        open={connectionModalOpen}
+        onOpenChange={setConnectionModalOpen}
+        onSave={handleSaveConnection}
+      />
     </div>
   );
 }

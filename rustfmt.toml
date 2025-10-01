@@ -1,3 +1,0 @@
-edition = "2021"
-max_width = 100 # Maximum width of each line
-tab_spaces = 2 # Number of spaces per tab

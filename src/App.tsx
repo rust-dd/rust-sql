@@ -2,7 +2,7 @@ import Editor from "@monaco-editor/react";
 import type * as Monaco from "monaco-editor";
 import React, { useCallback, useEffect, useState } from "react";
 import { useKeyPressEvent } from "react-use";
-import { Play, Save, Database, PanelLeftClose, PanelLeft, Plus, ChevronRight, ChevronDown, Server, Table as TableIcon, Columns, X } from "lucide-react";
+import { Play, Save, Database, PanelLeftClose, PanelLeft, Plus, Table as TableIcon, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ResizeHandle } from "@/components/resize-handle";
 import { ConnectionModal, type ConnectionConfig } from "@/components/connection-modal";
@@ -112,9 +112,8 @@ export default function App() {
         const aliasMap = extractAliasMap(context);
         const suggestions: Monaco.languages.CompletionItem[] = [];
         const add = (label: string, kind: Monaco.languages.CompletionItemKind, insert?: string, snippet?: boolean) => {
-          const item: Monaco.languages.CompletionItem = { label, kind, insertText: insert ?? label };
+          const item: any = { label, kind, insertText: insert ?? label, range: undefined };
           if (snippet) {
-            // @ts-expect-error monaco types
             item.insertTextRules = monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet;
           }
           suggestions.push(item);
@@ -363,7 +362,7 @@ export default function App() {
                   </Button>
                 </div>
                 <div className="flex-1 overflow-y-auto p-2">
-                  {Object.entries(projects).map(([project_id, d]) => {
+                {Object.entries(projects).map(([project_id]) => {
                     const st = status[project_id] ?? ProjectConnectionStatus.Disconnected;
                     const projectSchemas = schemas[project_id] ?? [];
                     return (
@@ -500,14 +499,14 @@ export default function App() {
                         <div className="flex items-center gap-2">
                           <Button variant="outline" size="sm" onClick={() => setSelectedRow((i) => Math.max(0, i - 1))}>Prev</Button>
                           <span className="text-sm text-muted-foreground">Row {selectedRow + 1} of {activeTab.result.rows.length}</span>
-                          <Button variant="outline" size="sm" onClick={() => setSelectedRow((i) => Math.min(activeTab.result.rows.length - 1, i + 1))}>Next</Button>
+                          <Button variant="outline" size="sm" onClick={() => setSelectedRow((i) => Math.min((activeTab?.result?.rows.length ?? 1) - 1, i + 1))}>Next</Button>
                         </div>
                         <table className="w-full border-collapse">
                           <tbody>
                             {activeTab.result.columns.map((col, idx) => (
                               <tr key={col}>
                                 <td className="w-1/3 border-b border-border px-2 py-1 font-medium">{col}</td>
-                                <td className="border-b border-border px-2 py-1">{activeTab.result!.rows[selectedRow]?.[idx] ?? ""}</td>
+                                <td className="border-b border-border px-2 py-1">{activeTab?.result?.rows[selectedRow]?.[idx] ?? ""}</td>
                               </tr>
                             ))}
                           </tbody>

@@ -2,6 +2,8 @@
 
 A lightweight SQL database client built with Tauri, React, and TypeScript.
 
+![Preview](https://i.ibb.co/d0LkWx9g)
+
 ## Features
 
 - SQL editor with syntax highlighting

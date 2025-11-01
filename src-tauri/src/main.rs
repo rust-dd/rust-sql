@@ -80,6 +80,11 @@ fn main() {
             drivers::pgsql::pgsql_load_tables,
             drivers::pgsql::pgsql_load_columns,
             drivers::pgsql::pgsql_run_query,
+            drivers::redshift::redshift_connector,
+            drivers::redshift::redshift_load_schemas,
+            drivers::redshift::redshift_load_tables,
+            drivers::redshift::redshift_load_columns,
+            drivers::redshift::redshift_run_query,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

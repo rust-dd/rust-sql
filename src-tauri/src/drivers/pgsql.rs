@@ -13,7 +13,7 @@ use crate::{utils::reflective_get, AppState};
 #[tauri::command(rename_all = "snake_case")]
 pub async fn pgsql_connector(
     project_id: &str,
-    key: Option<[&str; 5]>,
+    key: Option<[&str; 6]>,
     app: AppHandle,
 ) -> Result<ProjectConnectionStatus> {
     let app_state = app.state::<AppState>();
@@ -25,13 +25,14 @@ pub async fn pgsql_connector(
         return Ok(ProjectConnectionStatus::Connected);
     }
 
-    let (user, password, database, host, port_str) = match key {
+    let (user, password, database, host, port_str, use_ssl) = match key {
         Some(key) => (
             key[0].to_string(),
             key[1].to_string(),
             key[2].to_string(),
             key[3].to_string(),
             key[4].to_string(),
+            key[5] == "true",
         ),
         None => {
             let projects_db = app_state.project_db.lock().await;
@@ -47,6 +48,7 @@ pub async fn pgsql_connector(
                 project_details[3].clone(),
                 project_details[4].clone(),
                 project_details[5].clone(),
+                project_details.get(6).map(|s| s == "true").unwrap_or(false),
             )
         }
     };

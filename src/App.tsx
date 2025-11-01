@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useEffect } from "react";
 import type * as Monaco from "monaco-editor";
 import { useKeyPressEvent } from "react-use";
-import { Database, Play, Save, Settings, ChevronRight, ChevronDown, Server, Table, Plus, X, CheckCircle2, Clock } from "lucide-react";
+import { Database, Play, Save, Settings, ChevronRight, ChevronDown, Server, Table, Plus, X, CheckCircle2, Clock, Moon, Sun } from "lucide-react";
 import Editor from "@monaco-editor/react";
 import { Button } from "@/components/ui/button";
 import { ResizeHandle } from "@/components/resize-handle";
@@ -13,15 +13,11 @@ import {
   getProjects,
   insertProject,
   insertQuery,
-  pgsqlConnector,
-  pgsqlLoadColumns,
-  pgsqlLoadSchemas,
-  pgsqlLoadTables,
-  pgsqlRunQuery,
   ProjectConnectionStatus,
   ProjectMap,
   TableInfo,
 } from "@/tauri";
+import { DriverFactory, type DriverType } from "@/lib/database-driver";
 
 type Tab = {
   id: number;
@@ -216,6 +212,7 @@ export default function App() {
   const [connectionModalOpen, setConnectionModalOpen] = useState(false);
   const [viewMode, setViewMode] = useState<"grid" | "record">("grid");
   const [selectedRow, setSelectedRow] = useState<number>(0);
+  const [theme, setTheme] = useState<"light" | "dark">("light");
 
   const [projects, setProjects] = useState<ProjectMap>({});
   const [status, setStatus] = useState<Record<string, ProjectConnectionStatus>>({});
@@ -243,6 +240,14 @@ export default function App() {
   useEffect(() => { columnsRef.current = columns; }, [columns]);
   useEffect(() => { activeProjectRef.current = activeProject; }, [activeProject]);
 
+  // Helper to get driver for a project
+  const getProjectDriver = useCallback((projectId: string) => {
+    const d = projectsRef.current[projectId];
+    if (!d) return null;
+    const driverType = d[0] as DriverType;
+    return DriverFactory.getDriver(driverType);
+  }, []);
+
   function registerContextAwareCompletions(monaco: typeof Monaco) {
     type TableRef = { schema?: string; table: string };
     function stripQuotes(s: string) { return s.replaceAll('"', ""); }
@@ -261,12 +266,15 @@ export default function App() {
     async function resolveTableRef(projectId: string, ref: TableRef): Promise<{ schema: string; table: string } | null> {
       if (ref.schema) return { schema: ref.schema, table: ref.table };
       const projSchemas = schemasRef.current[projectId] || [];
+      const driver = getProjectDriver(projectId);
+      if (!driver) return { schema: "public", table: ref.table };
+      
       for (const schema of projSchemas) {
         const key = `${projectId}::${schema}`;
         let t = tablesRef.current[key];
         if (!t) {
           try {
-            t = await pgsqlLoadTables(projectId, schema);
+            t = await driver.loadTables(projectId, schema);
             tablesRef.current[key] = t;
             setTables((prev) => ({ ...prev, [key]: t! }));
           } catch {}
@@ -280,6 +288,8 @@ export default function App() {
       provideCompletionItems: async (model, position) => {
         const projectId = activeProjectRef.current;
         if (!projectId) return { suggestions: [] };
+        const driver = getProjectDriver(projectId);
+        if (!driver) return { suggestions: [] };
         const textUntilPosition = model.getValueInRange({
           startLineNumber: 1, startColumn: 1,
           endLineNumber: position.lineNumber, endColumn: position.column,
@@ -315,7 +325,7 @@ export default function App() {
                 let cols = columnsRef.current[colKey];
                 if (!cols) {
                   try {
-                    cols = await pgsqlLoadColumns(projectId, resolved.schema, resolved.table);
+                    cols = await driver.loadColumns(projectId, resolved.schema, resolved.table);
                     columnsRef.current[colKey] = cols;
                     setColumns((prev) => ({ ...prev, [colKey]: cols! }));
                   } catch {}
@@ -330,7 +340,7 @@ export default function App() {
               let t = tablesRef.current[key];
               if (!t) {
                 try {
-                  t = await pgsqlLoadTables(projectId, schema);
+                  t = await driver.loadTables(projectId, schema);
                   tablesRef.current[key] = t;
                   setTables((prev) => ({ ...prev, [key]: t! }));
                 } catch {}
@@ -347,7 +357,7 @@ export default function App() {
             let cols = columnsRef.current[colKey];
             if (!cols) {
               try {
-                cols = await pgsqlLoadColumns(projectId, left, right);
+                cols = await driver.loadColumns(projectId, left, right);
                 columnsRef.current[colKey] = cols;
                 setColumns((prev) => ({ ...prev, [colKey]: cols! }));
               } catch {}
@@ -364,7 +374,7 @@ export default function App() {
             let t = tablesRef.current[key];
             if (!t) {
               try {
-                t = await pgsqlLoadTables(projectId, schema);
+                t = await driver.loadTables(projectId, schema);
                 tablesRef.current[key] = t;
                 setTables((prev) => ({ ...prev, [key]: t! }));
               } catch {}
@@ -415,12 +425,15 @@ export default function App() {
     const d = projects[project_id];
     if (!d) return;
     setStatus((s) => ({ ...s, [project_id]: ProjectConnectionStatus.Connecting }));
-    const key: [string, string, string, string, string] = [d[1], d[2], d[3], d[4], d[5]];
+    const driverType = d[0] as DriverType;
+    const useSsl = d[6] === "true"; // 7th element is SSL flag
+    const key: [string, string, string, string, string, string] = [d[1], d[2], d[3], d[4], d[5], useSsl ? "true" : "false"];
     try {
-      const st = await pgsqlConnector(project_id, key);
+      const driver = DriverFactory.getDriver(driverType);
+      const st = await driver.connect(project_id, key);
       setStatus((s) => ({ ...s, [project_id]: st }));
       if (st === ProjectConnectionStatus.Connected) {
-        const sc = await pgsqlLoadSchemas(project_id);
+        const sc = await driver.loadSchemas(project_id);
         setSchemas((prev) => ({ ...prev, [project_id]: sc }));
       }
     } catch {
@@ -436,9 +449,13 @@ export default function App() {
   const onLoadTables = useCallback(async (project_id: string, schema: string) => {
     const key = `${project_id}::${schema}`;
     if (tables[key]) return;
-    const rows = await pgsqlLoadTables(project_id, schema);
+    const d = projects[project_id];
+    if (!d) return;
+    const driverType = d[0] as DriverType;
+    const driver = DriverFactory.getDriver(driverType);
+    const rows = await driver.loadTables(project_id, schema);
     setTables((t) => ({ ...t, [key]: rows }));
-  }, [tables]);
+  }, [tables, projects]);
 
   const onOpenDefaultTableQuery = useCallback((project_id: string, schema: string, table: string) => {
     const sql = `SELECT * FROM "${schema}"."${table}" LIMIT 100;`;
@@ -448,14 +465,18 @@ export default function App() {
 
   const runQuery = useCallback(async () => {
     if (!activeProject || !activeTab) return;
-    const [cols, rows, time] = await pgsqlRunQuery(activeProject, activeTab.editorValue);
+    const d = projects[activeProject];
+    if (!d) return;
+    const driverType = d[0] as DriverType;
+    const driver = DriverFactory.getDriver(driverType);
+    const [cols, rows, time] = await driver.runQuery(activeProject, activeTab.editorValue);
     setTabs((ts) => {
       const copy = ts.slice();
       copy[selectedTab] = { ...copy[selectedTab], result: { columns: cols, rows, time } };
       return copy;
     });
     setSelectedRow(0);
-  }, [activeProject, activeTab, selectedTab]);
+  }, [activeProject, activeTab, selectedTab, projects]);
 
   const saveQuery = useCallback(async (title: string) => {
     if (!activeProject) return;
@@ -478,10 +499,22 @@ export default function App() {
   };
 
   const handleSaveConnection = useCallback(async (connection: ConnectionConfig) => {
-    const details = ["PGSQL", connection.username, connection.password, connection.database, connection.host, connection.port];
+    const details = [connection.driver, connection.username, connection.password, connection.database, connection.host, connection.port, connection.ssl ? "true" : "false"];
     await insertProject(connection.name, details);
     await reloadProjects();
   }, [reloadProjects]);
+
+  const toggleTheme = () => {
+    setTheme(prev => prev === "light" ? "dark" : "light");
+  };
+
+  useEffect(() => {
+    if (theme === "dark") {
+      document.documentElement.classList.add("dark");
+    } else {
+      document.documentElement.classList.remove("dark");
+    }
+  }, [theme]);
 
   return (
     <div className="flex h-screen flex-col bg-background text-foreground">
@@ -489,8 +522,8 @@ export default function App() {
       <div className="flex h-12 items-center justify-between border-b border-border bg-card px-4">
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2">
-            <Database className="h-5 w-5 text-white" />
-            <span className="font-mono text-sm font-semibold text-white">PostgresGUI</span>
+            <Database className="h-5 w-5" />
+            <span className="font-mono text-sm font-semibold">PostgresGUI</span>
           </div>
           {activeProject && activeProjectDetails ? (
             <>
@@ -503,9 +536,9 @@ export default function App() {
                   status[activeProject] === ProjectConnectionStatus.Failed && "bg-destructive",
                   !status[activeProject] && "bg-destructive"
                 )} />
-                <span className="font-mono text-white">{activeProject}</span>
+                <span className="font-mono">{activeProject}</span>
                 <span className="text-muted-foreground/50">•</span>
-                <span className="text-white">{activeProjectDetails[4]}:{activeProjectDetails[5]}</span>
+                <span>{activeProjectDetails[4]}:{activeProjectDetails[5]}</span>
               </div>
             </>
           ) : null}
@@ -522,8 +555,8 @@ export default function App() {
             }}
             disabled={!activeProject}
           >
-            <Save className="h-4 w-4 text-white" />
-            <span className="text-xs text-white">Save</span>
+            <Save className="h-4 w-4" />
+            <span className="text-xs">Save</span>
           </Button>
           <Button
             variant="default"
@@ -532,12 +565,12 @@ export default function App() {
             onClick={() => void runQuery()}
             disabled={!activeProject}
           >
-            <Play className="h-4 w-4 text-white" />
-            <span className="text-xs text-white">Execute (⌘+Enter)</span>
+            <Play className="h-4 w-4" />
+            <span className="text-xs">Execute (⌘+Enter)</span>
           </Button>
           <div className="h-4 w-px bg-border" />
-          <Button variant="ghost" size="icon" className="h-8 w-8">
-            <Settings className="h-4 w-4 text-white" />
+          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={toggleTheme}>
+            {theme === "light" ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
           </Button>
         </div>
       </div>
@@ -578,7 +611,7 @@ export default function App() {
                         : "bg-card text-muted-foreground hover:bg-accent hover:text-accent-foreground"
                     )}
                   >
-                    <button onClick={() => setSelectedTab(idx)} className="font-mono text-xs text-white">
+                    <button onClick={() => setSelectedTab(idx)} className="font-mono text-xs">
                       Query {idx + 1}
                     </button>
                     {tabs.length > 1 && (
@@ -592,26 +625,26 @@ export default function App() {
                         }}
                         className="opacity-0 transition-opacity hover:text-foreground group-hover:opacity-100"
                       >
-                        <X className="h-3 w-3 text-white" />
+                        <X className="h-3 w-3" />
                       </button>
                     )}
                   </div>
                 ))}
               </div>
               <Button variant="ghost" size="icon" onClick={() => setTabs((ts) => [...ts, { id: ts.length + 1, editorValue: "" }])} className="h-9 w-9 shrink-0">
-                <Plus className="h-4 w-4 text-white" />
+                <Plus className="h-4 w-4" />
               </Button>
             </div>
             {/* SQL Editor */}
             <div className="relative flex-1 overflow-hidden bg-[var(--color-editor-bg)]" suppressHydrationWarning>
-              <div className="absolute inset-0 overflow-auto bg-[#1e1e1e]">
+              <div className="absolute inset-0 overflow-auto bg-editor-bg">
                 <Editor
                   height="100%"
                   defaultLanguage="pgsql"
                   language="pgsql"
-                  theme="vs-dark"
+                  theme={theme === "light" ? "vs" : "vs-dark"}
                   loading={
-                    <div className="flex h-full w-full items-center justify-center bg-[#1e1e1e]">
+                    <div className="flex h-full w-full items-center justify-center bg-editor-bg">
                       <span className="text-muted-foreground text-sm">Loading editor...</span>
                     </div>
                   }
@@ -624,7 +657,6 @@ export default function App() {
                     lineNumbers: "on",
                     quickSuggestions: { other: true, comments: false, strings: true },
                     suggestOnTriggerCharacters: true,
-                    theme: "vs-dark",
                   }}
                   value={activeTab?.editorValue}
                   onChange={(v) => {

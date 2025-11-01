@@ -6,12 +6,14 @@ use serde::{Deserialize, Serialize};
 pub enum Drivers {
   #[default]
   PGSQL,
+  REDSHIFT,
 }
 
 impl Display for Drivers {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
     match self {
       Drivers::PGSQL => write!(f, "PGSQL"),
+      Drivers::REDSHIFT => write!(f, "REDSHIFT"),
     }
   }
 }
@@ -20,6 +22,7 @@ impl AsRef<str> for Drivers {
   fn as_ref(&self) -> &str {
     match self {
       Drivers::PGSQL => "PGSQL",
+      Drivers::REDSHIFT => "REDSHIFT",
     }
   }
 }

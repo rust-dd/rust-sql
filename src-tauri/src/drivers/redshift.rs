@@ -122,14 +122,15 @@ pub async fn redshift_load_schemas(
     let clients = app_state.client.lock().await;
     let client = clients.as_ref().unwrap().get(project_id).unwrap();
 
-    // Redshift uses similar schema query but with some differences
+    // Use pg_namespace for complete schema list
     let query = tokio_time::timeout(
         tokio_time::Duration::from_secs(10),
         client.query(
-            r#"
-        SELECT schema_name
-        FROM information_schema.schemata
-        WHERE schema_name NOT IN ('pg_catalog', 'information_schema', 'pg_internal')
+            r#"--sql
+        SELECT nspname AS schema_name
+        FROM pg_catalog.pg_namespace
+        WHERE nspname NOT LIKE 'pg_%'
+          AND nspname != 'information_schema'
         ORDER BY schema_name;
         "#,
             &[],
@@ -176,10 +177,9 @@ pub async fn redshift_load_tables(
       r#"--sql
         SELECT 
           table_name,
-          '-' AS size
+          table_type AS size
         FROM information_schema.tables
         WHERE table_schema = $1
-          AND table_type = 'BASE TABLE'
         ORDER BY table_name;
         "#,
       &[&schema],

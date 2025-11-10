@@ -7,6 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from "./ui/button"
 import { Input } from "./ui/input"
 import { Label } from "./ui/label"
+import { DriverFactory, DRIVER_CONFIGS, type DriverType } from "@/lib/database-driver"
 
 interface ConnectionModalProps {
   open: boolean
@@ -17,6 +18,7 @@ interface ConnectionModalProps {
 export interface ConnectionConfig {
   id: string
   name: string
+  driver: DriverType
   host: string
   port: string
   database: string
@@ -28,6 +30,7 @@ export interface ConnectionConfig {
 export function ConnectionModal({ open, onOpenChange, onSave }: ConnectionModalProps) {
   const [formData, setFormData] = useState<Omit<ConnectionConfig, "id">>({
     name: "",
+    driver: "PGSQL",
     host: "localhost",
     port: "5432",
     database: "",
@@ -47,6 +50,7 @@ export function ConnectionModal({ open, onOpenChange, onSave }: ConnectionModalP
     // Reset form
     setFormData({
       name: "",
+      driver: "PGSQL",
       host: "localhost",
       port: "5432",
       database: "",
@@ -56,16 +60,45 @@ export function ConnectionModal({ open, onOpenChange, onSave }: ConnectionModalP
     })
   }
 
+  const handleDriverChange = (driver: DriverType) => {
+    const config = DRIVER_CONFIGS[driver];
+    setFormData({
+      ...formData,
+      driver,
+      port: config.defaultPort,
+    })
+  }
+
+  const supportedDrivers = DriverFactory.getSupportedDrivers();
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="bg-background border-border sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle className="font-mono text-foreground">New Connection</DialogTitle>
           <DialogDescription className="text-muted-foreground text-xs">
-            Add a new PostgreSQL database connection
+            Add a new database connection
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4 mt-4">
+          <div className="space-y-2">
+            <Label htmlFor="driver" className="font-mono text-xs text-foreground">
+              Database Type
+            </Label>
+            <select
+              id="driver"
+              value={formData.driver}
+              onChange={(e) => handleDriverChange(e.target.value as DriverType)}
+              className="w-full bg-input border border-border text-foreground font-mono text-sm rounded-md px-3 py-2"
+            >
+              {supportedDrivers.map((driverType) => (
+                <option key={driverType} value={driverType}>
+                  {DRIVER_CONFIGS[driverType].name}
+                </option>
+              ))}
+            </select>
+          </div>
+
           <div className="space-y-2">
             <Label htmlFor="name" className="font-mono text-xs text-foreground">
               Connection Name

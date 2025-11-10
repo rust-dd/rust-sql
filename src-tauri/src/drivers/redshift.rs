@@ -6,22 +6,25 @@ use crate::common::{
 };
 use tauri::{AppHandle, Manager, Result, State};
 use tokio::{sync::Mutex, time as tokio_time};
-use tokio_postgres::{Config, NoTls};
+use tokio_postgres::Config;
+use postgres_native_tls::MakeTlsConnector;
+use native_tls::TlsConnector;
 
 use crate::{utils::reflective_get, AppState};
 
 #[tauri::command(rename_all = "snake_case")]
-pub async fn pgsql_connector(
+pub async fn redshift_connector(
     project_id: &str,
     key: Option<[&str; 6]>,
     app: AppHandle,
 ) -> Result<ProjectConnectionStatus> {
     let app_state = app.state::<AppState>();
     let mut clients = app_state.client.lock().await;
-    tracing::info!("Postgres connection already exists!: {:?}", key);
+    tracing::info!("Redshift connection attempt: {:?}", key);
+    
     // check if connection already exists
     if clients.as_ref().unwrap().contains_key(project_id) {
-        tracing::info!("Postgres connection already exists!");
+        tracing::info!("Redshift connection already exists!");
         return Ok(ProjectConnectionStatus::Connected);
     }
 
@@ -53,7 +56,7 @@ pub async fn pgsql_connector(
         }
     };
 
-    let port: u16 = port_str.parse::<u16>().unwrap_or(5432);
+    let port: u16 = port_str.parse::<u16>().unwrap_or(5439); // Redshift default port
     let mut cfg = Config::new();
     cfg.user(&user);
     cfg.password(password);
@@ -61,38 +64,47 @@ pub async fn pgsql_connector(
     cfg.host(&host);
     cfg.port(port);
 
-    let connection = tokio_time::timeout(tokio_time::Duration::from_secs(10), cfg.connect(NoTls))
+    tracing::info!("Redshift SSL enabled: {}", use_ssl);
+
+    // Redshift always uses SSL in production, but allow NoTls for testing
+    let tls_connector = TlsConnector::builder()
+        .danger_accept_invalid_certs(true) // Accept self-signed certs
+        .build()
+        .unwrap();
+    let tls = MakeTlsConnector::new(tls_connector);
+    
+    let connection = tokio_time::timeout(tokio_time::Duration::from_secs(10), cfg.connect(tls))
         .await
         .map_err(|_| PostgresqlError::ConnectionTimeout);
 
-    if connection.is_err() {
-        tracing::error!("Postgres connection timeout error!");
+    if let Err(e) = connection {
+        tracing::error!("Redshift connection timeout error: {:?}", e);
         return Ok(ProjectConnectionStatus::Failed);
     }
 
     let connection = connection.unwrap();
-    if connection.is_err() {
-        tracing::error!("Postgres connection error!");
+    if let Err(e) = connection {
+        tracing::error!("Redshift connection error: {:?}", e);
         return Ok(ProjectConnectionStatus::Failed);
     }
 
     let is_connection_error = Arc::new(Mutex::new(false));
     let (client, connection) = connection.unwrap();
-    tracing::info!("Postgres connection established!");
+    tracing::info!("Redshift connection established!");
 
     // check if connection has some error
     tokio::spawn({
         let is_connection_error = Arc::clone(&is_connection_error);
         async move {
             if let Err(e) = connection.await {
-                tracing::info!("Postgres connection error: {:?}", e);
+                tracing::info!("Redshift connection error: {:?}", e);
                 *is_connection_error.lock().await = true;
             }
-        }
+        }   
     });
 
     if *is_connection_error.lock().await {
-        tracing::error!("Postgres connection error!");
+        tracing::error!("Redshift connection error!");
         return Ok(ProjectConnectionStatus::Failed);
     }
 
@@ -103,20 +115,22 @@ pub async fn pgsql_connector(
 }
 
 #[tauri::command(rename_all = "snake_case")]
-pub async fn pgsql_load_schemas(
+pub async fn redshift_load_schemas(
     project_id: &str,
     app_state: State<'_, AppState>,
 ) -> Result<PgsqlLoadSchemas> {
     let clients = app_state.client.lock().await;
     let client = clients.as_ref().unwrap().get(project_id).unwrap();
 
+    // Use pg_namespace for complete schema list
     let query = tokio_time::timeout(
         tokio_time::Duration::from_secs(10),
         client.query(
-            r#"
-        SELECT schema_name
-        FROM information_schema.schemata
-        WHERE schema_name NOT IN ('pg_catalog', 'information_schema')
+            r#"--sql
+        SELECT nspname AS schema_name
+        FROM pg_catalog.pg_namespace
+        WHERE nspname NOT LIKE 'pg_%'
+          AND nspname != 'information_schema'
         ORDER BY schema_name;
         "#,
             &[],
@@ -126,7 +140,7 @@ pub async fn pgsql_load_schemas(
     .map_err(|_| PostgresqlError::QueryTimeout);
 
     if query.is_err() {
-        tracing::error!("Postgres schema query timeout error!");
+        tracing::error!("Redshift schema query timeout error!");
         return Err(tauri::Error::Io(std::io::Error::new(
             std::io::ErrorKind::Other,
             PostgresqlError::QueryTimeout,
@@ -135,7 +149,7 @@ pub async fn pgsql_load_schemas(
 
     let query = query.unwrap();
     if query.is_err() {
-        tracing::error!("Postgres schema query error!");
+        tracing::error!("Redshift schema query error!");
         return Err(tauri::Error::Io(std::io::Error::new(
             std::io::ErrorKind::Other,
             PostgresqlError::QueryError,
@@ -144,36 +158,45 @@ pub async fn pgsql_load_schemas(
 
     let qeury = query.unwrap();
     let schemas = qeury.iter().map(|r| r.get(0)).collect::<Vec<String>>();
-    tracing::info!("Postgres schemas: {:?}", schemas);
+    tracing::info!("Redshift schemas: {:?}", schemas);
     Ok(schemas)
 }
 
 #[tauri::command(rename_all = "snake_case")]
-pub async fn pgsql_load_tables(
+pub async fn redshift_load_tables(
     project_id: &str,
     schema: &str,
     app_state: State<'_, AppState>,
 ) -> Result<PgsqlLoadTables> {
     let clients = app_state.client.lock().await;
     let client = clients.as_ref().unwrap().get(project_id).unwrap();
+    
+    // Use information_schema which is more universally accessible
     let query = client
     .query(
       r#"--sql
-        SELECT
+        SELECT 
           table_name,
-          pg_size_pretty(pg_total_relation_size('"' || table_schema || '"."' || table_name || '"')) AS size
-        FROM
-          information_schema.tables
-        WHERE
-          table_schema = $1
-        ORDER BY
-          table_name;
+          table_type AS size
+        FROM information_schema.tables
+        WHERE table_schema = $1
+        ORDER BY table_name;
         "#,
       &[&schema],
     )
-    .await
-    .unwrap();
-    let tables = query
+    .await;
+
+    
+    if let Err(e) = query {
+        tracing::error!("Redshift load tables error: {:?}", e);
+        return Err(tauri::Error::Io(std::io::Error::new(
+            std::io::ErrorKind::Other,
+            format!("Failed to load tables: {:?}", e),
+        )));
+    }
+    
+    let rows = query.unwrap();
+    let tables = rows
         .iter()
         .map(|r| (r.get(0), r.get(1)))
         .collect::<Vec<(String, String)>>();
@@ -181,7 +204,7 @@ pub async fn pgsql_load_tables(
 }
 
 #[tauri::command(rename_all = "snake_case")]
-pub async fn pgsql_load_columns(
+pub async fn redshift_load_columns(
     project_id: &str,
     schema: &str,
     table: &str,
@@ -209,7 +232,7 @@ pub async fn pgsql_load_columns(
 }
 
 #[tauri::command(rename_all = "snake_case")]
-pub async fn pgsql_run_query(
+pub async fn redshift_run_query(
     project_id: &str,
     sql: &str,
     app_state: State<'_, AppState>,
@@ -245,53 +268,3 @@ pub async fn pgsql_run_query(
     Ok((columns, rows, elasped))
 }
 
-#[tauri::command(rename_all = "snake_case")]
-pub async fn pgsql_load_relations(
-    project_name: &str,
-    schema: &str,
-    app_state: State<'_, AppState>,
-) -> Result<Vec<()>> {
-    // let clients = app_state.client.lock().await;
-    // let client = clients.as_ref().unwrap().get(project_name).unwrap();
-    // let rows = client
-    //   .query(
-    //     r#"--sql SELECT
-    //         tc.constraint_name,
-    //         tc.table_name,
-    //         kcu.column_name,
-    //         ccu.table_name AS foreign_table_name,
-    //         ccu.column_name AS foreign_column_name
-    //       FROM information_schema.table_constraints AS tc
-    //       JOIN information_schema.key_column_usage AS kcu
-    //       ON tc.constraint_name = kcu.constraint_name
-    //       JOIN information_schema.constraint_column_usage AS ccu
-    //       ON ccu.constraint_name = tc.constraint_name
-    //       WHERE constraint_type = 'FOREIGN KEY'
-    //       AND tc.table_schema = $1;
-    //     "#,
-    //     &[&schema],
-    //   )
-    //   .await
-    //   .unwrap();
-
-    // let relations = rows
-    //   .iter()
-    //   .map(|row| {
-    //     let constraint_name = row.get(0);
-    //     let table_name = row.get(1);
-    //     let column_name = row.get(2);
-    //     let foreign_table_name = row.get(3);
-    //     let foreign_column_name = row.get(4);
-    //     PostgresqlRelation {
-    //       constraint_name,
-    //       table_name,
-    //       column_name,
-    //       foreign_table_name,
-    //       foreign_column_name,
-    //     }
-    //   })
-    //   .collect::<Vec<PostgresqlRelation>>();
-
-    // Ok(relations)
-    todo!()
-}

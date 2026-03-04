@@ -1,18 +1,17 @@
-"use client"
-
 import type React from "react"
-
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "./ui/dialog"
 import { Button } from "./ui/button"
 import { Input } from "./ui/input"
 import { Label } from "./ui/label"
-import { DriverFactory, DRIVER_CONFIGS, type DriverType } from "@/lib/database-driver"
+import { DriverFactory, DRIVER_CONFIGS } from "@/lib/database-driver"
+import type { DriverType, ProjectDetails } from "@/types"
 
 interface ConnectionModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   onSave: (connection: ConnectionConfig) => void
+  editData?: { name: string; details: ProjectDetails } | null
 }
 
 export interface ConnectionConfig {
@@ -27,41 +26,51 @@ export interface ConnectionConfig {
   ssl: boolean
 }
 
-export function ConnectionModal({ open, onOpenChange, onSave }: ConnectionModalProps) {
-  const [formData, setFormData] = useState<Omit<ConnectionConfig, "id">>({
-    name: "",
-    driver: "PGSQL",
-    host: "localhost",
-    port: "5432",
-    database: "",
-    username: "",
-    password: "",
-    ssl: false,
-  })
+const defaultForm: Omit<ConnectionConfig, "id"> = {
+  name: "",
+  driver: "PGSQL",
+  host: "localhost",
+  port: "5432",
+  database: "",
+  username: "",
+  password: "",
+  ssl: false,
+}
+
+export function ConnectionModal({ open, onOpenChange, onSave, editData }: ConnectionModalProps) {
+  const [formData, setFormData] = useState<Omit<ConnectionConfig, "id">>(defaultForm)
+
+  useEffect(() => {
+    if (open && editData) {
+      setFormData({
+        name: editData.name,
+        driver: editData.details.driver,
+        host: editData.details.host,
+        port: editData.details.port,
+        database: editData.details.database,
+        username: editData.details.username,
+        password: editData.details.password,
+        ssl: editData.details.ssl === "true",
+      })
+    } else if (open && !editData) {
+      setFormData(defaultForm)
+    }
+  }, [open, editData])
+
+  const isEditing = !!editData
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    const newConnection: ConnectionConfig = {
+    const connection: ConnectionConfig = {
       ...formData,
-      id: `conn-${Date.now()}`,
+      id: editData ? editData.name : `conn-${Date.now()}`,
     }
-    onSave(newConnection)
+    onSave(connection)
     onOpenChange(false)
-    // Reset form
-    setFormData({
-      name: "",
-      driver: "PGSQL",
-      host: "localhost",
-      port: "5432",
-      database: "",
-      username: "",
-      password: "",
-      ssl: false,
-    })
   }
 
   const handleDriverChange = (driver: DriverType) => {
-    const config = DRIVER_CONFIGS[driver];
+    const config = DRIVER_CONFIGS[driver]
     setFormData({
       ...formData,
       driver,
@@ -69,15 +78,17 @@ export function ConnectionModal({ open, onOpenChange, onSave }: ConnectionModalP
     })
   }
 
-  const supportedDrivers = DriverFactory.getSupportedDrivers();
+  const supportedDrivers = DriverFactory.getSupportedDrivers()
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="bg-background border-border sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle className="font-mono text-foreground">New Connection</DialogTitle>
+          <DialogTitle className="font-mono text-foreground">
+            {isEditing ? "Edit Connection" : "New Connection"}
+          </DialogTitle>
           <DialogDescription className="text-muted-foreground text-xs">
-            Add a new database connection
+            {isEditing ? "Update connection details" : "Add a new database connection"}
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4 mt-4">
@@ -90,6 +101,7 @@ export function ConnectionModal({ open, onOpenChange, onSave }: ConnectionModalP
               value={formData.driver}
               onChange={(e) => handleDriverChange(e.target.value as DriverType)}
               className="w-full bg-input border border-border text-foreground font-mono text-sm rounded-md px-3 py-2"
+              disabled={isEditing}
             >
               {supportedDrivers.map((driverType) => (
                 <option key={driverType} value={driverType}>
@@ -109,6 +121,7 @@ export function ConnectionModal({ open, onOpenChange, onSave }: ConnectionModalP
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               placeholder="production-db"
               required
+              disabled={isEditing}
               className="bg-input border-border text-foreground font-mono text-sm"
             />
           </div>
@@ -202,7 +215,7 @@ export function ConnectionModal({ open, onOpenChange, onSave }: ConnectionModalP
               Cancel
             </Button>
             <Button type="submit" className="font-mono text-xs bg-primary text-primary-foreground">
-              Connect
+              {isEditing ? "Save Changes" : "Connect"}
             </Button>
           </div>
         </form>

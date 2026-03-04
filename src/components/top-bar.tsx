@@ -1,0 +1,121 @@
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+import { useProjectStore } from "@/stores/project-store";
+import { useTabStore, useActiveTab } from "@/stores/tab-store";
+import { useUIStore } from "@/stores/ui-store";
+import { insertQuery } from "@/tauri";
+import { ProjectConnectionStatus } from "@/types";
+import { Database, Moon, Play, Save, Sun } from "lucide-react";
+
+export function TopBar({ onExecute }: { onExecute: () => void }) {
+  const theme = useUIStore((s) => s.theme);
+  const toggleTheme = useUIStore((s) => s.toggleTheme);
+  const projects = useProjectStore((s) => s.projects);
+  const status = useProjectStore((s) => s.status);
+  const selectedTabIndex = useTabStore((s) => s.selectedTabIndex);
+  const activeTab = useActiveTab();
+  const setProjectId = useTabStore((s) => s.setProjectId);
+  const activeProject = activeTab?.projectId;
+  const activeProjectDetails = activeProject ? projects[activeProject] : undefined;
+
+  const connectedProjects = Object.entries(projects).filter(
+    ([id]) => status[id] === ProjectConnectionStatus.Connected,
+  );
+
+  const saveQuery = async () => {
+    if (!activeProject || !activeProjectDetails) return;
+    const title = prompt("Query title?");
+    if (!title) return;
+    const queryId = `${activeProject}:${activeProjectDetails.database}:${activeProjectDetails.driver}:${title}`;
+    await insertQuery(queryId, activeTab?.editorValue ?? "");
+  };
+
+  return (
+    <div className="flex h-12 items-center justify-between border-b border-border bg-card px-4">
+      <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
+          <Database className="h-5 w-5" />
+          <span className="font-mono text-sm font-semibold">PostgresGUI</span>
+        </div>
+        <div className="h-4 w-px bg-border" />
+        {activeProject && activeProjectDetails ? (
+          <div className="flex items-center gap-1 text-xs text-muted-foreground">
+            <div
+              className={cn(
+                "h-2 w-2 rounded-full",
+                status[activeProject] === ProjectConnectionStatus.Connected && "bg-success",
+                status[activeProject] === ProjectConnectionStatus.Connecting && "bg-warning",
+                status[activeProject] === ProjectConnectionStatus.Failed && "bg-destructive",
+                !status[activeProject] && "bg-destructive",
+              )}
+            />
+            <span className="font-mono">{activeProject}</span>
+            <span className="text-muted-foreground/50">&bull;</span>
+            <span>
+              {activeProjectDetails.host}:{activeProjectDetails.port}
+            </span>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2">
+            {connectedProjects.length > 0 ? (
+              <select
+                className="bg-input border border-border text-foreground font-mono text-xs rounded px-2 py-1"
+                value=""
+                onChange={(e) => {
+                  if (e.target.value) {
+                    setProjectId(selectedTabIndex, e.target.value);
+                  }
+                }}
+              >
+                <option value="">Select connection...</option>
+                {connectedProjects.map(([id, details]) => (
+                  <option key={id} value={id}>
+                    {id} ({details.database})
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <span className="text-xs text-muted-foreground">No active connection</span>
+            )}
+          </div>
+        )}
+      </div>
+
+      <div className="flex items-center gap-2">
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-8 gap-2"
+          onClick={() => void saveQuery()}
+          disabled={!activeProject}
+        >
+          <Save className="h-4 w-4" />
+          <span className="text-xs">Save</span>
+        </Button>
+        <Button
+          variant="default"
+          size="sm"
+          className="h-8 gap-2 bg-primary text-primary-foreground"
+          onClick={onExecute}
+          disabled={!activeProject || activeTab?.isExecuting}
+        >
+          <Play className="h-4 w-4" />
+          <span className="text-xs">Execute ({navigator.platform.includes("Mac") ? "\u2318" : "Ctrl"}+Enter)</span>
+        </Button>
+        <div className="h-4 w-px bg-border" />
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8"
+          onClick={toggleTheme}
+        >
+          {theme === "light" ? (
+            <Moon className="h-4 w-4" />
+          ) : (
+            <Sun className="h-4 w-4" />
+          )}
+        </Button>
+      </div>
+    </div>
+  );
+}

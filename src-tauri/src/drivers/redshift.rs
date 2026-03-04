@@ -1,16 +1,20 @@
-use std::{sync::Arc, time::Instant};
+use std::sync::Arc;
 
-use crate::common::{
-    enums::{PostgresqlError, ProjectConnectionStatus},
-    pgsql::{PgsqlLoadColumns, PgsqlLoadSchemas, PgsqlLoadTables},
+use crate::common::enums::{AppError, ProjectConnectionStatus};
+use crate::common::pgsql::{PgsqlLoadColumns, PgsqlLoadSchemas, PgsqlLoadTables};
+use crate::drivers::common::{
+    execute_query, get_client, load_column_details, load_columns, load_constraints,
+    load_indexes, load_schemas, load_tables, load_triggers, load_views,
+    ColumnDetail, ConstraintDetail, DbStat, FunctionInfo, IndexDetail, PolicyDetail, RuleDetail,
+    TriggerDetail,
 };
+use crate::AppState;
+
+use native_tls::TlsConnector;
+use postgres_native_tls::MakeTlsConnector;
 use tauri::{AppHandle, Manager, Result, State};
 use tokio::{sync::Mutex, time as tokio_time};
 use tokio_postgres::Config;
-use postgres_native_tls::MakeTlsConnector;
-use native_tls::TlsConnector;
-
-use crate::{utils::reflective_get, AppState};
 
 #[tauri::command(rename_all = "snake_case")]
 pub async fn redshift_connector(
@@ -20,97 +24,89 @@ pub async fn redshift_connector(
 ) -> Result<ProjectConnectionStatus> {
     let app_state = app.state::<AppState>();
     let mut clients = app_state.client.lock().await;
-    tracing::info!("Redshift connection attempt: {:?}", key);
-    
-    // check if connection already exists
-    if clients.as_ref().unwrap().contains_key(project_id) {
-        tracing::info!("Redshift connection already exists!");
+    let client_map = clients.as_mut().ok_or(AppError::DatabaseError("No client map".into()))?;
+
+    if client_map.contains_key(project_id) {
         return Ok(ProjectConnectionStatus::Connected);
     }
 
-    let (user, password, database, host, port_str, use_ssl) = match key {
+    let (user, password, database, host, port_str, _use_ssl) = match key {
         Some(key) => (
-            key[0].to_string(),
-            key[1].to_string(),
-            key[2].to_string(),
-            key[3].to_string(),
-            key[4].to_string(),
-            key[5] == "true",
+            key[0].to_string(), key[1].to_string(), key[2].to_string(),
+            key[3].to_string(), key[4].to_string(), key[5] == "true",
         ),
         None => {
-            let projects_db = app_state.project_db.lock().await;
-            let projects_db = projects_db.as_ref().unwrap();
-            let project_details = projects_db.get(project_id).unwrap();
-            let project_details = match project_details {
-                Some(bytes) => bincode::deserialize::<Vec<String>>(&bytes).unwrap(),
-                _ => Vec::new(),
-            };
+            let conn = app_state.local_db.connect()
+                .map_err(|e| AppError::DatabaseError(e.to_string()))?;
+            let mut rows = conn
+                .query(
+                    "SELECT username, password, database, host, port, ssl FROM projects WHERE id = ?1",
+                    libsql::params![project_id],
+                )
+                .await
+                .map_err(|e| AppError::DatabaseError(e.to_string()))?;
+            let row = rows
+                .next()
+                .await
+                .map_err(|e| AppError::DatabaseError(e.to_string()))?
+                .ok_or_else(|| AppError::ProjectNotFound(project_id.to_string()))?;
             (
-                project_details[1].clone(),
-                project_details[2].clone(),
-                project_details[3].clone(),
-                project_details[4].clone(),
-                project_details[5].clone(),
-                project_details.get(6).map(|s| s == "true").unwrap_or(false),
+                row.get::<String>(0).unwrap_or_default(),
+                row.get::<String>(1).unwrap_or_default(),
+                row.get::<String>(2).unwrap_or_default(),
+                row.get::<String>(3).unwrap_or_default(),
+                row.get::<String>(4).unwrap_or_default(),
+                row.get::<String>(5).map(|s| s == "true").unwrap_or(false),
             )
         }
     };
 
-    let port: u16 = port_str.parse::<u16>().unwrap_or(5439); // Redshift default port
+    let port: u16 = port_str.parse().unwrap_or(5439);
     let mut cfg = Config::new();
-    cfg.user(&user);
-    cfg.password(password);
-    cfg.dbname(&database);
-    cfg.host(&host);
-    cfg.port(port);
+    cfg.user(&user).password(&password).dbname(&database).host(&host).port(port);
 
-    tracing::info!("Redshift SSL enabled: {}", use_ssl);
-
-    // Redshift always uses SSL in production, but allow NoTls for testing
+    // Redshift uses TLS with self-signed certs
     let tls_connector = TlsConnector::builder()
-        .danger_accept_invalid_certs(true) // Accept self-signed certs
+        .danger_accept_invalid_certs(true)
         .build()
-        .unwrap();
+        .map_err(|e| AppError::ConnectionFailed(e.to_string()))?;
     let tls = MakeTlsConnector::new(tls_connector);
-    
-    let connection = tokio_time::timeout(tokio_time::Duration::from_secs(10), cfg.connect(tls))
-        .await
-        .map_err(|_| PostgresqlError::ConnectionTimeout);
 
-    if let Err(e) = connection {
-        tracing::error!("Redshift connection timeout error: {:?}", e);
-        return Ok(ProjectConnectionStatus::Failed);
-    }
+    let connection = tokio_time::timeout(
+        tokio_time::Duration::from_secs(10),
+        cfg.connect(tls),
+    )
+    .await
+    .map_err(|_| AppError::ConnectionTimeout);
 
-    let connection = connection.unwrap();
-    if let Err(e) = connection {
-        tracing::error!("Redshift connection error: {:?}", e);
-        return Ok(ProjectConnectionStatus::Failed);
-    }
+    let (client, connection) = match connection {
+        Ok(Ok(pair)) => pair,
+        Ok(Err(e)) => {
+            tracing::error!("Redshift connection error: {:?}", e);
+            return Ok(ProjectConnectionStatus::Failed);
+        }
+        Err(_) => {
+            tracing::error!("Redshift connection timeout");
+            return Ok(ProjectConnectionStatus::Failed);
+        }
+    };
 
     let is_connection_error = Arc::new(Mutex::new(false));
-    let (client, connection) = connection.unwrap();
-    tracing::info!("Redshift connection established!");
-
-    // check if connection has some error
     tokio::spawn({
-        let is_connection_error = Arc::clone(&is_connection_error);
+        let flag = Arc::clone(&is_connection_error);
         async move {
             if let Err(e) = connection.await {
-                tracing::info!("Redshift connection error: {:?}", e);
-                *is_connection_error.lock().await = true;
+                tracing::error!("Redshift connection error: {:?}", e);
+                *flag.lock().await = true;
             }
-        }   
+        }
     });
 
     if *is_connection_error.lock().await {
-        tracing::error!("Redshift connection error!");
         return Ok(ProjectConnectionStatus::Failed);
     }
 
-    let clients = clients.as_mut().unwrap();
-    clients.insert(project_id.to_string(), client);
-
+    client_map.insert(project_id.to_string(), client);
     Ok(ProjectConnectionStatus::Connected)
 }
 
@@ -120,46 +116,19 @@ pub async fn redshift_load_schemas(
     app_state: State<'_, AppState>,
 ) -> Result<PgsqlLoadSchemas> {
     let clients = app_state.client.lock().await;
-    let client = clients.as_ref().unwrap().get(project_id).unwrap();
+    let client_map = clients.as_ref().ok_or(AppError::DatabaseError("No client map".into()))?;
+    let client = get_client(client_map, project_id)?;
 
-    // Use pg_namespace for complete schema list
-    let query = tokio_time::timeout(
-        tokio_time::Duration::from_secs(10),
-        client.query(
-            r#"--sql
-        SELECT nspname AS schema_name
-        FROM pg_catalog.pg_namespace
-        WHERE nspname NOT LIKE 'pg_%'
-          AND nspname != 'information_schema'
-        ORDER BY schema_name;
-        "#,
-            &[],
-        ),
+    load_schemas(
+        client,
+        r#"SELECT nspname AS schema_name
+           FROM pg_catalog.pg_namespace
+           WHERE nspname NOT LIKE 'pg_%'
+             AND nspname != 'information_schema'
+           ORDER BY schema_name"#,
     )
     .await
-    .map_err(|_| PostgresqlError::QueryTimeout);
-
-    if query.is_err() {
-        tracing::error!("Redshift schema query timeout error!");
-        return Err(tauri::Error::Io(std::io::Error::new(
-            std::io::ErrorKind::Other,
-            PostgresqlError::QueryTimeout,
-        )));
-    }
-
-    let query = query.unwrap();
-    if query.is_err() {
-        tracing::error!("Redshift schema query error!");
-        return Err(tauri::Error::Io(std::io::Error::new(
-            std::io::ErrorKind::Other,
-            PostgresqlError::QueryError,
-        )));
-    }
-
-    let qeury = query.unwrap();
-    let schemas = qeury.iter().map(|r| r.get(0)).collect::<Vec<String>>();
-    tracing::info!("Redshift schemas: {:?}", schemas);
-    Ok(schemas)
+    .map_err(Into::into)
 }
 
 #[tauri::command(rename_all = "snake_case")]
@@ -169,38 +138,19 @@ pub async fn redshift_load_tables(
     app_state: State<'_, AppState>,
 ) -> Result<PgsqlLoadTables> {
     let clients = app_state.client.lock().await;
-    let client = clients.as_ref().unwrap().get(project_id).unwrap();
-    
-    // Use information_schema which is more universally accessible
-    let query = client
-    .query(
-      r#"--sql
-        SELECT 
-          table_name,
-          table_type AS size
-        FROM information_schema.tables
-        WHERE table_schema = $1
-        ORDER BY table_name;
-        "#,
-      &[&schema],
-    )
-    .await;
+    let client_map = clients.as_ref().ok_or(AppError::DatabaseError("No client map".into()))?;
+    let client = get_client(client_map, project_id)?;
 
-    
-    if let Err(e) = query {
-        tracing::error!("Redshift load tables error: {:?}", e);
-        return Err(tauri::Error::Io(std::io::Error::new(
-            std::io::ErrorKind::Other,
-            format!("Failed to load tables: {:?}", e),
-        )));
-    }
-    
-    let rows = query.unwrap();
-    let tables = rows
-        .iter()
-        .map(|r| (r.get(0), r.get(1)))
-        .collect::<Vec<(String, String)>>();
-    Ok(tables)
+    load_tables(
+        client,
+        r#"SELECT table_name, table_type AS size
+           FROM information_schema.tables
+           WHERE table_schema = $1
+           ORDER BY table_name"#,
+        schema,
+    )
+    .await
+    .map_err(Into::into)
 }
 
 #[tauri::command(rename_all = "snake_case")]
@@ -211,24 +161,143 @@ pub async fn redshift_load_columns(
     app_state: State<'_, AppState>,
 ) -> Result<PgsqlLoadColumns> {
     let clients = app_state.client.lock().await;
-    let client = clients.as_ref().unwrap().get(project_id).unwrap();
-    let rows = client
-        .query(
-            r#"--sql
-        SELECT column_name
-        FROM information_schema.columns
-        WHERE table_schema = $1 AND table_name = $2
-        ORDER BY ordinal_position;
-        "#,
-            &[&schema, &table],
-        )
+    let client_map = clients.as_ref().ok_or(AppError::DatabaseError("No client map".into()))?;
+    let client = get_client(client_map, project_id)?;
+
+    load_columns(client, schema, table)
         .await
-        .unwrap();
-    let cols = rows
-        .iter()
-        .map(|r| r.get::<_, String>(0))
-        .collect::<Vec<String>>();
-    Ok(cols)
+        .map_err(Into::into)
+}
+
+#[tauri::command(rename_all = "snake_case")]
+pub async fn redshift_load_column_details(
+    project_id: &str,
+    schema: &str,
+    table: &str,
+    app_state: State<'_, AppState>,
+) -> Result<Vec<ColumnDetail>> {
+    let clients = app_state.client.lock().await;
+    let client_map = clients.as_ref().ok_or(AppError::DatabaseError("No client map".into()))?;
+    let client = get_client(client_map, project_id)?;
+
+    load_column_details(client, schema, table)
+        .await
+        .map_err(Into::into)
+}
+
+#[tauri::command(rename_all = "snake_case")]
+pub async fn redshift_load_indexes(
+    project_id: &str,
+    schema: &str,
+    table: &str,
+    app_state: State<'_, AppState>,
+) -> Result<Vec<IndexDetail>> {
+    let clients = app_state.client.lock().await;
+    let client_map = clients.as_ref().ok_or(AppError::DatabaseError("No client map".into()))?;
+    let client = get_client(client_map, project_id)?;
+
+    load_indexes(client, schema, table)
+        .await
+        .map_err(Into::into)
+}
+
+#[tauri::command(rename_all = "snake_case")]
+pub async fn redshift_load_constraints(
+    project_id: &str,
+    schema: &str,
+    table: &str,
+    app_state: State<'_, AppState>,
+) -> Result<Vec<ConstraintDetail>> {
+    let clients = app_state.client.lock().await;
+    let client_map = clients.as_ref().ok_or(AppError::DatabaseError("No client map".into()))?;
+    let client = get_client(client_map, project_id)?;
+
+    load_constraints(client, schema, table)
+        .await
+        .map_err(Into::into)
+}
+
+#[tauri::command(rename_all = "snake_case")]
+pub async fn redshift_load_triggers(
+    project_id: &str,
+    schema: &str,
+    table: &str,
+    app_state: State<'_, AppState>,
+) -> Result<Vec<TriggerDetail>> {
+    let clients = app_state.client.lock().await;
+    let client_map = clients.as_ref().ok_or(AppError::DatabaseError("No client map".into()))?;
+    let client = get_client(client_map, project_id)?;
+
+    load_triggers(client, schema, table)
+        .await
+        .map_err(Into::into)
+}
+
+#[tauri::command(rename_all = "snake_case")]
+pub async fn redshift_load_rules(
+    _project_id: &str,
+    _schema: &str,
+    _table: &str,
+    _app_state: State<'_, AppState>,
+) -> Result<Vec<RuleDetail>> {
+    // Redshift does not support rules
+    Ok(Vec::new())
+}
+
+#[tauri::command(rename_all = "snake_case")]
+pub async fn redshift_load_policies(
+    _project_id: &str,
+    _schema: &str,
+    _table: &str,
+    _app_state: State<'_, AppState>,
+) -> Result<Vec<PolicyDetail>> {
+    // Redshift does not support RLS policies
+    Ok(Vec::new())
+}
+
+#[tauri::command(rename_all = "snake_case")]
+pub async fn redshift_load_views(
+    project_id: &str,
+    schema: &str,
+    app_state: State<'_, AppState>,
+) -> Result<Vec<String>> {
+    let clients = app_state.client.lock().await;
+    let client_map = clients.as_ref().ok_or(AppError::DatabaseError("No client map".into()))?;
+    let client = get_client(client_map, project_id)?;
+
+    load_views(client, schema)
+        .await
+        .map_err(Into::into)
+}
+
+#[tauri::command(rename_all = "snake_case")]
+pub async fn redshift_load_materialized_views(
+    _project_id: &str,
+    _schema: &str,
+    _app_state: State<'_, AppState>,
+) -> Result<Vec<String>> {
+    // Redshift late-binding views differ from PG materialized views
+    Ok(Vec::new())
+}
+
+#[tauri::command(rename_all = "snake_case")]
+pub async fn redshift_load_functions(
+    _project_id: &str,
+    _schema: &str,
+    _app_state: State<'_, AppState>,
+) -> Result<Vec<FunctionInfo>> {
+    // Redshift UDFs have different catalog structure
+    Ok(Vec::new())
+}
+
+#[tauri::command(rename_all = "snake_case")]
+pub async fn redshift_load_trigger_functions(
+    _project_id: &str,
+    _schema: &str,
+    _app_state: State<'_, AppState>,
+) -> Result<Vec<(String, String)>> {
+    // Redshift does not support trigger functions
+    Ok(Vec::new())
 }
 
 #[tauri::command(rename_all = "snake_case")]
@@ -237,34 +306,36 @@ pub async fn redshift_run_query(
     sql: &str,
     app_state: State<'_, AppState>,
 ) -> Result<(Vec<String>, Vec<Vec<String>>, f32)> {
-    let start = Instant::now();
     let clients = app_state.client.lock().await;
-    let client = clients.as_ref().unwrap().get(project_id).unwrap();
-    let rows = client.query(sql, &[]).await.unwrap();
+    let client_map = clients.as_ref().ok_or(AppError::DatabaseError("No client map".into()))?;
+    let client = get_client(client_map, project_id)?;
 
-    if rows.is_empty() {
-        return Ok((Vec::new(), Vec::new(), 0.0f32));
-    }
-
-    let columns = rows
-        .first()
-        .unwrap()
-        .columns()
-        .iter()
-        .map(|c| c.name().to_string())
-        .collect::<Vec<String>>();
-    let rows = rows
-        .iter()
-        .map(|row| {
-            let mut row_values = Vec::new();
-            for i in 0..row.len() {
-                let value = reflective_get(row, i);
-                row_values.push(value);
-            }
-            row_values
-        })
-        .collect::<Vec<Vec<String>>>();
-    let elasped = start.elapsed().as_millis() as f32;
-    Ok((columns, rows, elasped))
+    execute_query(client, sql)
+        .await
+        .map_err(Into::into)
 }
 
+#[tauri::command(rename_all = "snake_case")]
+pub async fn redshift_load_activity(
+    _project_id: &str,
+    _app_state: State<'_, AppState>,
+) -> Result<Vec<Vec<String>>> {
+    // Redshift uses STV_RECENTS/STL_QUERY instead of pg_stat_activity
+    Ok(Vec::new())
+}
+
+#[tauri::command(rename_all = "snake_case")]
+pub async fn redshift_load_database_stats(
+    _project_id: &str,
+    _app_state: State<'_, AppState>,
+) -> Result<Vec<DbStat>> {
+    Ok(Vec::new())
+}
+
+#[tauri::command(rename_all = "snake_case")]
+pub async fn redshift_load_table_stats(
+    _project_id: &str,
+    _app_state: State<'_, AppState>,
+) -> Result<Vec<Vec<String>>> {
+    Ok(Vec::new())
+}

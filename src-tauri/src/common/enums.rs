@@ -1,7 +1,7 @@
-use std::fmt::Display;
-
+use std::fmt;
 use serde::{Deserialize, Serialize};
 
+#[allow(dead_code)]
 #[derive(Clone, Copy, Serialize, Deserialize, Default)]
 pub enum Drivers {
   #[default]
@@ -9,8 +9,8 @@ pub enum Drivers {
   REDSHIFT,
 }
 
-impl Display for Drivers {
-  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl fmt::Display for Drivers {
+  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
     match self {
       Drivers::PGSQL => write!(f, "PGSQL"),
       Drivers::REDSHIFT => write!(f, "REDSHIFT"),
@@ -37,8 +37,8 @@ pub enum ProjectConnectionStatus {
 }
 
 impl std::error::Error for ProjectConnectionStatus {}
-impl Display for ProjectConnectionStatus {
-  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl fmt::Display for ProjectConnectionStatus {
+  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
     match self {
       ProjectConnectionStatus::Connected => write!(f, "Connected"),
       ProjectConnectionStatus::Connecting => write!(f, "Connecting"),
@@ -48,25 +48,28 @@ impl Display for ProjectConnectionStatus {
   }
 }
 
-use std::fmt;
-
-#[derive(Debug, Serialize, Deserialize, Clone, Copy)]
-pub enum PostgresqlError {
+#[derive(Debug, thiserror::Error)]
+pub enum AppError {
+  #[error("Connection timed out")]
   ConnectionTimeout,
-  ConnectionError,
+  #[error("Connection failed: {0}")]
+  ConnectionFailed(String),
+  #[error("Query timed out")]
   QueryTimeout,
-  QueryError,
+  #[error("Query failed: {0}")]
+  QueryFailed(String),
+  #[error("Project not found: {0}")]
+  ProjectNotFound(String),
+  #[error("Client not connected: {0}")]
+  ClientNotConnected(String),
+  #[error("Database error: {0}")]
+  DatabaseError(String),
+  #[error("Serialization error: {0}")]
+  SerializationError(String),
 }
 
-impl std::error::Error for PostgresqlError {}
-impl fmt::Display for PostgresqlError {
-  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-    match *self {
-      PostgresqlError::ConnectionTimeout => write!(f, "ConnectionTimeout"),
-      PostgresqlError::ConnectionError => write!(f, "ConnectionError"),
-      PostgresqlError::QueryTimeout => write!(f, "QueryTimeout"),
-      PostgresqlError::QueryError => write!(f, "QueryError"),
-    }
+impl From<AppError> for tauri::Error {
+  fn from(e: AppError) -> Self {
+    tauri::Error::Io(std::io::Error::new(std::io::ErrorKind::Other, e.to_string()))
   }
 }
-

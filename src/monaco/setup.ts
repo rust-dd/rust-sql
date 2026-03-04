@@ -7,7 +7,6 @@ import 'monaco-sql-languages/esm/languages/pgsql/pgsql.contribution'
 import { setupLanguageFeatures } from 'monaco-sql-languages/esm/setupLanguageFeatures'
 import { LanguageIdEnum } from 'monaco-sql-languages/esm/common/constants'
 
-// Map workers for Monaco when using Vite bundling
 // @ts-expect-error MonacoEnvironment is attached to global scope at runtime
 self.MonacoEnvironment = {
   getWorker(_workerId: string, label: string) {
@@ -18,18 +17,13 @@ self.MonacoEnvironment = {
   },
 }
 
-// Ensure @monaco-editor/react uses the ESM monaco instance
 loader.config({ monaco })
 
-// Configure monaco-sql-languages features for pgsql
-const letters = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_'.split('')
 setupLanguageFeatures(LanguageIdEnum.PG, {
   completionItems: {
-    enable: true,
-    triggerCharacters: ['.', ' ', ...letters],
+    enable: false, // Disabled: our custom provider handles completions
   },
   diagnostics: true,
   definitions: true,
   references: true,
 })
-

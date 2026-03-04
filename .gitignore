@@ -34,3 +34,5 @@ query_db
 /src-tauri/project_db# Local databases (should never be committed)
 src-tauri/project_db/
 src-tauri/query_db/
+
+*.db

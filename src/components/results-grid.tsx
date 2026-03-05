@@ -1,4 +1,4 @@
-import { useRef, useMemo, useState, useCallback, useEffect } from "react";
+import { useRef, useMemo, useState, useCallback, useEffect, useImperativeHandle, type MutableRefObject } from "react";
 import DataEditor, {
   type GridColumn,
   type GridCell,
@@ -27,7 +27,7 @@ interface ResultsGridProps {
   onFKNavigate?: (colName: string, value: string) => void;
   virtualQuery?: VirtualQuery;
   onPageNeeded?: (pageIndex: number) => void;
-  cacheVersion?: number;
+  gridRef?: MutableRefObject<{ invalidate: () => void } | null>;
 }
 
 const MIN_COL_WIDTH = 80;
@@ -58,11 +58,24 @@ export function ResultsGrid({
   onFKNavigate,
   virtualQuery,
   onPageNeeded,
-  cacheVersion,
+  gridRef,
 }: ResultsGridProps) {
   const theme = useUIStore((s) => s.theme);
   const containerRef = useRef<HTMLDivElement>(null);
   const [containerSize, setContainerSize] = useState({ width: 800, height: 400 });
+
+  // Batched invalidation — multiple page fetches within one frame only cause one re-render.
+  // The version is included in getCellContent deps so DataEditor gets a fresh callback.
+  const invalidateRafId = useRef(0);
+  const [cacheVersion, setCacheVersion] = useState(0);
+  useImperativeHandle(gridRef ?? { current: null }, () => ({
+    invalidate: () => {
+      cancelAnimationFrame(invalidateRafId.current);
+      invalidateRafId.current = requestAnimationFrame(() => {
+        setCacheVersion((v) => v + 1);
+      });
+    },
+  }), []);
 
   // Observe container size (debounced to avoid mid-scroll re-renders)
   useEffect(() => {
@@ -109,6 +122,17 @@ export function ResultsGrid({
     return s;
   }, [columns, fkColumns]);
 
+  // Pre-compute theme override objects — avoids creating new objects per cell render
+  const deletedOverride = useMemo(() => (
+    { bgCell: "rgba(239, 68, 68, 0.1)", textDark: "#999", textLight: "#999" }
+  ), []);
+  const modifiedOverride = useMemo(() => (
+    { bgCell: theme === "dark" ? "rgba(245, 158, 11, 0.15)" : "rgba(245, 158, 11, 0.1)" }
+  ), [theme]);
+  const fkOverride = useMemo(() => (
+    { textDark: "hsl(220, 70%, 50%)", textLight: "hsl(220, 70%, 65%)" }
+  ), []);
+
   // Total row count: virtual mode uses totalRows, otherwise rows.length
   const totalRowCount = virtualQuery ? virtualQuery.totalRows : rows.length;
 
@@ -144,11 +168,11 @@ export function ResultsGrid({
         allowOverlay: !!isEditing && !isDeleted,
         readonly: !isEditing || !!isDeleted,
         themeOverride: isDeleted
-          ? { bgCell: "rgba(239, 68, 68, 0.1)", textDark: "#999", textLight: "#999" }
+          ? deletedOverride
           : isModified
-            ? { bgCell: theme === "dark" ? "rgba(245, 158, 11, 0.15)" : "rgba(245, 158, 11, 0.1)" }
+            ? modifiedOverride
             : isFK && value !== "null"
-              ? { textDark: "hsl(220, 70%, 50%)", textLight: "hsl(220, 70%, 65%)" }
+              ? fkOverride
               : undefined,
       };
 

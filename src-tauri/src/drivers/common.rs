@@ -33,15 +33,18 @@ fn process_simple_messages(messages: Vec<SimpleQueryMessage>) -> (Vec<String>, V
     for msg in messages {
         match msg {
             SimpleQueryMessage::Row(row) => {
-                if cur_columns.is_empty() {
-                    cur_columns = row.columns().iter().map(|c| c.name().to_string()).collect();
-                }
                 let col_count = row.columns().len();
-                cur_rows.push(
-                    (0..col_count)
-                        .map(|i| row.get(i).unwrap_or("null").to_string())
-                        .collect(),
-                );
+                if cur_columns.is_empty() {
+                    cur_columns = Vec::with_capacity(col_count);
+                    for c in row.columns() {
+                        cur_columns.push(c.name().to_owned());
+                    }
+                }
+                let mut cells = Vec::with_capacity(col_count);
+                for i in 0..col_count {
+                    cells.push(row.get(i).unwrap_or("null").to_owned());
+                }
+                cur_rows.push(cells);
             }
             SimpleQueryMessage::CommandComplete(n) => {
                 if !cur_rows.is_empty() {
@@ -67,7 +70,7 @@ fn process_simple_messages(messages: Vec<SimpleQueryMessage>) -> (Vec<String>, V
         (last_columns, last_rows)
     } else if total_affected > 0 {
         (
-            vec!["Result".to_string()],
+            vec!["Result".into()],
             vec![vec![format!("{} rows affected", total_affected)]],
         )
     } else {
@@ -97,6 +100,18 @@ pub async fn execute_query(
 const CELL_SEP: char = '\x1F';
 /// Row separator for packed format (Record Separator, ASCII 0x1E)
 const ROW_SEP: char = '\x1E';
+
+/// Join string slices with a char separator — avoids .to_string() on the separator.
+#[inline]
+fn join_sep(items: &[String], sep: char) -> String {
+    let total: usize = items.iter().map(|s| s.len()).sum::<usize>() + items.len();
+    let mut out = String::with_capacity(total);
+    for (i, item) in items.iter().enumerate() {
+        if i > 0 { out.push(sep); }
+        out.push_str(item);
+    }
+    out
+}
 
 /// Events emitted during streamed query execution.
 #[derive(serde::Serialize, Clone)]
@@ -134,15 +149,17 @@ pub async fn execute_query_packed(
         return Ok((String::new(), start.elapsed().as_millis() as f32));
     }
 
-    let cell_sep = CELL_SEP.to_string();
-    let row_sep = ROW_SEP.to_string();
-    let header = columns.join(&cell_sep);
+    let header = join_sep(&columns, CELL_SEP);
     let body = pack_rows_vec(&rows);
 
     let packed = if body.is_empty() {
         header
     } else {
-        format!("{}{}{}", header, row_sep, body)
+        let mut s = String::with_capacity(header.len() + 1 + body.len());
+        s.push_str(&header);
+        s.push(ROW_SEP);
+        s.push_str(&body);
+        s
     };
     let elapsed = start.elapsed().as_millis() as f32;
     Ok((packed, elapsed))
@@ -174,7 +191,6 @@ pub async fn execute_query_streamed(
             let mut total_sent: usize = 0;
             let mut columns_sent = false;
             let mut capped = false;
-            let cell_sep = CELL_SEP.to_string();
 
             loop {
                 let messages = client.simple_query(&fetch_sql).await
@@ -188,17 +204,19 @@ pub async fn execute_query_streamed(
 
                 for msg in messages {
                     if let SimpleQueryMessage::Row(row) = msg {
-                        if batch_columns.is_none() {
-                            batch_columns = Some(
-                                row.columns().iter().map(|c| c.name().to_string()).collect(),
-                            );
-                        }
                         let col_count = row.columns().len();
-                        batch_rows.push(
-                            (0..col_count)
-                                .map(|i| row.get(i).unwrap_or("null").to_string())
-                                .collect(),
-                        );
+                        if batch_columns.is_none() {
+                            let mut cols = Vec::with_capacity(col_count);
+                            for c in row.columns() {
+                                cols.push(c.name().to_owned());
+                            }
+                            batch_columns = Some(cols);
+                        }
+                        let mut cells = Vec::with_capacity(col_count);
+                        for i in 0..col_count {
+                            cells.push(row.get(i).unwrap_or("null").to_owned());
+                        }
+                        batch_rows.push(cells);
                     }
                 }
 
@@ -209,7 +227,7 @@ pub async fn execute_query_streamed(
                 // Emit columns on first batch
                 if !columns_sent {
                     if let Some(cols) = batch_columns {
-                        let header = cols.join(&cell_sep);
+                        let header = join_sep(&cols, CELL_SEP);
                         let _ = app.emit(&event_name, QueryStreamEvent::Columns {
                             columns: header,
                             total_rows: 0,
@@ -259,8 +277,7 @@ pub async fn execute_query_streamed(
                     total_rows: 0,
                 });
             } else {
-                let cell_sep = CELL_SEP.to_string();
-                let header = columns.join(&cell_sep);
+                let header = join_sep(&columns, CELL_SEP);
                 let _ = app.emit(&event_name, QueryStreamEvent::Columns {
                     columns: header,
                     total_rows: rows.len(),
@@ -289,19 +306,34 @@ pub struct CachedQuery {
 pub type VirtualCache = std::collections::BTreeMap<String, CachedQuery>;
 
 /// Pack a slice of rows (each row = Vec<String>) into wire format.
+/// Pre-allocates capacity and writes directly — zero intermediate allocations.
 fn pack_rows_vec(rows: &[Vec<String>]) -> String {
-    let cell_sep = CELL_SEP.to_string();
-    let row_sep = ROW_SEP.to_string();
-    let row_strings: Vec<String> = rows
-        .iter()
-        .map(|row| {
-            row.iter()
-                .map(|cell| cell.replace(CELL_SEP, " ").replace(ROW_SEP, " "))
-                .collect::<Vec<_>>()
-                .join(&cell_sep)
-        })
-        .collect();
-    row_strings.join(&row_sep)
+    if rows.is_empty() {
+        return String::new();
+    }
+    // Estimate capacity: avg ~20 chars per cell
+    let est = rows.len() * rows.first().map_or(10, |r| r.len()) * 20;
+    let mut out = String::with_capacity(est);
+
+    for (ri, row) in rows.iter().enumerate() {
+        if ri > 0 {
+            out.push(ROW_SEP);
+        }
+        for (ci, cell) in row.iter().enumerate() {
+            if ci > 0 {
+                out.push(CELL_SEP);
+            }
+            // Inline separator sanitization — avoids .replace() allocations
+            for ch in cell.chars() {
+                if ch == CELL_SEP || ch == ROW_SEP {
+                    out.push(' ');
+                } else {
+                    out.push(ch);
+                }
+            }
+        }
+    }
+    out
 }
 
 /// Execute a query in one shot using simple_query protocol.
@@ -331,29 +363,27 @@ pub async fn execute_virtual(
 
     // Synthetic "N rows affected" result — pass through as fallback format
     if columns.len() == 1 && columns[0] == "Result" {
-        let cell_sep = CELL_SEP.to_string();
-        let row_sep = ROW_SEP.to_string();
-        let fallback = format!(
-            "{}{}{}",
-            columns[0],
-            row_sep,
-            all_rows.first().map(|r| r.join(&cell_sep)).unwrap_or_default()
-        );
+        let mut fallback = String::with_capacity(64);
+        fallback.push_str(&columns[0]);
+        fallback.push(ROW_SEP);
+        if let Some(r) = all_rows.first() {
+            fallback.push_str(&join_sep(r, CELL_SEP));
+        }
         let elapsed = start.elapsed().as_millis() as f32;
         return Ok((String::new(), 0, fallback, elapsed));
     }
 
     let total_rows = all_rows.len();
 
-    // Pre-pack into pages in parallel
+    // Pre-pack into pages — use rayon only for large results (>50K rows)
     let chunks: Vec<&[Vec<String>]> = all_rows.chunks(page_size).collect();
-    let pages: Vec<String> = chunks
-        .par_iter()
-        .map(|chunk| pack_rows_vec(chunk))
-        .collect();
+    let pages: Vec<String> = if total_rows > 50_000 {
+        chunks.par_iter().map(|chunk| pack_rows_vec(chunk)).collect()
+    } else {
+        chunks.iter().map(|chunk| pack_rows_vec(chunk)).collect()
+    };
 
-    let cell_sep = CELL_SEP.to_string();
-    let columns_packed = columns.join(&cell_sep);
+    let columns_packed = join_sep(&columns, CELL_SEP);
     let first_page_packed = pages.first().cloned().unwrap_or_default();
 
     // Store pre-packed pages in cache

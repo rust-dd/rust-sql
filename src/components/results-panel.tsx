@@ -56,6 +56,17 @@ export function ResultsPanel() {
   const pinnedResult = useUIStore((s) => s.pinnedResult);
   const [panelView, setPanelView] = useState<PanelView>("grid");
   const [searchTerm, setSearchTerm] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+
+  // Debounce search term — avoids filtering 50K rows on every keystroke
+  useEffect(() => {
+    if (!searchTerm.trim()) {
+      setDebouncedSearch("");
+      return;
+    }
+    const timer = setTimeout(() => setDebouncedSearch(searchTerm), 200);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
   const [isEditing, setIsEditing] = useState(false);
   const [editState, setEditState] = useState<EditState | null>(null);
   const [editError, setEditError] = useState<string | null>(null);
@@ -83,7 +94,7 @@ export function ResultsPanel() {
   const queuedPageSet = useRef(new Set<number>());
   const activeFetches = useRef(0);
   const latestRequestedPage = useRef(0);
-  const [cacheVersion, setCacheVersion] = useState(0);
+  const gridRef = useRef<{ invalidate: () => void }>(null);
 
   useEffect(() => {
     loadingPages.current.clear();
@@ -111,7 +122,7 @@ export function ResultsPanel() {
     virtualCache.setPage(vq.queryId, pageIndex, rows);
     // Evict around the user's latest viewport, not the page that happened to resolve last.
     virtualCache.evictDistant(vq.queryId, latestRequestedPage.current, CACHE_WINDOW_PAGES);
-    setCacheVersion((v) => v + 1);
+    gridRef.current?.invalidate();
   }, [vq, activeTab?.projectId]);
 
   const pumpQueue = useCallback(() => {
@@ -173,12 +184,12 @@ export function ResultsPanel() {
 
   const filteredRows = useMemo(() => {
     if (isEditing) return result?.rows ?? [];
-    if (!result || !searchTerm.trim()) return result?.rows ?? [];
-    const term = searchTerm.toLowerCase();
+    if (!result || !debouncedSearch.trim()) return result?.rows ?? [];
+    const term = debouncedSearch.toLowerCase();
     return result.rows.filter((row) =>
       row.some((cell) => cell.toLowerCase().includes(term)),
     );
-  }, [result, searchTerm, isEditing]);
+  }, [result, debouncedSearch, isEditing]);
 
   const explainResult = activeTab?.explainResult;
   const hasExplain = !!explainResult;
@@ -509,7 +520,7 @@ export function ResultsPanel() {
           onFKNavigate={handleFKNavigate}
           virtualQuery={vq}
           onPageNeeded={vq ? handlePageNeeded : undefined}
-          cacheVersion={cacheVersion}
+          gridRef={gridRef}
         />
       ) : (
         <ResultsRecord columns={result.columns} rows={filteredRows} />

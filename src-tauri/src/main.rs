@@ -22,6 +22,7 @@ pub struct AppState {
     pub client_ssl: Arc<Mutex<BTreeMap<String, bool>>>,
     pub local_db: libsql::Database,
     pub resource_monitor: Arc<Mutex<utils::ResourceMonitor>>,
+    pub virtual_cache: Arc<Mutex<drivers::common::VirtualCache>>,
 }
 
 fn main() {
@@ -90,6 +91,7 @@ fn main() {
                     client_ssl: Arc::new(Mutex::new(BTreeMap::new())),
                     local_db: db,
                     resource_monitor: Arc::new(Mutex::new(utils::ResourceMonitor::new())),
+                    virtual_cache: Arc::new(Mutex::new(BTreeMap::new())),
                 };
                 app_handle.manage(state);
 
@@ -107,7 +109,7 @@ fn main() {
                     name: Some("RSQL".into()),
                     version: Some(env!("CARGO_PKG_VERSION").into()),
                     copyright: Some("\u{00a9} 2025 rust-dd".into()),
-                    comments: Some("Modern SQL client for PostgreSQL and Redshift.\nBuilt with Tauri, React, and Rust.".into()),
+                    comments: Some("Modern SQL client for PostgreSQL.\nBuilt with Tauri, React, and Rust.".into()),
                     website: Some("https://github.com/rust-dd/rsql".into()),
                     website_label: Some("GitHub".into()),
                     ..Default::default()
@@ -190,26 +192,6 @@ fn main() {
             drivers::pgsql::pgsql_execute_virtual,
             drivers::pgsql::pgsql_fetch_page,
             drivers::pgsql::pgsql_close_virtual,
-            drivers::redshift::redshift_connector,
-            drivers::redshift::redshift_load_schemas,
-            drivers::redshift::redshift_load_tables,
-            drivers::redshift::redshift_load_columns,
-            drivers::redshift::redshift_load_column_details,
-            drivers::redshift::redshift_load_indexes,
-            drivers::redshift::redshift_load_constraints,
-            drivers::redshift::redshift_load_triggers,
-            drivers::redshift::redshift_load_rules,
-            drivers::redshift::redshift_load_policies,
-            drivers::redshift::redshift_load_views,
-            drivers::redshift::redshift_load_materialized_views,
-            drivers::redshift::redshift_load_functions,
-            drivers::redshift::redshift_load_trigger_functions,
-            drivers::redshift::redshift_run_query,
-            drivers::redshift::redshift_load_activity,
-            drivers::redshift::redshift_load_database_stats,
-            drivers::redshift::redshift_load_table_stats,
-            drivers::redshift::redshift_load_foreign_keys,
-            drivers::redshift::redshift_run_query_packed,
             terminal::terminal_spawn,
             terminal::terminal_write,
             terminal::terminal_resize,

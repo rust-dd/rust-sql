@@ -3,12 +3,13 @@ use std::sync::Arc;
 use crate::common::enums::{AppError, ProjectConnectionStatus};
 use crate::common::pgsql::{PgsqlLoadColumns, PgsqlLoadSchemas, PgsqlLoadTables};
 use crate::drivers::common::{
-    execute_query, execute_query_packed, execute_query_streamed, execute_virtual, fetch_virtual_page,
-    close_virtual, get_client, load_activity, load_column_details, load_columns,
-    load_constraints, load_database_stats, load_foreign_keys, load_functions, load_indexes,
-    load_materialized_views, load_policies, load_rules, load_schemas, load_table_stats, load_tables,
-    load_trigger_functions, load_triggers, load_views, ColumnDetail, ConstraintDetail, DbStat,
-    ForeignKeyInfo, FunctionInfo, IndexDetail, PolicyDetail, RuleDetail, TriggerDetail,
+    execute_query, execute_query_packed, execute_query_streamed, execute_virtual,
+    fetch_virtual_page, close_virtual, get_client, load_activity, load_column_details,
+    load_columns, load_constraints, load_database_stats, load_foreign_keys, load_functions,
+    load_indexes, load_materialized_views, load_policies, load_rules, load_schemas,
+    load_table_stats, load_tables, load_trigger_functions, load_triggers, load_views,
+    ColumnDetail, ConstraintDetail, DbStat, ForeignKeyInfo, FunctionInfo, IndexDetail,
+    PolicyDetail, RuleDetail, TriggerDetail,
 };
 use crate::AppState;
 
@@ -558,43 +559,30 @@ pub async fn pgsql_execute_virtual(
         get_client(client_map, project_id)?
     };
 
-    execute_virtual(&client, sql, query_id, page_size)
+    execute_virtual(&client, &app_state.virtual_cache, sql, query_id, page_size)
         .await
         .map_err(Into::into)
 }
 
 #[tauri::command(rename_all = "snake_case")]
 pub async fn pgsql_fetch_page(
-    project_id: &str,
     query_id: &str,
+    col_count: usize,
     offset: usize,
     limit: usize,
     app_state: State<'_, AppState>,
 ) -> Result<String> {
-    let client = {
-        let clients = app_state.client.lock().await;
-        let client_map = clients.as_ref().ok_or(AppError::DatabaseError("No client map".into()))?;
-        get_client(client_map, project_id)?
-    };
-
-    fetch_virtual_page(&client, query_id, offset, limit)
+    fetch_virtual_page(&app_state.virtual_cache, query_id, col_count, offset, limit)
         .await
         .map_err(Into::into)
 }
 
 #[tauri::command(rename_all = "snake_case")]
 pub async fn pgsql_close_virtual(
-    project_id: &str,
     query_id: &str,
     app_state: State<'_, AppState>,
 ) -> Result<()> {
-    let client = {
-        let clients = app_state.client.lock().await;
-        let client_map = clients.as_ref().ok_or(AppError::DatabaseError("No client map".into()))?;
-        get_client(client_map, project_id)?
-    };
-
-    close_virtual(&client, query_id)
+    close_virtual(&app_state.virtual_cache, query_id)
         .await
         .map_err(Into::into)
 }

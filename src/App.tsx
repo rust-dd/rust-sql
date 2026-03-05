@@ -147,7 +147,7 @@ export default function App() {
             notifyQueryComplete(tab.editorValue, elapsed, true, firstPage.length);
           } else {
             virtualCache.setPage(queryId, 0, firstPage);
-            setVirtualQuery(idx, { queryId, columns, totalRows, pageSize: PAGE_SIZE, time: elapsed });
+            setVirtualQuery(idx, { queryId, columns, totalRows, pageSize: PAGE_SIZE, colCount: columns.length, time: elapsed });
             updateResult(idx, { columns, rows: firstPage, time: elapsed });
             notifyQueryComplete(tab.editorValue, elapsed, true, totalRows);
           }
@@ -282,7 +282,7 @@ export default function App() {
         if (t.length > 1) {
           const closingTab = t[idx];
           if (closingTab?.virtualQuery?.queryId && closingTab.projectId) {
-            const dd = projects[closingTab.projectId];
+            const dd = useProjectStore.getState().projects[closingTab.projectId];
             if (dd) DriverFactory.getDriver(dd.driver).closeVirtual?.(closingTab.projectId, closingTab.virtualQuery.queryId).catch(() => {});
             virtualCache.clearQuery(closingTab.virtualQuery.queryId);
           }

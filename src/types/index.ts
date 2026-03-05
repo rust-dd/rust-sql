@@ -72,6 +72,7 @@ export interface VirtualQuery {
   columns: string[];
   totalRows: number;
   pageSize: number;
+  colCount: number;
   time: number;
 }
 

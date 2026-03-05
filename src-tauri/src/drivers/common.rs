@@ -302,149 +302,114 @@ pub async fn execute_query_streamed(
     Ok(())
 }
 
-/// Pack rows skipping the first column (_rsql_rn row number).
-fn pack_rows_skip_rn(rows: &[tokio_postgres::Row], col_count: usize) -> String {
+/// A cached query: pre-packed page strings for zero-copy serving.
+/// Each page is a single large String (~1-2 MB) so the OS reclaims RSS on drop.
+pub struct CachedQuery {
+    pages: Vec<String>,
+    page_size: usize,
+}
+
+/// In-memory virtual cache: query_id → pre-packed pages.
+pub type VirtualCache = std::collections::BTreeMap<String, CachedQuery>;
+
+/// Pack a slice of rows (each row = Vec<String>) into wire format.
+fn pack_rows_vec(rows: &[Vec<String>]) -> String {
     let cell_sep = CELL_SEP.to_string();
     let row_sep = ROW_SEP.to_string();
-
-    let row_strings: Vec<String> = if rows.len() >= PARALLEL_PACK_THRESHOLD {
-        rows.par_iter()
-            .map(|row| {
-                (1..col_count)
-                    .map(|i| {
-                        reflective_get(row, i)
-                            .replace(CELL_SEP, " ")
-                            .replace(ROW_SEP, " ")
-                    })
-                    .collect::<Vec<_>>()
-                    .join(&cell_sep)
-            })
-            .collect()
-    } else {
-        rows.iter()
-            .map(|row| {
-                (1..col_count)
-                    .map(|i| {
-                        reflective_get(row, i)
-                            .replace(CELL_SEP, " ")
-                            .replace(ROW_SEP, " ")
-                    })
-                    .collect::<Vec<_>>()
-                    .join(&cell_sep)
-            })
-            .collect()
-    };
-
+    let row_strings: Vec<String> = rows
+        .iter()
+        .map(|row| {
+            row.iter()
+                .map(|cell| cell.replace(CELL_SEP, " ").replace(ROW_SEP, " "))
+                .collect::<Vec<_>>()
+                .join(&cell_sep)
+        })
+        .collect();
     row_strings.join(&row_sep)
 }
 
-/// Execute a query using a temp table for virtual pagination.
+/// Execute a query in one shot (read-only on remote, no temp tables / cursors).
+/// Pre-packs results into page-sized strings cached in-memory.
 /// Returns (columns_packed, total_rows, first_page_packed, elapsed_ms).
-/// If the SQL is not a SELECT (e.g. DDL), falls back to execute_query_packed
-/// and returns an empty query_id signal (empty columns_packed).
+/// If the SQL is non-SELECT / returns 0 rows, returns empty columns_packed signal.
 pub async fn execute_virtual(
     client: &Client,
+    cache: &tokio::sync::Mutex<VirtualCache>,
     sql: &str,
     query_id: &str,
     page_size: usize,
 ) -> Result<(String, usize, String, f32), AppError> {
     let start = Instant::now();
-    let table_name = format!("_rsql_{}", query_id);
 
-    // Try to create the temp table
-    let create_sql = format!(
-        "CREATE TEMP TABLE {} AS SELECT row_number() OVER () AS _rsql_rn, _q.* FROM ({}) AS _q",
-        table_name, sql
-    );
-    match client.batch_execute(&create_sql).await {
-        Ok(_) => {}
-        Err(_) => {
-            // Non-SELECT fallback: execute directly with packed format
-            let (packed, elapsed) = execute_query_packed(client, sql).await?;
-            return Ok((String::new(), 0, packed, elapsed));
-        }
+    // One-shot query — single network roundtrip, read-only on remote
+    let pg_rows = client.query(sql, &[]).await
+        .map_err(|e| AppError::QueryFailed(e.to_string()))?;
+
+    if pg_rows.is_empty() {
+        let elapsed = start.elapsed().as_millis() as f32;
+        return Ok((String::new(), 0, String::new(), elapsed));
     }
 
-    // Create index for fast random access
-    let index_sql = format!("CREATE INDEX ON {} (_rsql_rn)", table_name);
-    client.batch_execute(&index_sql).await.ok();
-    // Refresh planner stats so fetch queries choose index range scans.
-    let analyze_sql = format!("ANALYZE {}", table_name);
-    client.batch_execute(&analyze_sql).await.ok();
+    let col_count = pg_rows[0].len();
+    let columns: Vec<String> = pg_rows[0]
+        .columns()
+        .iter()
+        .map(|c| c.name().to_string())
+        .collect();
+    let total_rows = pg_rows.len();
 
-    // Get total row count
-    let count_sql = format!("SELECT max(_rsql_rn)::bigint FROM {}", table_name);
-    let count_rows = client.query(&count_sql, &[]).await
-        .map_err(|e| AppError::QueryFailed(e.to_string()))?;
-    let total_rows: i64 = count_rows.first()
-        .and_then(|r| r.get::<_, Option<i64>>(0))
-        .unwrap_or(0);
-    let total_rows = total_rows as usize;
+    // Convert PG rows → strings AND pre-pack into pages in one parallel pass.
+    // Each page becomes a single large String (~1-2 MB) — the OS reclaims these on free.
+    let pg_chunks: Vec<&[tokio_postgres::Row]> = pg_rows.chunks(page_size).collect();
+    let pages: Vec<String> = pg_chunks
+        .par_iter()
+        .map(|chunk| {
+            let rows: Vec<Vec<String>> = chunk
+                .iter()
+                .map(|row| (0..col_count).map(|i| reflective_get(row, i)).collect())
+                .collect();
+            pack_rows_vec(&rows)
+        })
+        .collect();
+    drop(pg_rows); // free PG row memory
 
-    // Fetch first page
-    let first_page_sql = format!(
-        "SELECT * FROM {} WHERE _rsql_rn <= {} ORDER BY _rsql_rn",
-        table_name, page_size
-    );
-    let rows = client.query(&first_page_sql, &[]).await
-        .map_err(|e| AppError::QueryFailed(e.to_string()))?;
+    let cell_sep = CELL_SEP.to_string();
+    let columns_packed = columns.join(&cell_sep);
+    let first_page_packed = pages.first().cloned().unwrap_or_default();
 
-    // Pack columns (skip _rsql_rn at index 0)
-    let columns_packed = if rows.is_empty() {
-        String::new()
-    } else {
-        let cell_sep = CELL_SEP.to_string();
-        rows[0].columns().iter().skip(1)
-            .map(|c| c.name().to_string())
-            .collect::<Vec<_>>()
-            .join(&cell_sep)
-    };
-
-    // Pack first page rows (skip _rsql_rn)
-    let col_count = if rows.is_empty() { 0 } else { rows[0].len() };
-    let first_page_packed = if rows.is_empty() {
-        String::new()
-    } else {
-        pack_rows_skip_rn(&rows, col_count)
-    };
+    // Store pre-packed pages in cache
+    {
+        let mut c = cache.lock().await;
+        c.insert(query_id.to_string(), CachedQuery { pages, page_size });
+    }
 
     let elapsed = start.elapsed().as_millis() as f32;
     Ok((columns_packed, total_rows, first_page_packed, elapsed))
 }
 
-/// Fetch a page from the virtual temp table.
-/// Returns packed rows (skip _rsql_rn).
+/// Fetch a pre-packed page from the in-memory cache. O(1) — no packing at serve time.
 pub async fn fetch_virtual_page(
-    client: &Client,
+    cache: &tokio::sync::Mutex<VirtualCache>,
     query_id: &str,
+    _col_count: usize,
     offset: usize,
-    limit: usize,
+    _limit: usize,
 ) -> Result<String, AppError> {
-    let table_name = format!("_rsql_{}", query_id);
-    let sql = format!(
-        "SELECT * FROM {} WHERE _rsql_rn > {} AND _rsql_rn <= {} ORDER BY _rsql_rn",
-        table_name, offset, offset + limit
-    );
-    let rows = client.query(&sql, &[]).await
-        .map_err(|e| AppError::QueryFailed(e.to_string()))?;
+    let c = cache.lock().await;
+    let entry = c.get(query_id)
+        .ok_or_else(|| AppError::QueryFailed(format!("Virtual query {} not found", query_id)))?;
 
-    if rows.is_empty() {
-        return Ok(String::new());
-    }
-
-    let col_count = rows[0].len();
-    Ok(pack_rows_skip_rn(&rows, col_count))
+    let page_index = offset / entry.page_size;
+    Ok(entry.pages.get(page_index).cloned().unwrap_or_default())
 }
 
-/// Drop the virtual temp table.
+/// Remove a query from the in-memory cache. Large page strings are freed → OS reclaims RSS.
 pub async fn close_virtual(
-    client: &Client,
+    cache: &tokio::sync::Mutex<VirtualCache>,
     query_id: &str,
 ) -> Result<(), AppError> {
-    let table_name = format!("_rsql_{}", query_id);
-    let sql = format!("DROP TABLE IF EXISTS {}", table_name);
-    client.batch_execute(&sql).await
-        .map_err(|e| AppError::QueryFailed(e.to_string()))?;
+    let mut c = cache.lock().await;
+    c.remove(query_id);
     Ok(())
 }
 

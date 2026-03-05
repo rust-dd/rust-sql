@@ -99,7 +99,7 @@ export function ResultsPanel() {
     if (!driver.fetchPage) return;
 
     const offset = pageIndex * vq.pageSize;
-    const packed = await driver.fetchPage(activeTab.projectId, vq.queryId, offset, vq.pageSize);
+    const packed = await driver.fetchPage(activeTab.projectId, vq.queryId, vq.colCount, offset, vq.pageSize);
 
     // Drop stale page responses after tab/query switches.
     const selectedIdx = useTabStore.getState().selectedTabIndex;

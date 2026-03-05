@@ -70,7 +70,7 @@ export interface DatabaseDriver {
   runQuery(projectId: string, sql: string): Promise<WireQueryResult>;
   runQueryStreamed?(projectId: string, sql: string, streamId: string, callbacks: StreamCallbacks): Promise<void>;
   executeVirtual?(projectId: string, sql: string, queryId: string, pageSize: number): Promise<[string, number, string, number]>;
-  fetchPage?(projectId: string, queryId: string, offset: number, limit: number): Promise<string>;
+  fetchPage?(projectId: string, queryId: string, colCount: number, offset: number, limit: number): Promise<string>;
   closeVirtual?(projectId: string, queryId: string): Promise<void>;
   loadActivity(projectId: string): Promise<string[][]>;
   loadDatabaseStats(projectId: string): Promise<[string, string][]>;
@@ -239,14 +239,14 @@ class PostgreSQLDriver implements DatabaseDriver {
       project_id: projectId, sql, query_id: queryId, page_size: pageSize,
     });
   }
-  async fetchPage(projectId: string, queryId: string, offset: number, limit: number) {
+  async fetchPage(_projectId: string, queryId: string, colCount: number, offset: number, limit: number) {
     return invoke<string>("pgsql_fetch_page", {
-      project_id: projectId, query_id: queryId, offset, limit,
+      query_id: queryId, col_count: colCount, offset, limit,
     });
   }
-  async closeVirtual(projectId: string, queryId: string) {
+  async closeVirtual(_projectId: string, queryId: string) {
     return invoke<void>("pgsql_close_virtual", {
-      project_id: projectId, query_id: queryId,
+      query_id: queryId,
     });
   }
   async loadActivity(projectId: string) {

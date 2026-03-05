@@ -293,7 +293,7 @@ export default function App() {
         e.preventDefault();
         void runExplain();
       }
-      if ((e.metaKey || e.ctrlKey) && e.key === "p") {
+      if ((e.metaKey || e.ctrlKey) && (e.key === "p" || e.key === "k")) {
         e.preventDefault();
         setCommandPaletteOpen((v) => !v);
       }
@@ -405,7 +405,7 @@ export default function App() {
         editData={editingConnection}
       />
 
-      <CommandPalette open={commandPaletteOpen} onClose={() => setCommandPaletteOpen(false)} />
+      <CommandPalette open={commandPaletteOpen} onClose={() => setCommandPaletteOpen(false)} onExecute={() => void runQuery()} onExplain={() => void runExplain()} />
     </div>
   );
 }

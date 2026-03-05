@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { invoke } from "@tauri-apps/api/core";
 import { useActiveTab } from "@/stores/tab-store";
 import { useTabStore } from "@/stores/tab-store";
@@ -798,10 +799,17 @@ function ResultsToolbar(props: ToolbarProps) {
                   <Download className="h-3 w-3" />
                   Export
                 </button>
-                {exportOpen && (
+                {exportOpen && createPortal(
                   <>
-                    <div className="fixed inset-0 z-40" onClick={() => setExportOpen(false)} />
-                    <div className="absolute right-0 top-full mt-1 z-50 w-52 rounded-md border border-border bg-popover shadow-md py-1">
+                    <div className="fixed inset-0" style={{ zIndex: 9998 }} onClick={() => setExportOpen(false)} />
+                    <div
+                      className="fixed w-52 rounded-md border border-border bg-popover shadow-md py-1"
+                      style={{
+                        zIndex: 9999,
+                        top: (() => { const r = exportRef.current?.getBoundingClientRect(); return r ? r.bottom + 4 : 0; })(),
+                        left: (() => { const r = exportRef.current?.getBoundingClientRect(); return r ? Math.max(0, r.right - 208) : 0; })(),
+                      }}
+                    >
                       <div className="px-2 py-1 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
                         Download
                       </div>
@@ -830,7 +838,8 @@ function ResultsToolbar(props: ToolbarProps) {
                         </button>
                       ))}
                     </div>
-                  </>
+                  </>,
+                  document.body
                 )}
               </div>
             )}

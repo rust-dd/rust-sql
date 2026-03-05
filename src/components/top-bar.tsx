@@ -3,11 +3,12 @@ import { cn } from "@/lib/utils";
 import { useProjectStore } from "@/stores/project-store";
 import { useTabStore, useActiveTab } from "@/stores/tab-store";
 import { useUIStore } from "@/stores/ui-store";
-import { insertQuery } from "@/tauri";
+import { useQueryStore } from "@/stores/query-store";
 import { ProjectConnectionStatus } from "@/types";
-import { Database, Moon, Play, Save, Sun } from "lucide-react";
+import { AlignLeft, Database, GitBranch, Moon, Play, Save, Sun } from "lucide-react";
+import { format as formatSQL } from "sql-formatter";
 
-export function TopBar({ onExecute }: { onExecute: () => void }) {
+export function TopBar({ onExecute, onExplain }: { onExecute: () => void; onExplain: () => void }) {
   const theme = useUIStore((s) => s.theme);
   const toggleTheme = useUIStore((s) => s.toggleTheme);
   const projects = useProjectStore((s) => s.projects);
@@ -15,6 +16,8 @@ export function TopBar({ onExecute }: { onExecute: () => void }) {
   const selectedTabIndex = useTabStore((s) => s.selectedTabIndex);
   const activeTab = useActiveTab();
   const setProjectId = useTabStore((s) => s.setProjectId);
+  const updateContent = useTabStore((s) => s.updateContent);
+  const saveQueryAction = useQueryStore((s) => s.saveQuery);
   const activeProject = activeTab?.projectId;
   const activeProjectDetails = activeProject ? projects[activeProject] : undefined;
 
@@ -26,8 +29,18 @@ export function TopBar({ onExecute }: { onExecute: () => void }) {
     if (!activeProject || !activeProjectDetails) return;
     const title = prompt("Query title?");
     if (!title) return;
-    const queryId = `${activeProject}:${activeProjectDetails.database}:${activeProjectDetails.driver}:${title}`;
-    await insertQuery(queryId, activeTab?.editorValue ?? "");
+    await saveQueryAction(activeProject, activeProjectDetails.database, activeProjectDetails.driver, title, activeTab?.editorValue ?? "");
+  };
+
+  const formatQuery = () => {
+    const sql = activeTab?.editorValue;
+    if (!sql?.trim()) return;
+    try {
+      const formatted = formatSQL(sql, { language: "postgresql", tabWidth: 2, keywordCase: "upper" });
+      updateContent(selectedTabIndex, formatted);
+    } catch {
+      // silently ignore formatting errors
+    }
   };
 
   return (
@@ -91,6 +104,26 @@ export function TopBar({ onExecute }: { onExecute: () => void }) {
         >
           <Save className="h-4 w-4" />
           <span className="text-xs">Save</span>
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-8 gap-2"
+          onClick={formatQuery}
+          disabled={!activeTab?.editorValue?.trim()}
+        >
+          <AlignLeft className="h-4 w-4" />
+          <span className="text-xs">Format</span>
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          className="h-8 gap-2"
+          onClick={onExplain}
+          disabled={!activeProject || activeTab?.isExecuting}
+        >
+          <GitBranch className="h-4 w-4" />
+          <span className="text-xs">Explain</span>
         </Button>
         <Button
           variant="default"

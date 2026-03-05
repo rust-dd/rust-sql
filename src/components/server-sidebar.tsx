@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import { useProjectStore } from "@/stores/project-store";
 import { useUIStore } from "@/stores/ui-store";
 import { useTabStore } from "@/stores/tab-store";
+import { useQueryStore } from "@/stores/query-store";
 import { ProjectConnectionStatus } from "@/types";
 import {
   Activity,
@@ -16,6 +17,7 @@ import {
   Edit3,
   Eye,
   FileCode,
+  FileText,
   FolderOpen,
   Key,
   Layers,
@@ -35,6 +37,35 @@ import {
 
 // Indent levels (px)
 const I = { server: 4, db: 16, schema: 28, schemaObj: 36, table: 44, section: 52, item: 60 };
+
+// DDL query generators
+function ddlTableQuery(schema: string, table: string): string {
+  return `-- Generate CREATE TABLE DDL for "${schema}"."${table}"
+SELECT 'CREATE TABLE "' || schemaname || '"."' || tablename || '" (' || E'\\n' ||
+  string_agg('  "' || column_name || '" ' || data_type ||
+    CASE WHEN character_maximum_length IS NOT NULL THEN '(' || character_maximum_length || ')' ELSE '' END ||
+    CASE WHEN is_nullable = 'NO' THEN ' NOT NULL' ELSE '' END ||
+    CASE WHEN column_default IS NOT NULL THEN ' DEFAULT ' || column_default ELSE '' END,
+    ',' || E'\\n' ORDER BY ordinal_position) || E'\\n' || ');' AS ddl
+FROM information_schema.columns c
+JOIN pg_tables t ON t.schemaname = c.table_schema AND t.tablename = c.table_name
+WHERE c.table_schema = '${schema}' AND c.table_name = '${table}'
+GROUP BY schemaname, tablename;`;
+}
+
+function ddlViewQuery(schema: string, view: string): string {
+  return `-- View definition for "${schema}"."${view}"
+SELECT pg_get_viewdef('"${schema}"."${view}"'::regclass, true) AS view_definition;`;
+}
+
+function ddlFunctionQuery(schema: string, fnName: string): string {
+  return `-- Function definition for "${schema}"."${fnName}"
+SELECT pg_get_functiondef(p.oid) AS function_definition
+FROM pg_proc p
+JOIN pg_namespace n ON n.oid = p.pronamespace
+WHERE n.nspname = '${schema}' AND p.proname = '${fnName}'
+LIMIT 1;`;
+}
 
 export function ServerSidebar({
   onEditConnection,
@@ -63,7 +94,16 @@ export function ServerSidebar({
   const setConnectionModalOpen = useUIStore((s) => s.setConnectionModalOpen);
   const openTab = useTabStore((s) => s.openTab);
   const openMonitorTab = useTabStore((s) => s.openMonitorTab);
+  const openERDTab = useTabStore((s) => s.openERDTab);
+  const savedQueries = useQueryStore((s) => s.queries);
+  const loadQueries = useQueryStore((s) => s.loadQueries);
+  const queriesLoaded = useQueryStore((s) => s.loaded);
+  const removeQuery = useQueryStore((s) => s.removeQuery);
   const { menu, showMenu, closeMenu } = useContextMenu();
+
+  React.useEffect(() => {
+    if (!queriesLoaded) void loadQueries();
+  }, [queriesLoaded, loadQueries]);
 
   const [expanded, setExpanded] = React.useState<Record<string, boolean>>({});
   const [loading, setLoading] = React.useState<Record<string, boolean>>({});
@@ -131,18 +171,35 @@ export function ServerSidebar({
         </Button>
       </div>
       <div className="flex-1 overflow-y-auto overflow-x-auto p-1">
-        {Object.entries(projects).map(([pid, details]) => {
-          const conn = status[pid];
-          const isConnected = conn === ProjectConnectionStatus.Connected;
-          const projectSchemas = schemas[pid] || [];
-          const pKey = `proj::${pid}`;
+        {(() => {
+          const entries = Object.entries(projects);
+          const groups = new Map<string, string[]>();
+          const ungrouped: string[] = [];
+          for (const [pid] of entries) {
+            const slashIdx = pid.indexOf("/");
+            if (slashIdx > 0) {
+              const group = pid.slice(0, slashIdx);
+              if (!groups.has(group)) groups.set(group, []);
+              groups.get(group)!.push(pid);
+            } else {
+              ungrouped.push(pid);
+            }
+          }
 
-          return (
-            <div key={pid}>
-              {/* Server */}
-              <TreeRow indent={I.server}
-                icon={<Server className="h-3.5 w-3.5 text-primary" />}
-                label={pid}
+          const renderServer = (pid: string) => {
+            const details = projects[pid];
+            if (!details) return null;
+            const conn = status[pid];
+            const isConnected = conn === ProjectConnectionStatus.Connected;
+            const projectSchemas = schemas[pid] || [];
+            const pKey = `proj::${pid}`;
+            const displayName = pid.includes("/") ? pid.slice(pid.indexOf("/") + 1) : pid;
+
+            return (
+              <div key={pid}>
+                <TreeRow indent={pid.includes("/") ? I.db : I.server}
+                  icon={<Server className="h-3.5 w-3.5 text-primary" />}
+                  label={displayName}
                 bold
                 expanded={isOpen(pKey, isConnected)}
                 onClick={() => toggle(pKey)}
@@ -208,6 +265,7 @@ export function ServerSidebar({
                           loading={loading[sKey]}
                           onClick={() => void onExpandSchema(pid, schema)}
                           onContextMenu={(e) => showMenu(e, [
+                            { label: "ERD Diagram", icon: <Layers className="h-3 w-3" />, onClick: () => openERDTab(pid, schema) },
                             { label: "Copy Schema Name", icon: <Copy className="h-3 w-3" />, onClick: () => copy(schema) },
                             { label: "New Query", icon: <Plus className="h-3 w-3" />, onClick: () => openTab(pid, `-- Schema: ${schema}\n`) },
                           ])}
@@ -243,6 +301,7 @@ export function ServerSidebar({
                                     onContextMenu={(e) => showMenu(e, [
                                       { label: "SELECT TOP 100", icon: <Table className="h-3 w-3" />, onClick: () => onOpenTableQuery(pid, schema, ti.name) },
                                       { label: "SELECT COUNT(*)", icon: <Table className="h-3 w-3" />, onClick: () => openTab(pid, `SELECT COUNT(*) FROM "${schema}"."${ti.name}";`) },
+                                      { label: "Show CREATE TABLE", icon: <FileCode className="h-3 w-3" />, onClick: () => openTab(pid, ddlTableQuery(schema, ti.name)) },
                                       { separator: true as const },
                                       { label: "Copy Name", icon: <Copy className="h-3 w-3" />, onClick: () => copy(`"${schema}"."${ti.name}"`) },
                                     ])}
@@ -255,7 +314,7 @@ export function ServerSidebar({
                                         icon={<Columns3 className="h-3 w-3" />} sectionKey={`${tKey}::cols`}
                                         expanded={isOpen(`${tKey}::cols`, true)} onClick={() => toggle(`${tKey}::cols`)} />
                                       {isOpen(`${tKey}::cols`, true) && cols.map((c) => (
-                                        <div key={c.name} className="flex items-center gap-1.5 py-0.5 hover:bg-sidebar-accent rounded-sm whitespace-nowrap"
+                                        <div key={c.name} className="relative flex items-center gap-1.5 py-0.5 hover:bg-sidebar-accent rounded-sm whitespace-nowrap"
                                           style={{ paddingLeft: `${I.item}px` }}
                                           onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); showMenu(e, [
                                             { label: "Copy Column Name", icon: <Copy className="h-3 w-3" />, onClick: () => copy(c.name) },
@@ -277,7 +336,7 @@ export function ServerSidebar({
                                             const entries = idxs.filter((i) => i.indexName === name);
                                             const f = entries[0];
                                             return (
-                                              <div key={name} className="flex items-center gap-1.5 py-0.5 hover:bg-sidebar-accent rounded-sm whitespace-nowrap" style={{ paddingLeft: `${I.item}px` }}>
+                                              <div key={name} className="relative flex items-center gap-1.5 py-0.5 hover:bg-sidebar-accent rounded-sm whitespace-nowrap" style={{ paddingLeft: `${I.item}px` }}>
                                                 {f.isPrimary ? <Key className="h-3 w-3 shrink-0 text-warning" /> : f.isUnique ? <Shield className="h-3 w-3 shrink-0 text-blue-500" /> : <Key className="h-3 w-3 shrink-0 text-muted-foreground/50" />}
                                                 <span className="font-mono text-[11px] text-foreground">{name}</span>
                                                 <span className="font-mono text-[10px] text-muted-foreground">({entries.map((e) => e.columnName).join(", ")})</span>
@@ -297,7 +356,7 @@ export function ServerSidebar({
                                           {isOpen(`${tKey}::con`) && Array.from(new Set(cons.map((c) => c.constraintName))).map((name) => {
                                             const f = cons.find((c) => c.constraintName === name)!;
                                             return (
-                                              <div key={name} className="flex items-center gap-1.5 py-0.5 hover:bg-sidebar-accent rounded-sm whitespace-nowrap" style={{ paddingLeft: `${I.item}px` }}>
+                                              <div key={name} className="relative flex items-center gap-1.5 py-0.5 hover:bg-sidebar-accent rounded-sm whitespace-nowrap" style={{ paddingLeft: `${I.item}px` }}>
                                                 <Link2 className="h-3 w-3 shrink-0 text-muted-foreground/50" />
                                                 <span className="font-mono text-[11px] text-foreground">{name}</span>
                                                 <span className="font-mono text-[10px] text-muted-foreground">{f.constraintType}</span>
@@ -314,7 +373,7 @@ export function ServerSidebar({
                                             icon={<Zap className="h-3 w-3" />} sectionKey={`${tKey}::trig`}
                                             expanded={isOpen(`${tKey}::trig`)} onClick={() => toggle(`${tKey}::trig`)} />
                                           {isOpen(`${tKey}::trig`) && trigs.map((t) => (
-                                            <div key={`${t.triggerName}-${t.event}`} className="flex items-center gap-1.5 py-0.5 hover:bg-sidebar-accent rounded-sm whitespace-nowrap" style={{ paddingLeft: `${I.item}px` }}>
+                                            <div key={`${t.triggerName}-${t.event}`} className="relative flex items-center gap-1.5 py-0.5 hover:bg-sidebar-accent rounded-sm whitespace-nowrap" style={{ paddingLeft: `${I.item}px` }}>
                                               <Zap className="h-3 w-3 shrink-0 text-muted-foreground/50" />
                                               <span className="font-mono text-[11px] text-foreground">{t.triggerName}</span>
                                               <span className="font-mono text-[10px] text-muted-foreground">{t.timing} {t.event}</span>
@@ -330,7 +389,7 @@ export function ServerSidebar({
                                             icon={<ScrollText className="h-3 w-3" />} sectionKey={`${tKey}::rules`}
                                             expanded={isOpen(`${tKey}::rules`)} onClick={() => toggle(`${tKey}::rules`)} />
                                           {isOpen(`${tKey}::rules`) && rls.map((r) => (
-                                            <div key={r.ruleName} className="flex items-center gap-1.5 py-0.5 hover:bg-sidebar-accent rounded-sm whitespace-nowrap" style={{ paddingLeft: `${I.item}px` }}>
+                                            <div key={r.ruleName} className="relative flex items-center gap-1.5 py-0.5 hover:bg-sidebar-accent rounded-sm whitespace-nowrap" style={{ paddingLeft: `${I.item}px` }}>
                                               <ScrollText className="h-3 w-3 shrink-0 text-muted-foreground/50" />
                                               <span className="font-mono text-[11px] text-foreground">{r.ruleName}</span>
                                               <span className="font-mono text-[10px] text-muted-foreground">{r.event}</span>
@@ -346,7 +405,7 @@ export function ServerSidebar({
                                             icon={<Lock className="h-3 w-3" />} sectionKey={`${tKey}::pol`}
                                             expanded={isOpen(`${tKey}::pol`)} onClick={() => toggle(`${tKey}::pol`)} />
                                           {isOpen(`${tKey}::pol`) && pols.map((p) => (
-                                            <div key={p.policyName} className="flex items-center gap-1.5 py-0.5 hover:bg-sidebar-accent rounded-sm whitespace-nowrap" style={{ paddingLeft: `${I.item}px` }}>
+                                            <div key={p.policyName} className="relative flex items-center gap-1.5 py-0.5 hover:bg-sidebar-accent rounded-sm whitespace-nowrap" style={{ paddingLeft: `${I.item}px` }}>
                                               <Lock className="h-3 w-3 shrink-0 text-muted-foreground/50" />
                                               <span className="font-mono text-[11px] text-foreground">{p.policyName}</span>
                                               <span className="font-mono text-[10px] text-muted-foreground">{p.permissive} {p.command}</span>
@@ -373,6 +432,7 @@ export function ServerSidebar({
                                     onClick={() => onOpenTableQuery(pid, schema, v)}
                                     onContextMenu={(e) => showMenu(e, [
                                       { label: "SELECT TOP 100", icon: <Eye className="h-3 w-3" />, onClick: () => onOpenTableQuery(pid, schema, v) },
+                                      { label: "Show CREATE VIEW", icon: <FileCode className="h-3 w-3" />, onClick: () => openTab(pid, ddlViewQuery(schema, v)) },
                                       { label: "Copy Name", icon: <Copy className="h-3 w-3" />, onClick: () => copy(`"${schema}"."${v}"`) },
                                     ])}
                                   />
@@ -408,7 +468,11 @@ export function ServerSidebar({
                                   icon={<FileCode className="h-3 w-3" />} sectionKey={`${sKey}::fns`}
                                   expanded={isOpen(`${sKey}::fns`)} onClick={() => toggle(`${sKey}::fns`)} />
                                 {isOpen(`${sKey}::fns`) && schemaFns.map((fn, i) => (
-                                  <div key={`${fn.name}-${i}`} className="flex items-center gap-1.5 py-0.5 hover:bg-sidebar-accent rounded-sm whitespace-nowrap" style={{ paddingLeft: `${I.table}px` }}>
+                                  <div key={`${fn.name}-${i}`} className="relative flex items-center gap-1.5 py-0.5 hover:bg-sidebar-accent rounded-sm whitespace-nowrap" style={{ paddingLeft: `${I.table}px` }}
+                                    onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); showMenu(e, [
+                                      { label: "Show Definition", icon: <FileCode className="h-3 w-3" />, onClick: () => openTab(pid, ddlFunctionQuery(schema, fn.name)) },
+                                      { label: "Copy Name", icon: <Copy className="h-3 w-3" />, onClick: () => copy(fn.name) },
+                                    ]); }}>
                                     <FileCode className="h-3 w-3 shrink-0 text-muted-foreground/50" />
                                     <span className="font-mono text-[11px] text-foreground">{fn.name}({fn.arguments ? "..." : ""})</span>
                                     <span className="font-mono text-[10px] text-muted-foreground">{fn.returnType}</span>
@@ -424,7 +488,7 @@ export function ServerSidebar({
                                   icon={<Zap className="h-3 w-3" />} sectionKey={`${sKey}::trigfns`}
                                   expanded={isOpen(`${sKey}::trigfns`)} onClick={() => toggle(`${sKey}::trigfns`)} />
                                 {isOpen(`${sKey}::trigfns`) && schemaTrigFns.map((fn, i) => (
-                                  <div key={`${fn.name}-${i}`} className="flex items-center gap-1.5 py-0.5 hover:bg-sidebar-accent rounded-sm whitespace-nowrap" style={{ paddingLeft: `${I.table}px` }}>
+                                  <div key={`${fn.name}-${i}`} className="relative flex items-center gap-1.5 py-0.5 hover:bg-sidebar-accent rounded-sm whitespace-nowrap" style={{ paddingLeft: `${I.table}px` }}>
                                     <Zap className="h-3 w-3 shrink-0 text-muted-foreground/50" />
                                     <span className="font-mono text-[11px] text-foreground">{fn.name}()</span>
                                     <span className="font-mono text-[10px] text-muted-foreground">trigger</span>
@@ -439,13 +503,83 @@ export function ServerSidebar({
                   })}
                 </>
               )}
-            </div>
+              </div>
+            );
+          };
+
+          return (
+            <>
+              {/* Grouped connections */}
+              {Array.from(groups.entries()).map(([group, pids]) => {
+                const gKey = `group::${group}`;
+                return (
+                  <div key={gKey}>
+                    <TreeRow
+                      indent={I.server}
+                      icon={<FolderOpen className="h-3.5 w-3.5 text-warning" />}
+                      label={group}
+                      bold
+                      expanded={isOpen(gKey, true)}
+                      onClick={() => toggle(gKey)}
+                    />
+                    {isOpen(gKey, true) && pids.map(renderServer)}
+                  </div>
+                );
+              })}
+              {/* Ungrouped connections */}
+              {ungrouped.map(renderServer)}
+            </>
           );
-        })}
+        })()}
       </div>
+
+      {/* Saved Queries */}
+      {savedQueries.length > 0 && (
+        <div className="border-t border-sidebar-border">
+          <div className="flex h-8 items-center px-3">
+            <span className="font-mono text-xs font-semibold text-sidebar-foreground">SAVED QUERIES</span>
+          </div>
+          <div className="overflow-y-auto p-1 max-h-48">
+            {savedQueries.map((q) => (
+              <TreeRow
+                key={q.id}
+                indent={I.server}
+                icon={<FileText className="h-3.5 w-3.5 text-muted-foreground" />}
+                label={q.title}
+                onClick={() => openTab(q.projectId, q.sql)}
+                onContextMenu={(e) => showMenu(e, [
+                  { label: "Open in Tab", icon: <FileText className="h-3 w-3" />, onClick: () => openTab(q.projectId, q.sql) },
+                  { label: "Copy SQL", icon: <Copy className="h-3 w-3" />, onClick: () => copy(q.sql) },
+                  { separator: true as const },
+                  { label: "Delete", icon: <Trash2 className="h-3 w-3" />, onClick: () => void removeQuery(q.id), destructive: true },
+                ])}
+                trailing={
+                  <span className="font-mono text-[10px] text-muted-foreground shrink-0">{q.projectId}</span>
+                }
+              />
+            ))}
+          </div>
+        </div>
+      )}
 
       {menu && <ContextMenu x={menu.x} y={menu.y} items={menu.items} onClose={closeMenu} />}
     </div>
+  );
+}
+
+/** Indent guide lines */
+function IndentGuides({ indent }: { indent: number }) {
+  const guides: number[] = [];
+  // Draw guides at each nesting level (every 12px starting from the first nested level)
+  for (let x = I.db + 4; x < indent; x += 12) {
+    guides.push(x);
+  }
+  return (
+    <>
+      {guides.map((x) => (
+        <span key={x} className="sidebar-indent-guide" style={{ left: `${x}px` }} />
+      ))}
+    </>
   );
 }
 
@@ -470,9 +604,10 @@ function TreeRow({
       onClick={onClick}
       onDoubleClick={onDoubleClick}
       onContextMenu={onContextMenu}
-      className="flex w-full items-center gap-1.5 py-1 text-left text-sm hover:bg-sidebar-accent transition-colors rounded-sm whitespace-nowrap"
+      className="relative flex w-full items-center gap-1.5 py-1 text-left text-sm hover:bg-sidebar-accent transition-colors rounded-sm whitespace-nowrap"
       style={{ paddingLeft: `${indent}px` }}
     >
+      <IndentGuides indent={indent} />
       {expanded !== undefined ? (
         isLoading ? <Loader2 className="h-3 w-3 shrink-0 animate-spin text-muted-foreground" />
           : expanded ? <ChevronDown className="h-3 w-3 shrink-0 text-muted-foreground" />
@@ -498,8 +633,9 @@ function SectionHeader({
 }) {
   return (
     <button onClick={onClick}
-      className="flex w-full items-center gap-1.5 py-0.5 text-left hover:bg-sidebar-accent transition-colors rounded-sm whitespace-nowrap"
+      className="relative flex w-full items-center gap-1.5 py-0.5 text-left hover:bg-sidebar-accent transition-colors rounded-sm whitespace-nowrap"
       style={{ paddingLeft: `${indent}px` }}>
+      <IndentGuides indent={indent} />
       {expanded ? <ChevronDown className="h-3 w-3 shrink-0 text-muted-foreground" /> : <ChevronRight className="h-3 w-3 shrink-0 text-muted-foreground" />}
       <span className="shrink-0">{icon}</span>
       <span className="font-mono text-[11px] font-semibold text-muted-foreground">{label}</span>

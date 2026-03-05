@@ -8,6 +8,19 @@ import type {
 // Wire types from Rust (tuples)
 type WireTableInfo = [string, string];
 type WireQueryResult = [string[], string[][], number];
+type WirePackedResult = [string, number]; // [packed_string, elapsed_ms]
+
+const CELL_SEP = "\x1F"; // Unit Separator
+const ROW_SEP = "\x1E"; // Record Separator
+
+/** Parse packed result format into columns, rows, and time */
+function unpackResult(packed: string, time: number): WireQueryResult {
+  if (!packed) return [[], [], time];
+  const parts = packed.split(ROW_SEP);
+  const columns = parts[0].split(CELL_SEP);
+  const rows = parts.slice(1).map((r) => r.split(CELL_SEP));
+  return [columns, rows, time];
+}
 type WireColumnDetail = [string, string, boolean, string | null];
 type WireIndexDetail = [string, string, boolean, boolean];
 type WireConstraintDetail = [string, string, string];
@@ -16,6 +29,14 @@ type WireRuleDetail = [string, string];
 type WirePolicyDetail = [string, string, string];
 type WireFunctionInfo = [string, string, string];
 type WireTriggerFunctionInfo = [string, string];
+type WireForeignKeyInfo = [string, string, string, string];
+
+export interface ForeignKey {
+  sourceTable: string;
+  sourceColumn: string;
+  targetTable: string;
+  targetColumn: string;
+}
 
 export interface DatabaseDriver {
   connect(projectId: string, key: [string, string, string, string, string, string]): Promise<ProjectConnectionStatus>;
@@ -36,6 +57,7 @@ export interface DatabaseDriver {
   loadActivity(projectId: string): Promise<string[][]>;
   loadDatabaseStats(projectId: string): Promise<[string, string][]>;
   loadTableStats(projectId: string): Promise<string[][]>;
+  loadForeignKeys(projectId: string, schema: string): Promise<ForeignKey[]>;
 }
 
 function parseColumnDetails(wire: WireColumnDetail[]): ColumnDetail[] {
@@ -136,7 +158,9 @@ class PostgreSQLDriver implements DatabaseDriver {
     return parseTriggerFunctionInfo(wire);
   }
   async runQuery(projectId: string, sql: string) {
-    return invoke<WireQueryResult>("pgsql_run_query", { project_id: projectId, sql });
+    // Use packed format for faster IPC (avoids JSON overhead of nested arrays)
+    const [packed, time] = await invoke<WirePackedResult>("pgsql_run_query_packed", { project_id: projectId, sql });
+    return unpackResult(packed, time);
   }
   async loadActivity(projectId: string) {
     return invoke<string[][]>("pgsql_load_activity", { project_id: projectId });
@@ -146,6 +170,12 @@ class PostgreSQLDriver implements DatabaseDriver {
   }
   async loadTableStats(projectId: string) {
     return invoke<string[][]>("pgsql_load_table_stats", { project_id: projectId });
+  }
+  async loadForeignKeys(projectId: string, schema: string) {
+    const wire = await invoke<WireForeignKeyInfo[]>("pgsql_load_foreign_keys", { project_id: projectId, schema });
+    return wire.map(([sourceTable, sourceColumn, targetTable, targetColumn]) => ({
+      sourceTable, sourceColumn, targetTable, targetColumn,
+    }));
   }
 }
 
@@ -201,7 +231,8 @@ class RedshiftDriver implements DatabaseDriver {
     return parseTriggerFunctionInfo(wire);
   }
   async runQuery(projectId: string, sql: string) {
-    return invoke<WireQueryResult>("redshift_run_query", { project_id: projectId, sql });
+    const [packed, time] = await invoke<WirePackedResult>("redshift_run_query_packed", { project_id: projectId, sql });
+    return unpackResult(packed, time);
   }
   async loadActivity(projectId: string) {
     return invoke<string[][]>("redshift_load_activity", { project_id: projectId });
@@ -211,6 +242,12 @@ class RedshiftDriver implements DatabaseDriver {
   }
   async loadTableStats(projectId: string) {
     return invoke<string[][]>("redshift_load_table_stats", { project_id: projectId });
+  }
+  async loadForeignKeys(projectId: string, schema: string) {
+    const wire = await invoke<WireForeignKeyInfo[]>("redshift_load_foreign_keys", { project_id: projectId, schema });
+    return wire.map(([sourceTable, sourceColumn, targetTable, targetColumn]) => ({
+      sourceTable, sourceColumn, targetTable, targetColumn,
+    }));
   }
 }
 

@@ -220,12 +220,40 @@ export function registerContextAwareCompletions(monaco: typeof Monaco) {
         return { suggestions };
       }
 
-      // Default: schema completion
+      // Default: schema completion + snippets
       const projSchemas = state.schemas[projectId] || [];
       projSchemas.forEach((s) =>
         add(s, monaco.languages.CompletionItemKind.Module, `"${s}"`),
       );
+
+      // SQL snippets
+      for (const snip of SQL_SNIPPETS) {
+        add(snip.label, monaco.languages.CompletionItemKind.Snippet, snip.insert, true);
+      }
+
       return { suggestions };
     },
   });
 }
+
+const SQL_SNIPPETS = [
+  { label: "sel", insert: "SELECT ${1:*}\nFROM ${2:table_name}\nWHERE ${3:condition}\nLIMIT ${4:100};" },
+  { label: "selc", insert: "SELECT COUNT(*)\nFROM ${1:table_name}\nWHERE ${2:1=1};" },
+  { label: "seld", insert: "SELECT DISTINCT ${1:column}\nFROM ${2:table_name};" },
+  { label: "ins", insert: "INSERT INTO ${1:table_name} (${2:columns})\nVALUES (${3:values});" },
+  { label: "upd", insert: "UPDATE ${1:table_name}\nSET ${2:column} = ${3:value}\nWHERE ${4:condition};" },
+  { label: "del", insert: "DELETE FROM ${1:table_name}\nWHERE ${2:condition};" },
+  { label: "crt", insert: "CREATE TABLE ${1:table_name} (\n  ${2:id} SERIAL PRIMARY KEY,\n  ${3:column} ${4:TEXT} NOT NULL\n);" },
+  { label: "alt", insert: "ALTER TABLE ${1:table_name}\nADD COLUMN ${2:column_name} ${3:TEXT};" },
+  { label: "idx", insert: "CREATE INDEX ${1:idx_name}\nON ${2:table_name} (${3:column});" },
+  { label: "jn", insert: "SELECT ${1:*}\nFROM ${2:table1} t1\nJOIN ${3:table2} t2 ON t1.${4:id} = t2.${5:t1_id}\nWHERE ${6:1=1};" },
+  { label: "lj", insert: "SELECT ${1:*}\nFROM ${2:table1} t1\nLEFT JOIN ${3:table2} t2 ON t1.${4:id} = t2.${5:t1_id};" },
+  { label: "grp", insert: "SELECT ${1:column}, COUNT(*)\nFROM ${2:table_name}\nGROUP BY ${1:column}\nORDER BY COUNT(*) DESC;" },
+  { label: "cte", insert: "WITH ${1:cte_name} AS (\n  SELECT ${2:*}\n  FROM ${3:table_name}\n  WHERE ${4:condition}\n)\nSELECT * FROM ${1:cte_name};" },
+  { label: "exist", insert: "SELECT *\nFROM ${1:table_name} t1\nWHERE EXISTS (\n  SELECT 1\n  FROM ${2:other_table} t2\n  WHERE t2.${3:fk} = t1.${4:id}\n);" },
+  { label: "upsert", insert: "INSERT INTO ${1:table_name} (${2:columns})\nVALUES (${3:values})\nON CONFLICT (${4:constraint})\nDO UPDATE SET ${5:column} = EXCLUDED.${5:column};" },
+  { label: "vw", insert: "CREATE OR REPLACE VIEW ${1:view_name} AS\nSELECT ${2:*}\nFROM ${3:table_name}\nWHERE ${4:condition};" },
+  { label: "fn", insert: "CREATE OR REPLACE FUNCTION ${1:func_name}(${2:params})\nRETURNS ${3:return_type}\nLANGUAGE plpgsql\nAS \\$\\$\nBEGIN\n  ${4:-- body}\nEND;\n\\$\\$;" },
+  { label: "trg", insert: "CREATE TRIGGER ${1:trigger_name}\n${2:BEFORE} ${3:INSERT} ON ${4:table_name}\nFOR EACH ROW\nEXECUTE FUNCTION ${5:func_name}();" },
+  { label: "txn", insert: "BEGIN;\n  ${1:-- statements}\nCOMMIT;" },
+];

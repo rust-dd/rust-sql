@@ -1,4 +1,5 @@
 use std::time::Instant;
+use rayon::prelude::*;
 use tokio::time as tokio_time;
 use tokio_postgres::Client;
 
@@ -37,13 +38,90 @@ pub async fn execute_query(
         .map(|c| c.name().to_string())
         .collect::<Vec<String>>();
 
-    let data = rows
-        .iter()
-        .map(|row| (0..row.len()).map(|i| reflective_get(row, i)).collect())
-        .collect::<Vec<Vec<String>>>();
+    // Use rayon for parallel row processing on large result sets
+    let col_count = rows[0].len();
+    let data: Vec<Vec<String>> = if rows.len() > 1000 {
+        rows.par_iter()
+            .map(|row| (0..col_count).map(|i| reflective_get(row, i)).collect())
+            .collect()
+    } else {
+        rows.iter()
+            .map(|row| (0..col_count).map(|i| reflective_get(row, i)).collect())
+            .collect()
+    };
 
     let elapsed = start.elapsed().as_millis() as f32;
     Ok((columns, data, elapsed))
+}
+
+/// Cell separator for packed format (Unit Separator, ASCII 0x1F)
+const CELL_SEP: char = '\x1F';
+/// Row separator for packed format (Record Separator, ASCII 0x1E)
+const ROW_SEP: char = '\x1E';
+
+/// Execute a timed query and return results in compact packed string format.
+/// Format: "col1\x1Fcol2\x1E row1val1\x1Frow1val2\x1E row2val1\x1Frow2val2"
+/// This avoids the massive JSON overhead of nested Vec<Vec<String>>.
+pub async fn execute_query_packed(
+    client: &Client,
+    sql: &str,
+) -> Result<(String, f32), AppError> {
+    let start = Instant::now();
+    let rows = client
+        .query(sql, &[])
+        .await
+        .map_err(|e| AppError::QueryFailed(e.to_string()))?;
+
+    if rows.is_empty() {
+        return Ok((String::new(), 0.0f32));
+    }
+
+    let columns = rows[0]
+        .columns()
+        .iter()
+        .map(|c| c.name().to_string())
+        .collect::<Vec<String>>();
+
+    let col_count = rows[0].len();
+    let cell_sep = CELL_SEP.to_string();
+    let row_sep = ROW_SEP.to_string();
+
+    // Build header
+    let header = columns.join(&cell_sep);
+
+    // Use rayon for parallel row processing, then join
+    let row_strings: Vec<String> = if rows.len() > 1000 {
+        rows.par_iter()
+            .map(|row| {
+                (0..col_count)
+                    .map(|i| {
+                        // Replace separator chars in values to avoid corruption
+                        reflective_get(row, i)
+                            .replace(CELL_SEP, " ")
+                            .replace(ROW_SEP, " ")
+                    })
+                    .collect::<Vec<_>>()
+                    .join(&cell_sep)
+            })
+            .collect()
+    } else {
+        rows.iter()
+            .map(|row| {
+                (0..col_count)
+                    .map(|i| {
+                        reflective_get(row, i)
+                            .replace(CELL_SEP, " ")
+                            .replace(ROW_SEP, " ")
+                    })
+                    .collect::<Vec<_>>()
+                    .join(&cell_sep)
+            })
+            .collect()
+    };
+
+    let packed = format!("{}{}{}", header, row_sep, row_strings.join(&row_sep));
+    let elapsed = start.elapsed().as_millis() as f32;
+    Ok((packed, elapsed))
 }
 
 /// Load schemas with a timeout. The query string is driver-specific.
@@ -534,6 +612,48 @@ pub async fn load_constraints(
             let ctype: String = r.get(1);
             let col: String = r.get(2);
             (name, ctype, col)
+        })
+        .collect())
+}
+
+/// FK relation: (source_table, source_column, target_table, target_column)
+pub type ForeignKeyInfo = (String, String, String, String);
+
+/// Load all foreign key relationships for a given schema.
+pub async fn load_foreign_keys(
+    client: &Client,
+    schema: &str,
+) -> Result<Vec<ForeignKeyInfo>, AppError> {
+    let rows = client
+        .query(
+            r#"SELECT
+                 kcu.table_name AS source_table,
+                 kcu.column_name AS source_column,
+                 ccu.table_name AS target_table,
+                 ccu.column_name AS target_column
+               FROM information_schema.table_constraints tc
+               JOIN information_schema.key_column_usage kcu
+                 ON tc.constraint_name = kcu.constraint_name
+                 AND tc.table_schema = kcu.table_schema
+               JOIN information_schema.constraint_column_usage ccu
+                 ON ccu.constraint_name = tc.constraint_name
+                 AND ccu.table_schema = tc.table_schema
+               WHERE tc.constraint_type = 'FOREIGN KEY'
+                 AND tc.table_schema = $1
+               ORDER BY kcu.table_name, kcu.column_name"#,
+            &[&schema],
+        )
+        .await
+        .map_err(|e| AppError::QueryFailed(e.to_string()))?;
+
+    Ok(rows
+        .iter()
+        .map(|r| {
+            let src_table: String = r.get(0);
+            let src_col: String = r.get(1);
+            let tgt_table: String = r.get(2);
+            let tgt_col: String = r.get(3);
+            (src_table, src_col, tgt_table, tgt_col)
         })
         .collect())
 }

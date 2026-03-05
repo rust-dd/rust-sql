@@ -121,6 +121,15 @@
     }
 }
 
+/* Hide scrollbar utility */
+.scrollbar-none::-webkit-scrollbar {
+    display: none;
+}
+.scrollbar-none {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
 /* Sidebar indent guides */
 .sidebar-indent-guide {
     position: absolute;
@@ -129,4 +138,5 @@
     width: 1px;
     background: var(--sidebar-border);
     pointer-events: none;
+    opacity: 0.5;
 }

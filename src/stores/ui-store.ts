@@ -1,4 +1,11 @@
 import { create } from "zustand";
+import type { QueryResult } from "@/types";
+
+interface PinnedResult {
+  columns: string[];
+  rows: string[][];
+  label: string;
+}
 
 interface UIState {
   theme: "light" | "dark";
@@ -7,6 +14,7 @@ interface UIState {
   connectionModalOpen: boolean;
   viewMode: "grid" | "record";
   selectedRow: number;
+  pinnedResult: PinnedResult | null;
 
   toggleTheme: () => void;
   setTheme: (theme: "light" | "dark") => void;
@@ -15,6 +23,8 @@ interface UIState {
   setConnectionModalOpen: (open: boolean) => void;
   setViewMode: (mode: "grid" | "record") => void;
   setSelectedRow: (row: number | ((prev: number) => number)) => void;
+  pinResult: (result: QueryResult, label: string) => void;
+  clearPinnedResult: () => void;
 }
 
 export const useUIStore = create<UIState>((set) => ({
@@ -24,6 +34,7 @@ export const useUIStore = create<UIState>((set) => ({
   connectionModalOpen: false,
   viewMode: "grid",
   selectedRow: 0,
+  pinnedResult: null,
 
   toggleTheme: () => {
     set((s) => {
@@ -69,4 +80,10 @@ export const useUIStore = create<UIState>((set) => ({
       selectedRow: typeof row === "function" ? row(s.selectedRow) : row,
     }));
   },
+
+  pinResult: (result, label) => {
+    set({ pinnedResult: { columns: result.columns, rows: result.rows, label } });
+  },
+
+  clearPinnedResult: () => set({ pinnedResult: null }),
 }));

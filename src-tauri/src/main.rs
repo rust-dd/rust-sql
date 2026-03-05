@@ -4,6 +4,7 @@
 mod common;
 mod dbs;
 mod drivers;
+mod terminal;
 mod utils;
 
 const LOCAL_DB_NAME: &str = "rsql.db";
@@ -30,6 +31,7 @@ fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_shell::init())
+        .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
             let app_handle = app.handle().clone();
 
@@ -83,6 +85,11 @@ fn main() {
                     local_db: db,
                 };
                 app_handle.manage(state);
+
+                let terminal_state = terminal::TerminalState {
+                    sessions: Arc::new(Mutex::new(std::collections::HashMap::new())),
+                };
+                app_handle.manage(terminal_state);
             });
 
             #[cfg(debug_assertions)]
@@ -119,6 +126,8 @@ fn main() {
             drivers::pgsql::pgsql_load_activity,
             drivers::pgsql::pgsql_load_database_stats,
             drivers::pgsql::pgsql_load_table_stats,
+            drivers::pgsql::pgsql_load_foreign_keys,
+            drivers::pgsql::pgsql_run_query_packed,
             drivers::redshift::redshift_connector,
             drivers::redshift::redshift_load_schemas,
             drivers::redshift::redshift_load_tables,
@@ -137,6 +146,13 @@ fn main() {
             drivers::redshift::redshift_load_activity,
             drivers::redshift::redshift_load_database_stats,
             drivers::redshift::redshift_load_table_stats,
+            drivers::redshift::redshift_load_foreign_keys,
+            drivers::redshift::redshift_run_query_packed,
+            terminal::terminal_spawn,
+            terminal::terminal_write,
+            terminal::terminal_resize,
+            terminal::terminal_kill,
+            utils::compute_diff,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -36,3 +36,4 @@ src-tauri/project_db/
 src-tauri/query_db/
 
 *.db
+.claude

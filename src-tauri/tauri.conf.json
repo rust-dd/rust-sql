@@ -13,8 +13,10 @@
     "windows": [
       {
         "title": "rsql",
-        "width": 800,
-        "height": 600
+        "width": 1280,
+        "height": 768,
+        "minWidth": 1280,
+        "minHeight": 768
       }
     ],
     "security": {

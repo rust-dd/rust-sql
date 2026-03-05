@@ -8,12 +8,15 @@ interface QueryEditorProps {
   value: string;
   onChange: (value: string) => void;
   onExecute: () => void;
+  onExplain?: () => void;
 }
 
-export function QueryEditor({ value, onChange, onExecute }: QueryEditorProps) {
+export function QueryEditor({ value, onChange, onExecute, onExplain }: QueryEditorProps) {
   const theme = useUIStore((s) => s.theme);
   const onExecuteRef = useRef(onExecute);
   onExecuteRef.current = onExecute;
+  const onExplainRef = useRef(onExplain);
+  onExplainRef.current = onExplain;
 
   const handleBeforeMount = useCallback((monaco: typeof Monaco) => {
     registerContextAwareCompletions(monaco);
@@ -26,6 +29,12 @@ export function QueryEditor({ value, onChange, onExecute }: QueryEditorProps) {
         label: "Run Query",
         keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter],
         run: () => onExecuteRef.current(),
+      });
+      editor.addAction({
+        id: "explain-query",
+        label: "Explain Query",
+        keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.Enter],
+        run: () => onExplainRef.current?.(),
       });
     },
     [],

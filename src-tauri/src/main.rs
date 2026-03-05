@@ -10,8 +10,8 @@ mod utils;
 const LOCAL_DB_NAME: &str = "rsql.db";
 
 use std::{collections::BTreeMap, sync::Arc};
-use tauri::Manager;
 use tauri::menu::{AboutMetadata, MenuBuilder, SubmenuBuilder};
+use tauri::Manager;
 use tokio::sync::Mutex;
 use tokio_postgres::{CancelToken, Client};
 use tracing::Level;
@@ -121,7 +121,10 @@ fn main() {
                     name: Some("RSQL".into()),
                     version: Some(env!("CARGO_PKG_VERSION").into()),
                     copyright: Some("\u{00a9} 2025 rust-dd".into()),
-                    comments: Some("Modern SQL client for PostgreSQL.\nBuilt with Tauri, React, and Rust.".into()),
+                    comments: Some(
+                        "Modern SQL client for PostgreSQL.\nBuilt with Tauri, React, and Rust."
+                            .into(),
+                    ),
                     website: Some("https://github.com/rust-dd/rsql".into()),
                     website_label: Some("GitHub".into()),
                     ..Default::default()
@@ -146,9 +149,7 @@ fn main() {
                 .select_all()
                 .build()?;
 
-            let view_menu = SubmenuBuilder::new(handle, "View")
-                .fullscreen()
-                .build()?;
+            let view_menu = SubmenuBuilder::new(handle, "View").fullscreen().build()?;
 
             let window_menu = SubmenuBuilder::new(handle, "Window")
                 .minimize()
@@ -165,7 +166,9 @@ fn main() {
 
             #[cfg(debug_assertions)]
             {
-                let window = app.get_webview_window("main").expect("main window not found");
+                let window = app
+                    .get_webview_window("main")
+                    .expect("main window not found");
                 window.open_devtools();
                 window.close_devtools();
             }

@@ -35,9 +35,7 @@ pub async fn terminal_spawn(
     let mut cmd = CommandBuilder::new_default_prog();
     cmd.env("TERM", "xterm-256color");
 
-    pair.slave
-        .spawn_command(cmd)
-        .map_err(|e| e.to_string())?;
+    pair.slave.spawn_command(cmd).map_err(|e| e.to_string())?;
 
     // Drop the slave so we can detect when the child exits
     drop(pair.slave);

@@ -2,7 +2,7 @@ use std::collections::HashSet;
 use std::time::Instant;
 
 use rayon::prelude::*;
-use sysinfo::{Networks, Pid, ProcessRefreshKind, ProcessesToUpdate, System, get_current_pid};
+use sysinfo::{get_current_pid, Networks, Pid, ProcessRefreshKind, ProcessesToUpdate, System};
 use tauri::State;
 
 use crate::AppState;
@@ -98,7 +98,9 @@ impl ResourceMonitor {
 }
 
 #[tauri::command(rename_all = "snake_case")]
-pub async fn system_resource_usage(app_state: State<'_, AppState>) -> Result<SystemResourceUsage, String> {
+pub async fn system_resource_usage(
+    app_state: State<'_, AppState>,
+) -> Result<SystemResourceUsage, String> {
     let mut monitor = app_state.resource_monitor.lock().await;
     Ok(monitor.sample())
 }
@@ -110,14 +112,19 @@ fn parse_packed_rows(packed: &str) -> Vec<&str> {
         return Vec::new();
     }
     let parts: Vec<&str> = packed.split(ROW_SEP).collect();
-    if parts.len() > 1 { parts[1..].to_vec() } else { Vec::new() }
+    if parts.len() > 1 {
+        parts[1..].to_vec()
+    } else {
+        Vec::new()
+    }
 }
 
 fn pack_rows(header: &str, rows: &[&str]) -> String {
     if rows.is_empty() {
         return header.to_string();
     }
-    let mut result = String::with_capacity(header.len() + rows.iter().map(|r| r.len() + 1).sum::<usize>());
+    let mut result =
+        String::with_capacity(header.len() + rows.iter().map(|r| r.len() + 1).sum::<usize>());
     result.push_str(header);
     for row in rows {
         result.push(ROW_SEP);
@@ -131,10 +138,7 @@ fn pack_rows(header: &str, rows: &[&str]) -> String {
 /// First row of each is the header (columns).
 /// Returns: (added_packed, removed_packed, unchanged_count)
 #[tauri::command(rename_all = "snake_case")]
-pub fn compute_diff(
-    pinned_packed: String,
-    current_packed: String,
-) -> (String, String, usize) {
+pub fn compute_diff(pinned_packed: String, current_packed: String) -> (String, String, usize) {
     let pinned_rows = parse_packed_rows(&pinned_packed);
     let current_rows = parse_packed_rows(&current_packed);
 
@@ -143,29 +147,36 @@ pub fn compute_diff(
     let current_set: HashSet<&str> = current_rows.iter().copied().collect();
 
     // Compute diff using parallel iteration for large datasets
-    let (added, removed, unchanged_count) = if current_rows.len() > 5000 || pinned_rows.len() > 5000 {
-        let added: Vec<&str> = current_rows.par_iter()
+    let (added, removed, unchanged_count) = if current_rows.len() > 5000 || pinned_rows.len() > 5000
+    {
+        let added: Vec<&str> = current_rows
+            .par_iter()
             .filter(|r| !pinned_set.contains(*r))
             .copied()
             .collect();
-        let removed: Vec<&str> = pinned_rows.par_iter()
+        let removed: Vec<&str> = pinned_rows
+            .par_iter()
             .filter(|r| !current_set.contains(*r))
             .copied()
             .collect();
-        let unchanged: usize = current_rows.par_iter()
+        let unchanged: usize = current_rows
+            .par_iter()
             .filter(|r| pinned_set.contains(*r))
             .count();
         (added, removed, unchanged)
     } else {
-        let added: Vec<&str> = current_rows.iter()
+        let added: Vec<&str> = current_rows
+            .iter()
             .filter(|r| !pinned_set.contains(*r))
             .copied()
             .collect();
-        let removed: Vec<&str> = pinned_rows.iter()
+        let removed: Vec<&str> = pinned_rows
+            .iter()
             .filter(|r| !current_set.contains(*r))
             .copied()
             .collect();
-        let unchanged: usize = current_rows.iter()
+        let unchanged: usize = current_rows
+            .iter()
             .filter(|r| pinned_set.contains(*r))
             .count();
         (added, removed, unchanged)

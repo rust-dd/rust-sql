@@ -1,6 +1,6 @@
+use rayon::prelude::*;
 use std::sync::Arc;
 use std::time::Instant;
-use rayon::prelude::*;
 use tokio::time as tokio_time;
 use tokio_postgres::{Client, SimpleQueryMessage};
 
@@ -107,7 +107,9 @@ fn join_sep(items: &[String], sep: char) -> String {
     let total: usize = items.iter().map(|s| s.len()).sum::<usize>() + items.len();
     let mut out = String::with_capacity(total);
     for (i, item) in items.iter().enumerate() {
-        if i > 0 { out.push(sep); }
+        if i > 0 {
+            out.push(sep);
+        }
         out.push_str(item);
     }
     out
@@ -133,10 +135,7 @@ const CURSOR_FETCH_SIZE: usize = 10_000;
 /// Execute a timed query and return results in compact packed string format.
 /// Format: "col1\x1Fcol2\x1E row1val1\x1Frow1val2\x1E row2val1\x1Frow2val2"
 /// Uses simple_query protocol with multi-statement support.
-pub async fn execute_query_packed(
-    client: &Client,
-    sql: &str,
-) -> Result<(String, f32), AppError> {
+pub async fn execute_query_packed(client: &Client, sql: &str) -> Result<(String, f32), AppError> {
     let start = Instant::now();
     let messages = client
         .simple_query(sql)
@@ -180,7 +179,9 @@ pub async fn execute_query_streamed(
     let event_name = format!("query-stream-{}", stream_id);
 
     // Begin transaction + declare cursor for memory-efficient streaming
-    client.batch_execute("BEGIN").await
+    client
+        .batch_execute("BEGIN")
+        .await
         .map_err(|e| AppError::QueryFailed(e.to_string()))?;
 
     let cursor_sql = format!("DECLARE _rsql_cur NO SCROLL CURSOR FOR {}", sql);
@@ -193,11 +194,10 @@ pub async fn execute_query_streamed(
             let mut capped = false;
 
             loop {
-                let messages = client.simple_query(&fetch_sql).await
-                    .map_err(|e| {
-                        let _ = client.batch_execute("CLOSE _rsql_cur; ROLLBACK");
-                        AppError::QueryFailed(e.to_string())
-                    })?;
+                let messages = client.simple_query(&fetch_sql).await.map_err(|e| {
+                    let _ = client.batch_execute("CLOSE _rsql_cur; ROLLBACK");
+                    AppError::QueryFailed(e.to_string())
+                })?;
 
                 let mut batch_rows: Vec<Vec<String>> = Vec::new();
                 let mut batch_columns: Option<Vec<String>> = None;
@@ -228,10 +228,13 @@ pub async fn execute_query_streamed(
                 if !columns_sent {
                     if let Some(cols) = batch_columns {
                         let header = join_sep(&cols, CELL_SEP);
-                        let _ = app.emit(&event_name, QueryStreamEvent::Columns {
-                            columns: header,
-                            total_rows: 0,
-                        });
+                        let _ = app.emit(
+                            &event_name,
+                            QueryStreamEvent::Columns {
+                                columns: header,
+                                total_rows: 0,
+                            },
+                        );
                         columns_sent = true;
                     }
                 }
@@ -248,10 +251,13 @@ pub async fn execute_query_streamed(
 
             // No rows at all
             if !columns_sent {
-                let _ = app.emit(&event_name, QueryStreamEvent::Columns {
-                    columns: String::new(),
-                    total_rows: 0,
-                });
+                let _ = app.emit(
+                    &event_name,
+                    QueryStreamEvent::Columns {
+                        columns: String::new(),
+                        total_rows: 0,
+                    },
+                );
             }
 
             // Clean up cursor + transaction
@@ -266,29 +272,43 @@ pub async fn execute_query_streamed(
             client.batch_execute("ROLLBACK").await.ok();
 
             // Re-execute with simple_query for multi-statement support
-            let messages = client.simple_query(sql).await
+            let messages = client
+                .simple_query(sql)
+                .await
                 .map_err(|e| AppError::QueryFailed(e.to_string()))?;
 
             let (columns, rows) = process_simple_messages(messages);
 
             if columns.is_empty() {
-                let _ = app.emit(&event_name, QueryStreamEvent::Columns {
-                    columns: String::new(),
-                    total_rows: 0,
-                });
+                let _ = app.emit(
+                    &event_name,
+                    QueryStreamEvent::Columns {
+                        columns: String::new(),
+                        total_rows: 0,
+                    },
+                );
             } else {
                 let header = join_sep(&columns, CELL_SEP);
-                let _ = app.emit(&event_name, QueryStreamEvent::Columns {
-                    columns: header,
-                    total_rows: rows.len(),
-                });
+                let _ = app.emit(
+                    &event_name,
+                    QueryStreamEvent::Columns {
+                        columns: header,
+                        total_rows: rows.len(),
+                    },
+                );
 
                 let packed = pack_rows_vec(&rows);
                 let _ = app.emit(&event_name, QueryStreamEvent::Chunk { data: packed });
             }
 
             let elapsed = start.elapsed().as_millis() as f32;
-            let _ = app.emit(&event_name, QueryStreamEvent::Done { elapsed, capped: false });
+            let _ = app.emit(
+                &event_name,
+                QueryStreamEvent::Done {
+                    elapsed,
+                    capped: false,
+                },
+            );
         }
     }
 
@@ -350,7 +370,9 @@ pub async fn execute_virtual(
 ) -> Result<(String, usize, String, f32), AppError> {
     let start = Instant::now();
 
-    let messages = client.simple_query(sql).await
+    let messages = client
+        .simple_query(sql)
+        .await
         .map_err(|e| AppError::QueryFailed(e.to_string()))?;
 
     let (columns, all_rows) = process_simple_messages(messages);
@@ -378,7 +400,10 @@ pub async fn execute_virtual(
     // Pre-pack into pages — use rayon only for large results (>50K rows)
     let chunks: Vec<&[Vec<String>]> = all_rows.chunks(page_size).collect();
     let pages: Vec<String> = if total_rows > 50_000 {
-        chunks.par_iter().map(|chunk| pack_rows_vec(chunk)).collect()
+        chunks
+            .par_iter()
+            .map(|chunk| pack_rows_vec(chunk))
+            .collect()
     } else {
         chunks.iter().map(|chunk| pack_rows_vec(chunk)).collect()
     };
@@ -405,7 +430,8 @@ pub async fn fetch_virtual_page(
     _limit: usize,
 ) -> Result<String, AppError> {
     let c = cache.lock().await;
-    let entry = c.get(query_id)
+    let entry = c
+        .get(query_id)
         .ok_or_else(|| AppError::QueryFailed(format!("Virtual query {} not found", query_id)))?;
 
     let page_index = offset / entry.page_size;
@@ -423,10 +449,7 @@ pub async fn close_virtual(
 }
 
 /// Load schemas with a timeout. The query string is driver-specific.
-pub async fn load_schemas(
-    client: &Client,
-    query_sql: &str,
-) -> Result<PgsqlLoadSchemas, AppError> {
+pub async fn load_schemas(client: &Client, query_sql: &str) -> Result<PgsqlLoadSchemas, AppError> {
     let rows = tokio_time::timeout(
         tokio_time::Duration::from_secs(10),
         client.query(query_sql, &[]),
@@ -648,10 +671,7 @@ pub async fn load_policies(
 }
 
 /// View info: (view_name)
-pub async fn load_views(
-    client: &Client,
-    schema: &str,
-) -> Result<Vec<String>, AppError> {
+pub async fn load_views(client: &Client, schema: &str) -> Result<Vec<String>, AppError> {
     let rows = client
         .query(
             r#"SELECT table_name
@@ -689,10 +709,7 @@ pub async fn load_materialized_views(
 pub type FunctionInfo = (String, String, String);
 
 /// Load functions for a schema (excluding trigger functions and aggregates).
-pub async fn load_functions(
-    client: &Client,
-    schema: &str,
-) -> Result<Vec<FunctionInfo>, AppError> {
+pub async fn load_functions(client: &Client, schema: &str) -> Result<Vec<FunctionInfo>, AppError> {
     let rows = client
         .query(
             r#"SELECT p.proname,
@@ -777,11 +794,7 @@ pub async fn load_activity(client: &Client) -> Result<Vec<Vec<String>>, AppError
 
     Ok(rows
         .iter()
-        .map(|r| {
-            (0..10)
-                .map(|i| r.get::<_, String>(i))
-                .collect()
-        })
+        .map(|r| (0..10).map(|i| r.get::<_, String>(i)).collect())
         .collect())
 }
 
@@ -868,11 +881,7 @@ pub async fn load_table_stats(client: &Client) -> Result<Vec<Vec<String>>, AppEr
 
     Ok(rows
         .iter()
-        .map(|r| {
-            (0..14)
-                .map(|i| r.get::<_, String>(i))
-                .collect()
-        })
+        .map(|r| (0..14).map(|i| r.get::<_, String>(i)).collect())
         .collect())
 }
 

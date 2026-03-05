@@ -3,20 +3,19 @@ use std::sync::Arc;
 use crate::common::enums::{AppError, ProjectConnectionStatus};
 use crate::common::pgsql::{PgsqlLoadColumns, PgsqlLoadSchemas, PgsqlLoadTables};
 use crate::drivers::common::{
-    execute_query, execute_query_packed, execute_query_streamed, execute_virtual,
-    fetch_virtual_page, close_virtual, get_client, load_activity, load_column_details,
-    load_columns, load_constraints, load_database_stats, load_foreign_keys, load_functions,
-    load_indexes, load_materialized_views, load_policies, load_rules, load_schemas,
-    load_table_stats, load_tables, load_trigger_functions, load_triggers, load_views,
-    ColumnDetail, ConstraintDetail, DbStat, ForeignKeyInfo, FunctionInfo, IndexDetail,
-    PolicyDetail, RuleDetail, TriggerDetail,
+    close_virtual, execute_query, execute_query_packed, execute_query_streamed, execute_virtual,
+    fetch_virtual_page, get_client, load_activity, load_column_details, load_columns,
+    load_constraints, load_database_stats, load_foreign_keys, load_functions, load_indexes,
+    load_materialized_views, load_policies, load_rules, load_schemas, load_table_stats,
+    load_tables, load_trigger_functions, load_triggers, load_views, ColumnDetail, ConstraintDetail,
+    DbStat, ForeignKeyInfo, FunctionInfo, IndexDetail, PolicyDetail, RuleDetail, TriggerDetail,
 };
 use crate::AppState;
 
 use native_tls::TlsConnector;
 use postgres_native_tls::MakeTlsConnector;
-use tauri::{AppHandle, Manager, Result, State};
 use tauri::ipc::Response;
+use tauri::{AppHandle, Manager, Result, State};
 use tokio::time as tokio_time;
 use tokio_postgres::{Client, Config, NoTls};
 
@@ -27,13 +26,11 @@ async fn create_pg_client(cfg: &Config, use_ssl: bool) -> std::result::Result<Cl
             .build()
             .map_err(|e| AppError::ConnectionFailed(e.to_string()))?;
         let tls = MakeTlsConnector::new(tls_connector);
-        let (client, connection) = tokio_time::timeout(
-            tokio_time::Duration::from_secs(10),
-            cfg.connect(tls),
-        )
-        .await
-        .map_err(|_| AppError::ConnectionTimeout)?
-        .map_err(|e| AppError::ConnectionFailed(e.to_string()))?;
+        let (client, connection) =
+            tokio_time::timeout(tokio_time::Duration::from_secs(10), cfg.connect(tls))
+                .await
+                .map_err(|_| AppError::ConnectionTimeout)?
+                .map_err(|e| AppError::ConnectionFailed(e.to_string()))?;
 
         tokio::spawn(async move {
             if let Err(e) = connection.await {
@@ -42,13 +39,11 @@ async fn create_pg_client(cfg: &Config, use_ssl: bool) -> std::result::Result<Cl
         });
         Ok(client)
     } else {
-        let (client, connection) = tokio_time::timeout(
-            tokio_time::Duration::from_secs(10),
-            cfg.connect(NoTls),
-        )
-        .await
-        .map_err(|_| AppError::ConnectionTimeout)?
-        .map_err(|e| AppError::ConnectionFailed(e.to_string()))?;
+        let (client, connection) =
+            tokio_time::timeout(tokio_time::Duration::from_secs(10), cfg.connect(NoTls))
+                .await
+                .map_err(|_| AppError::ConnectionTimeout)?
+                .map_err(|e| AppError::ConnectionFailed(e.to_string()))?;
 
         tokio::spawn(async move {
             if let Err(e) = connection.await {
@@ -83,7 +78,9 @@ pub async fn pgsql_connector(
             key[5] == "true",
         ),
         None => {
-            let conn = app_state.local_db.connect()
+            let conn = app_state
+                .local_db
+                .connect()
                 .map_err(|e| AppError::DatabaseError(e.to_string()))?;
             let mut rows = conn
                 .query(
@@ -451,10 +448,7 @@ pub async fn pgsql_run_query(
 }
 
 #[tauri::command(rename_all = "snake_case")]
-pub async fn pgsql_cancel_query(
-    project_id: &str,
-    app_state: State<'_, AppState>,
-) -> Result<bool> {
+pub async fn pgsql_cancel_query(project_id: &str, app_state: State<'_, AppState>) -> Result<bool> {
     let cancel_token = {
         let cancel_tokens = app_state.cancel_tokens.lock().await;
         cancel_tokens
@@ -534,7 +528,8 @@ pub async fn pgsql_execute_virtual(
         get_client(&clients, project_id)?
     };
 
-    let result = execute_virtual(&client, &app_state.virtual_cache, sql, query_id, page_size).await?;
+    let result =
+        execute_virtual(&client, &app_state.virtual_cache, sql, query_id, page_size).await?;
     let json = sonic_rs::to_string(&result).map_err(|e| AppError::QueryFailed(e.to_string()))?;
     Ok(Response::new(json))
 }
@@ -547,16 +542,14 @@ pub async fn pgsql_fetch_page(
     limit: usize,
     app_state: State<'_, AppState>,
 ) -> Result<Response> {
-    let result = fetch_virtual_page(&app_state.virtual_cache, query_id, col_count, offset, limit).await?;
+    let result =
+        fetch_virtual_page(&app_state.virtual_cache, query_id, col_count, offset, limit).await?;
     let json = sonic_rs::to_string(&result).map_err(|e| AppError::QueryFailed(e.to_string()))?;
     Ok(Response::new(json))
 }
 
 #[tauri::command(rename_all = "snake_case")]
-pub async fn pgsql_close_virtual(
-    query_id: &str,
-    app_state: State<'_, AppState>,
-) -> Result<()> {
+pub async fn pgsql_close_virtual(query_id: &str, app_state: State<'_, AppState>) -> Result<()> {
     close_virtual(&app_state.virtual_cache, query_id)
         .await
         .map_err(Into::into)

@@ -19,6 +19,7 @@ use tracing::Level;
 pub struct AppState {
     pub client: Arc<Mutex<Option<BTreeMap<String, Arc<Client>>>>>,
     pub local_db: libsql::Database,
+    pub resource_monitor: Arc<Mutex<utils::ResourceMonitor>>,
 }
 
 fn main() {
@@ -84,6 +85,7 @@ fn main() {
                 let state = AppState {
                     client: Arc::new(Mutex::new(Some(BTreeMap::new()))),
                     local_db: db,
+                    resource_monitor: Arc::new(Mutex::new(utils::ResourceMonitor::new())),
                 };
                 app_handle.manage(state);
 
@@ -208,6 +210,7 @@ fn main() {
             terminal::terminal_resize,
             terminal::terminal_kill,
             utils::compute_diff,
+            utils::system_resource_usage,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

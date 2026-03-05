@@ -1,6 +1,8 @@
+import { useEffect, useState } from "react";
 import { useActiveTab } from "@/stores/tab-store";
 import { useProjectStore } from "@/stores/project-store";
 import { useHistoryStore } from "@/stores/history-store";
+import { getSystemResourceUsage, type SystemResourceUsage } from "@/tauri";
 import { ProjectConnectionStatus } from "@/types";
 import { cn } from "@/lib/utils";
 import { Loader2 } from "lucide-react";
@@ -16,6 +18,46 @@ export function StatusBar() {
   const connStatus = projectId ? status[projectId] : undefined;
   const result = activeTab?.result;
   const isExecuting = activeTab?.isExecuting;
+  const [resources, setResources] = useState<SystemResourceUsage | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    const load = async () => {
+      try {
+        const usage = await getSystemResourceUsage();
+        if (!cancelled) setResources(usage);
+      } catch {
+        // Ignore metrics polling errors to keep footer stable.
+      }
+    };
+
+    void load();
+    const id = window.setInterval(() => {
+      void load();
+    }, 1000);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(id);
+    };
+  }, []);
+
+  const formatMb = (mb: number): string => {
+    if (mb >= 1000) return `${(mb / 1000).toFixed(2)} GB`;
+    return `${mb.toLocaleString()} MB`;
+  };
+
+  const formatMbps = (mbps: number): string => {
+    if (mbps >= 1000) return `${(mbps / 1000).toFixed(2)} Gbps`;
+    return `${mbps.toFixed(2)} Mbps`;
+  };
+
+  const cpu = resources ? `${resources.app_cpu_percent.toFixed(1)}%` : "--";
+  const rss = resources ? formatMb(resources.app_memory_rss_mb) : "--";
+  const proc = resources ? `${resources.app_process_count}` : "--";
+  const net = resources
+    ? `↓ ${formatMbps(resources.network_rx_mbps)} ↑ ${formatMbps(resources.network_tx_mbps)}`
+    : "--";
 
   return (
     <div className="flex h-7 items-center justify-between border-t border-border/30 bg-card/60 backdrop-blur-sm px-3 text-[11px] font-mono text-muted-foreground">
@@ -57,6 +99,16 @@ export function StatusBar() {
             {result.rows.length.toLocaleString()} rows in {result.time.toFixed(0)}ms
           </span>
         ) : null}
+      </div>
+
+      <div className="flex items-center gap-2">
+        <span>APP CPU {cpu}</span>
+        <span className="opacity-40">&bull;</span>
+        <span>RSS {rss}</span>
+        <span className="opacity-40">&bull;</span>
+        <span>PROC {proc}</span>
+        <span className="opacity-40">&bull;</span>
+        <span>NET {net}</span>
       </div>
 
       <div className="flex items-center gap-2">

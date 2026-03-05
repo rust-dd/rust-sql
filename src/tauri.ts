@@ -3,6 +3,14 @@ import { invoke } from "@tauri-apps/api/core";
 // Raw wire types from Rust backend (string arrays)
 export type RawProjectMap = Record<string, string[]>;
 
+export interface SystemResourceUsage {
+  app_cpu_percent: number;
+  app_memory_rss_mb: number;
+  app_process_count: number;
+  network_rx_mbps: number;
+  network_tx_mbps: number;
+}
+
 export async function getProjects(): Promise<RawProjectMap> {
   return await invoke<RawProjectMap>("project_db_select");
 }
@@ -31,4 +39,8 @@ export async function insertQuery(
 
 export async function deleteQuery(query_id: string): Promise<void> {
   await invoke("query_db_delete", { query_id });
+}
+
+export async function getSystemResourceUsage(): Promise<SystemResourceUsage> {
+  return await invoke<SystemResourceUsage>("system_resource_usage");
 }

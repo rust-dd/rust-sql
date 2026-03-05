@@ -1,7 +1,10 @@
+import { useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useTabStore } from "@/stores/tab-store";
 import { useProjectStore } from "@/stores/project-store";
+import { DriverFactory } from "@/lib/database-driver";
+import * as virtualCache from "@/lib/virtual-cache";
 import { Activity, Database, Plus, Terminal, X } from "lucide-react";
 
 export function TabBar() {
@@ -10,6 +13,16 @@ export function TabBar() {
   const selectTab = useTabStore((s) => s.selectTab);
   const closeTab = useTabStore((s) => s.closeTab);
   const openTab = useTabStore((s) => s.openTab);
+
+  const handleCloseTab = useCallback((idx: number) => {
+    const tab = tabs[idx];
+    if (tab?.virtualQuery?.queryId && tab.projectId) {
+      const d = useProjectStore.getState().projects[tab.projectId];
+      if (d) DriverFactory.getDriver(d.driver).closeVirtual?.(tab.projectId, tab.virtualQuery.queryId).catch(() => {});
+      virtualCache.clearQuery(tab.virtualQuery.queryId);
+    }
+    closeTab(idx);
+  }, [tabs, closeTab]);
   const openTerminalTab = useTabStore((s) => s.openTerminalTab);
   const projects = useProjectStore((s) => s.projects);
 
@@ -52,7 +65,7 @@ export function TabBar() {
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
-                    closeTab(idx);
+                    handleCloseTab(idx);
                   }}
                   className="opacity-0 transition-all hover:bg-destructive/20 hover:text-destructive rounded-md p-0.5 group-hover:opacity-100"
                 >

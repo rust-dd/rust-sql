@@ -72,5 +72,12 @@ pub async fn project_db_delete(
         .await
         .map_err(|e| AppError::DatabaseError(e.to_string()))?;
 
+    // Best-effort cleanup for in-memory connection state.
+    if let Some(client_map) = app_state.client.lock().await.as_mut() {
+        client_map.remove(project_id);
+    }
+    app_state.cancel_tokens.lock().await.remove(project_id);
+    app_state.client_ssl.lock().await.remove(project_id);
+
     Ok(())
 }

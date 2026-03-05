@@ -12,6 +12,8 @@ use crate::drivers::common::{
 };
 use crate::AppState;
 
+use native_tls::TlsConnector;
+use postgres_native_tls::MakeTlsConnector;
 use tauri::{AppHandle, Manager, Result, State};
 use tokio::{sync::Mutex, time as tokio_time};
 use tokio_postgres::{Config, NoTls};
@@ -23,16 +25,18 @@ pub async fn pgsql_connector(
     app: AppHandle,
 ) -> Result<ProjectConnectionStatus> {
     let app_state = app.state::<AppState>();
-    let mut clients = app_state.client.lock().await;
-    let client_map = clients
-        .as_mut()
-        .ok_or(AppError::DatabaseError("No client map".into()))?;
+    {
+        let clients = app_state.client.lock().await;
+        let client_map = clients
+            .as_ref()
+            .ok_or(AppError::DatabaseError("No client map".into()))?;
 
-    if client_map.contains_key(project_id) {
-        return Ok(ProjectConnectionStatus::Connected);
+        if client_map.contains_key(project_id) {
+            return Ok(ProjectConnectionStatus::Connected);
+        }
     }
 
-    let (user, password, database, host, port_str, _use_ssl) = match key {
+    let (user, password, database, host, port_str, use_ssl) = match key {
         Some(key) => (
             key[0].to_string(),
             key[1].to_string(),
@@ -75,38 +79,91 @@ pub async fn pgsql_connector(
         .host(&host)
         .port(port);
 
-    let connection = tokio_time::timeout(tokio_time::Duration::from_secs(10), cfg.connect(NoTls))
-        .await
-        .map_err(|_| AppError::ConnectionTimeout);
-
-    let (client, connection) = match connection {
-        Ok(Ok(pair)) => pair,
-        Ok(Err(e)) => {
-            tracing::error!("Postgres connection error: {:?}", e);
-            return Ok(ProjectConnectionStatus::Failed);
-        }
-        Err(_) => {
-            tracing::error!("Postgres connection timeout");
-            return Ok(ProjectConnectionStatus::Failed);
-        }
-    };
-
     let is_connection_error = Arc::new(Mutex::new(false));
-    tokio::spawn({
-        let flag = Arc::clone(&is_connection_error);
-        async move {
-            if let Err(e) = connection.await {
-                tracing::error!("Postgres connection error: {:?}", e);
-                *flag.lock().await = true;
+    let client = if use_ssl {
+        let tls_connector = TlsConnector::builder()
+            .build()
+            .map_err(|e| AppError::ConnectionFailed(e.to_string()))?;
+        let tls = MakeTlsConnector::new(tls_connector);
+        let connection = tokio_time::timeout(tokio_time::Duration::from_secs(10), cfg.connect(tls))
+            .await
+            .map_err(|_| AppError::ConnectionTimeout);
+
+        match connection {
+            Ok(Ok((client, connection))) => {
+                tokio::spawn({
+                    let flag = Arc::clone(&is_connection_error);
+                    async move {
+                        if let Err(e) = connection.await {
+                            tracing::error!("Postgres TLS connection error: {:?}", e);
+                            *flag.lock().await = true;
+                        }
+                    }
+                });
+                client
+            }
+            Ok(Err(e)) => {
+                tracing::error!("Postgres TLS connection error: {:?}", e);
+                return Ok(ProjectConnectionStatus::Failed);
+            }
+            Err(_) => {
+                tracing::error!("Postgres TLS connection timeout");
+                return Ok(ProjectConnectionStatus::Failed);
             }
         }
-    });
+    } else {
+        let connection = tokio_time::timeout(tokio_time::Duration::from_secs(10), cfg.connect(NoTls))
+            .await
+            .map_err(|_| AppError::ConnectionTimeout);
+
+        match connection {
+            Ok(Ok((client, connection))) => {
+                tokio::spawn({
+                    let flag = Arc::clone(&is_connection_error);
+                    async move {
+                        if let Err(e) = connection.await {
+                            tracing::error!("Postgres connection error: {:?}", e);
+                            *flag.lock().await = true;
+                        }
+                    }
+                });
+                client
+            }
+            Ok(Err(e)) => {
+                tracing::error!("Postgres connection error: {:?}", e);
+                return Ok(ProjectConnectionStatus::Failed);
+            }
+            Err(_) => {
+                tracing::error!("Postgres connection timeout");
+                return Ok(ProjectConnectionStatus::Failed);
+            }
+        }
+    };
 
     if *is_connection_error.lock().await {
         return Ok(ProjectConnectionStatus::Failed);
     }
 
-    client_map.insert(project_id.to_string(), Arc::new(client));
+    let client = Arc::new(client);
+
+    {
+        let mut clients = app_state.client.lock().await;
+        let client_map = clients
+            .as_mut()
+            .ok_or(AppError::DatabaseError("No client map".into()))?;
+        client_map.insert(project_id.to_string(), Arc::clone(&client));
+    }
+
+    {
+        let mut cancel_tokens = app_state.cancel_tokens.lock().await;
+        cancel_tokens.insert(project_id.to_string(), client.cancel_token());
+    }
+
+    {
+        let mut client_ssl = app_state.client_ssl.lock().await;
+        client_ssl.insert(project_id.to_string(), use_ssl);
+    }
+
     Ok(ProjectConnectionStatus::Connected)
 }
 
@@ -357,6 +414,43 @@ pub async fn pgsql_run_query(
     };
 
     execute_query(&client, sql).await.map_err(Into::into)
+}
+
+#[tauri::command(rename_all = "snake_case")]
+pub async fn pgsql_cancel_query(
+    project_id: &str,
+    app_state: State<'_, AppState>,
+) -> Result<bool> {
+    let cancel_token = {
+        let cancel_tokens = app_state.cancel_tokens.lock().await;
+        cancel_tokens
+            .get(project_id)
+            .cloned()
+            .ok_or_else(|| AppError::ClientNotConnected(project_id.to_string()))?
+    };
+
+    let use_ssl = {
+        let client_ssl = app_state.client_ssl.lock().await;
+        *client_ssl.get(project_id).unwrap_or(&false)
+    };
+
+    if use_ssl {
+        let tls_connector = TlsConnector::builder()
+            .build()
+            .map_err(|e| AppError::ConnectionFailed(e.to_string()))?;
+        let tls = MakeTlsConnector::new(tls_connector);
+        cancel_token
+            .cancel_query(tls)
+            .await
+            .map_err(|e| AppError::QueryFailed(format!("Failed to cancel query: {e}")))?;
+    } else {
+        cancel_token
+            .cancel_query(NoTls)
+            .await
+            .map_err(|e| AppError::QueryFailed(format!("Failed to cancel query: {e}")))?;
+    }
+
+    Ok(true)
 }
 
 #[tauri::command(rename_all = "snake_case")]

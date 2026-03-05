@@ -18,6 +18,7 @@ import {
   Pin,
   Save,
   Search,
+  Square,
   X,
   XCircle,
 } from "lucide-react";
@@ -61,6 +62,19 @@ export function ResultsPanel() {
   const result = activeTab?.result;
   const isExecuting = activeTab?.isExecuting;
   const vq = activeTab?.virtualQuery;
+
+  // Cancel running query
+  const handleCancel = useCallback(async () => {
+    if (!activeTab?.projectId || !activeTab.isExecuting) return;
+    const d = useProjectStore.getState().projects[activeTab.projectId];
+    if (!d) return;
+    try {
+      const driver = DriverFactory.getDriver(d.driver);
+      await driver.cancelQuery?.(activeTab.projectId);
+    } catch (err) {
+      console.error("Failed to cancel query:", err);
+    }
+  }, [activeTab?.projectId, activeTab?.isExecuting]);
 
   // Virtual page loading
   const loadingPages = useRef(new Set<number>());
@@ -400,6 +414,7 @@ export function ResultsPanel() {
     onEnterEdit: handleEnterEdit,
     onCommit: handleCommit,
     onDiscard: handleDiscard,
+    onCancel: handleCancel,
     virtualQuery: vq,
   };
 
@@ -523,6 +538,7 @@ interface ToolbarProps {
   onEnterEdit: () => void;
   onCommit: () => void;
   onDiscard: () => void;
+  onCancel?: () => void;
   virtualQuery?: { queryId: string; totalRows: number; time: number; pageSize: number };
 }
 
@@ -548,6 +564,7 @@ function ResultsToolbar(props: ToolbarProps) {
     onEnterEdit,
     onCommit,
     onDiscard,
+    onCancel,
     virtualQuery,
   } = props;
 
@@ -597,7 +614,7 @@ function ResultsToolbar(props: ToolbarProps) {
                 ? "bg-accent text-foreground shadow-sm"
                 : "text-muted-foreground hover:text-foreground"
             }`}
-            disabled={!result?.rows.length}
+            disabled={!result?.rows.length || !!virtualQuery}
           >
             Record
           </button>
@@ -668,6 +685,17 @@ function ResultsToolbar(props: ToolbarProps) {
             )}
           </div>
         )}
+
+        {/* Stop button — visible while executing */}
+        {isExecuting && onCancel && (
+          <button
+            onClick={onCancel}
+            className="flex items-center gap-1 px-2.5 py-1 rounded text-xs font-mono border border-destructive/50 text-destructive hover:bg-destructive/10 transition-colors"
+          >
+            <Square className="h-3 w-3" />
+            Stop
+          </button>
+        )}
       </div>
 
       <div className="flex items-center gap-2">
@@ -715,7 +743,7 @@ function ResultsToolbar(props: ToolbarProps) {
             )}
 
             {/* Pin / Diff */}
-            {panelView !== "history" && result && result.rows.length > 0 && (
+            {panelView !== "history" && result && result.rows.length > 0 && !virtualQuery && (
               <>
                 {pinnedResult ? (
                   <div className="flex items-center gap-1 px-2 py-0.5 rounded text-xs font-mono bg-primary/10 text-primary border border-primary/20">

@@ -50,8 +50,6 @@ export function ResultsGrid({
   onPageNeeded,
   cacheVersion,
 }: ResultsGridProps) {
-  const setSelectedRow = useUIStore((s) => s.setSelectedRow);
-  const setViewMode = useUIStore((s) => s.setViewMode);
   const theme = useUIStore((s) => s.theme);
   const containerRef = useRef<HTMLDivElement>(null);
   const [containerSize, setContainerSize] = useState({ width: 800, height: 400 });
@@ -178,10 +176,10 @@ export function ResultsGrid({
     [onCellEdit],
   );
 
-  // Cell click → FK navigate or record view
+  // Cell click → FK navigate only
   const handleRowClick = useCallback(
     (cell: Item) => {
-      if (isEditing) return;
+      if (isEditing || virtualQuery) return;
       const [colIdx, rowIdx] = cell;
 
       // FK navigation: if clicking an FK column, navigate to the referenced row
@@ -190,14 +188,10 @@ export function ResultsGrid({
         const value = rows[rowIdx]?.[colIdx] ?? "";
         if (value && value !== "null") {
           onFKNavigate(colName, value);
-          return;
         }
       }
-
-      setSelectedRow(rowIdx);
-      setViewMode("record");
     },
-    [isEditing, setSelectedRow, setViewMode, fkColIndices, onFKNavigate, columns, rows],
+    [isEditing, virtualQuery, fkColIndices, onFKNavigate, columns, rows],
   );
 
   // Theme for glide-data-grid

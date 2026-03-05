@@ -5,7 +5,6 @@ import { useHistoryStore } from "@/stores/history-store";
 import { getSystemResourceUsage, type SystemResourceUsage } from "@/tauri";
 import { ProjectConnectionStatus } from "@/types";
 import { cn } from "@/lib/utils";
-import { Loader2 } from "lucide-react";
 
 export function StatusBar() {
   const activeTab = useActiveTab();
@@ -16,8 +15,6 @@ export function StatusBar() {
   const projectId = activeTab?.projectId;
   const details = projectId ? projects[projectId] : undefined;
   const connStatus = projectId ? status[projectId] : undefined;
-  const result = activeTab?.result;
-  const isExecuting = activeTab?.isExecuting;
   const [resources, setResources] = useState<SystemResourceUsage | null>(null);
 
   useEffect(() => {
@@ -86,19 +83,6 @@ export function StatusBar() {
         ) : (
           <span>No connection</span>
         )}
-      </div>
-
-      <div className="flex items-center gap-2">
-        {isExecuting ? (
-          <>
-            <Loader2 className="h-3 w-3 animate-spin" />
-            <span>Executing...</span>
-          </>
-        ) : result ? (
-          <span>
-            {result.rows.length.toLocaleString()} rows in {result.time.toFixed(0)}ms
-          </span>
-        ) : null}
       </div>
 
       <div className="flex items-center gap-2">

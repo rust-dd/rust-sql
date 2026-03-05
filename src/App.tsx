@@ -29,6 +29,14 @@ const PAGE_SIZE = Number.isFinite(PAGE_SIZE_RAW) && PAGE_SIZE_RAW >= 100
 const CELL_SEP = "\x1F";
 const ROW_SEP = "\x1E";
 
+function isQueryCancelledError(message: string): boolean {
+  const lower = message.toLowerCase();
+  return lower.includes("canceling statement due to user request")
+    || lower.includes("cancelling statement due to user request")
+    || lower.includes("query canceled")
+    || lower.includes("query cancelled");
+}
+
 function notifyQueryComplete(sql: string, time: number, success: boolean, rowCount?: number) {
   if (document.hasFocus() || time < NOTIFY_THRESHOLD_MS) return;
   if (!("Notification" in window)) return;
@@ -71,6 +79,8 @@ export default function App() {
     void loadProjects();
   }, [loadProjects]);
 
+  const connectProject = useProjectStore((s) => s.connect);
+
   const runQuery = useCallback(async () => {
     const { tabs, selectedTabIndex: idx } = useTabStore.getState();
     const tab = tabs[idx];
@@ -78,6 +88,14 @@ export default function App() {
 
     const d = useProjectStore.getState().projects[tab.projectId];
     if (!d) return;
+
+    // Auto-connect if not connected
+    const connStatus = useProjectStore.getState().status[tab.projectId];
+    if (connStatus !== "Connected") {
+      await connectProject(tab.projectId);
+      const newStatus = useProjectStore.getState().status[tab.projectId];
+      if (newStatus !== "Connected") return;
+    }
 
     setExecuting(idx, true);
     const startTime = Date.now();
@@ -162,12 +180,15 @@ export default function App() {
     } catch (err: any) {
       const elapsed = Date.now() - startTime;
       const errorMsg = err?.message ?? String(err);
+      const cancelled = isQueryCancelledError(errorMsg);
       updateResult(idx, {
-        columns: ["Error"],
-        rows: [[errorMsg]],
+        columns: [cancelled ? "Info" : "Error"],
+        rows: [[cancelled ? "Query cancelled" : errorMsg]],
         time: 0,
       });
-      notifyQueryComplete(tab.editorValue, elapsed, false);
+      if (!cancelled) {
+        notifyQueryComplete(tab.editorValue, elapsed, false);
+      }
       addHistoryEntry({
         projectId: tab.projectId,
         database: d.database,
@@ -175,12 +196,12 @@ export default function App() {
         executionTime: elapsed,
         rowCount: 0,
         success: false,
-        error: errorMsg,
+        error: cancelled ? "Query cancelled" : errorMsg,
         timestamp: startTime,
       });
     }
     useUIStore.getState().setSelectedRow(0);
-  }, [setExecuting, updateResult, setVirtualQuery, addHistoryEntry]);
+  }, [setExecuting, updateResult, setVirtualQuery, addHistoryEntry, connectProject]);
 
   const runExplain = useCallback(async () => {
     const { tabs, selectedTabIndex: idx } = useTabStore.getState();
@@ -189,6 +210,14 @@ export default function App() {
 
     const d = useProjectStore.getState().projects[tab.projectId];
     if (!d) return;
+
+    // Auto-connect if not connected
+    const connStatus = useProjectStore.getState().status[tab.projectId];
+    if (connStatus !== "Connected") {
+      await connectProject(tab.projectId);
+      const newStatus = useProjectStore.getState().status[tab.projectId];
+      if (newStatus !== "Connected") return;
+    }
 
     setExecuting(idx, true);
     try {
@@ -217,15 +246,32 @@ export default function App() {
       }
     } catch (err: any) {
       const errorMsg = err?.message ?? String(err);
+      const cancelled = isQueryCancelledError(errorMsg);
       updateResult(idx, {
-        columns: ["Explain Error"],
-        rows: [[errorMsg]],
+        columns: [cancelled ? "Info" : "Explain Error"],
+        rows: [[cancelled ? "Explain cancelled" : errorMsg]],
         time: 0,
       });
       setExplainResult(idx, undefined);
     }
     setExecuting(idx, false);
-  }, [setExecuting, updateResult, setExplainResult]);
+  }, [setExecuting, updateResult, setExplainResult, connectProject]);
+
+  const cancelQuery = useCallback(async () => {
+    const { tabs, selectedTabIndex: idx } = useTabStore.getState();
+    const tab = tabs[idx];
+    if (!tab?.projectId || !tab.isExecuting) return;
+
+    const d = useProjectStore.getState().projects[tab.projectId];
+    if (!d) return;
+
+    try {
+      const driver = DriverFactory.getDriver(d.driver);
+      await driver.cancelQuery?.(tab.projectId);
+    } catch (err) {
+      console.error("Failed to cancel query:", err);
+    }
+  }, []);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -255,10 +301,14 @@ export default function App() {
         e.preventDefault();
         useTabStore.getState().openTerminalTab();
       }
+      if ((e.metaKey || e.ctrlKey) && e.key === ".") {
+        e.preventDefault();
+        void cancelQuery();
+      }
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [closeTab, runExplain]);
+  }, [cancelQuery, closeTab, runExplain]);
 
   const handleSaveConnection = useCallback(
     async (connection: { name: string; driver: string; username: string; password: string; database: string; host: string; port: string; ssl: boolean }) => {
@@ -302,7 +352,10 @@ export default function App() {
 
   return (
     <div className="flex h-screen flex-col bg-background text-foreground">
-      <TopBar onExecute={() => void runQuery()} onExplain={() => void runExplain()} />
+      <TopBar
+        onExecute={() => void runQuery()}
+        onExplain={() => void runExplain()}
+      />
 
       <div className="flex flex-1 overflow-hidden">
         <div style={{ width: `${sidebarWidth}px`, minWidth: "180px" }} className="flex-shrink-0 overflow-hidden">

@@ -13,11 +13,13 @@ use std::{collections::BTreeMap, sync::Arc};
 use tauri::Manager;
 use tauri::menu::{AboutMetadata, MenuBuilder, SubmenuBuilder};
 use tokio::sync::Mutex;
-use tokio_postgres::Client;
+use tokio_postgres::{CancelToken, Client};
 use tracing::Level;
 
 pub struct AppState {
     pub client: Arc<Mutex<Option<BTreeMap<String, Arc<Client>>>>>,
+    pub cancel_tokens: Arc<Mutex<BTreeMap<String, CancelToken>>>,
+    pub client_ssl: Arc<Mutex<BTreeMap<String, bool>>>,
     pub local_db: libsql::Database,
     pub resource_monitor: Arc<Mutex<utils::ResourceMonitor>>,
 }
@@ -84,6 +86,8 @@ fn main() {
 
                 let state = AppState {
                     client: Arc::new(Mutex::new(Some(BTreeMap::new()))),
+                    cancel_tokens: Arc::new(Mutex::new(BTreeMap::new())),
+                    client_ssl: Arc::new(Mutex::new(BTreeMap::new())),
                     local_db: db,
                     resource_monitor: Arc::new(Mutex::new(utils::ResourceMonitor::new())),
                 };
@@ -176,6 +180,7 @@ fn main() {
             drivers::pgsql::pgsql_load_functions,
             drivers::pgsql::pgsql_load_trigger_functions,
             drivers::pgsql::pgsql_run_query,
+            drivers::pgsql::pgsql_cancel_query,
             drivers::pgsql::pgsql_load_activity,
             drivers::pgsql::pgsql_load_database_stats,
             drivers::pgsql::pgsql_load_table_stats,

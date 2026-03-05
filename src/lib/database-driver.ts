@@ -53,6 +53,7 @@ export interface StreamCallbacks {
 
 export interface DatabaseDriver {
   connect(projectId: string, key: [string, string, string, string, string, string]): Promise<ProjectConnectionStatus>;
+  cancelQuery?(projectId: string): Promise<boolean>;
   loadSchemas(projectId: string): Promise<string[]>;
   loadTables(projectId: string, schema: string): Promise<WireTableInfo[]>;
   loadColumns(projectId: string, schema: string, table: string): Promise<string[]>;
@@ -126,6 +127,9 @@ function parseTriggerFunctionInfo(wire: WireTriggerFunctionInfo[]): TriggerFunct
 class PostgreSQLDriver implements DatabaseDriver {
   async connect(projectId: string, key: [string, string, string, string, string, string]) {
     return invoke<ProjectConnectionStatus>("pgsql_connector", { project_id: projectId, key });
+  }
+  async cancelQuery(projectId: string) {
+    return invoke<boolean>("pgsql_cancel_query", { project_id: projectId });
   }
   async loadSchemas(projectId: string) {
     return invoke<string[]>("pgsql_load_schemas", { project_id: projectId });

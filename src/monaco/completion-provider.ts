@@ -61,8 +61,9 @@ async function resolveTableRef(
         continue;
       }
     }
-    if (t && t.some((ti: TableInfo) => ti.name === ref.table)) {
-      return { schema, table: ref.table };
+    const match = t && t.find((ti: TableInfo) => ti.name.toLowerCase() === ref.table.toLowerCase());
+    if (match) {
+      return { schema, table: match.name };
     }
   }
   return { schema: "public", table: ref.table };
@@ -153,7 +154,6 @@ export function registerContextAwareCompletions(monaco: typeof Monaco) {
         endColumn: position.column,
       });
       const context = textUntilPosition.slice(-1000);
-      const lowCtx = context.toLowerCase();
 
       // Get active project context
       const { tabs, selectedTabIndex } = useTabStore.getState();
@@ -165,17 +165,16 @@ export function registerContextAwareCompletions(monaco: typeof Monaco) {
       // === Context-aware completions (require active connection) ===
       if (projectId && d) {
         const aliasMap = extractAliasMap(context);
-        const tableCtx = /([a-z0-9_"]+)\s*\.\s*([a-z0-9_"]*)$/.exec(lowCtx);
+        const tableCtx = /([A-Za-z0-9_"]+)\s*\.\s*([A-Za-z0-9_"]*)$/i.exec(context);
 
         if (tableCtx) {
-          const origCtx = /([A-Za-z0-9_"]+)\s*\.\s*([A-Za-z0-9_"]*)$/.exec(context);
-          if (origCtx) {
-            const left = stripQuotes(origCtx[1]);
-            const right = stripQuotes(origCtx[2]);
+            const left = stripQuotes(tableCtx[1]);
+            const right = stripQuotes(tableCtx[2]);
 
             // Alias -> column completion
-            if (aliasMap[left]) {
-              const resolved = await resolveTableRef(projectId, aliasMap[left]);
+            const aliasKey = Object.keys(aliasMap).find((k) => k.toLowerCase() === left.toLowerCase());
+            if (aliasKey && aliasMap[aliasKey]) {
+              const resolved = await resolveTableRef(projectId, aliasMap[aliasKey]);
               if (resolved) {
                 const cols = await ensureColumns(projectId, resolved.schema, resolved.table);
                 cols.forEach((c) =>
@@ -207,11 +206,10 @@ export function registerContextAwareCompletions(monaco: typeof Monaco) {
               add(c, monaco.languages.CompletionItemKind.Property, `"${c}"`, false, `${right}.${c}`),
             );
             return { suggestions };
-          }
         }
 
         // FROM/JOIN context -> table completion
-        const fromCtx = /(from|join)\s+([A-Za-z0-9_".]*)$/.exec(lowCtx);
+        const fromCtx = /(from|join)\s+([A-Za-z0-9_".]*)$/i.exec(context);
         if (fromCtx) {
           const projSchemas = state.schemas[projectId] || [];
           for (const schema of projSchemas) {

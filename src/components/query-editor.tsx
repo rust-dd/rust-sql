@@ -45,7 +45,7 @@ export function QueryEditor({ value, onChange, onExecute, onExplain }: QueryEdit
           height="100%"
           defaultLanguage="pgsql"
           language="pgsql"
-          theme={theme === "light" ? "vs" : "vs-dark"}
+          theme={theme === "light" ? "rsql-light" : "rsql-dark"}
           loading={
             <div className="flex h-full w-full items-center justify-center bg-editor-bg">
               <span className="text-muted-foreground text-sm">Loading editor...</span>
@@ -57,6 +57,10 @@ export function QueryEditor({ value, onChange, onExecute, onExplain }: QueryEdit
             scrollBeyondLastLine: false,
             fontSize: 13,
             lineNumbers: "on",
+            fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
+            fontLigatures: false,
+            renderLineHighlight: "all",
+            padding: { top: 8, bottom: 8 },
             quickSuggestions: {
               other: true,
               comments: false,

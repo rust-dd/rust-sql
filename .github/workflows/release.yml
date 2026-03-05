@@ -64,4 +64,4 @@ jobs:
           releaseName: "RSQL v__VERSION__" # tauri-action replaces \_\_VERSION\_\_ with the app version.
           releaseBody: "See the assets to download and install this version."
           releaseDraft: true
-          prerelease: false
+          prerelease: ${{ contains(github.ref_name, '-rc.') || contains(github.ref_name, '-rc-') || endsWith(github.ref_name, '-rc') }}

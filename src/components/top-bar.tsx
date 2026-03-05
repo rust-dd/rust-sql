@@ -11,7 +11,13 @@ import { ProjectConnectionStatus } from "@/types";
 import { AlignLeft, Database, GitBranch, Moon, Play, Save, Sun } from "lucide-react";
 import { format as formatSQL } from "sql-formatter";
 
-export function TopBar({ onExecute, onExplain }: { onExecute: () => void; onExplain: () => void }) {
+export function TopBar({
+  onExecute,
+  onExplain,
+}: {
+  onExecute: () => void;
+  onExplain: () => void;
+}) {
   const theme = useUIStore((s) => s.theme);
   const toggleTheme = useUIStore((s) => s.toggleTheme);
   const projects = useProjectStore((s) => s.projects);

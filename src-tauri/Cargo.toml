@@ -3,7 +3,7 @@ name = "rsql"
 version = "1.0.0-rc.1"
 description = "Modern SQL Client"
 authors = ["rust-dd"]
-edition = "2021"
+edition = "2024"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 

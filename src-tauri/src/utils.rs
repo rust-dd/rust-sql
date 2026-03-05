@@ -2,7 +2,7 @@ use std::collections::HashSet;
 use std::time::Instant;
 
 use rayon::prelude::*;
-use sysinfo::{get_current_pid, Networks, Pid, ProcessRefreshKind, ProcessesToUpdate, System};
+use sysinfo::{Networks, Pid, ProcessRefreshKind, ProcessesToUpdate, System, get_current_pid};
 use tauri::State;
 
 use crate::AppState;
@@ -60,11 +60,11 @@ impl ResourceMonitor {
                 if included.contains(pid) {
                     continue;
                 }
-                if let Some(parent) = process.parent() {
-                    if included.contains(&parent) {
-                        included.insert(*pid);
-                        changed = true;
-                    }
+                if let Some(parent) = process.parent()
+                    && included.contains(&parent)
+                {
+                    included.insert(*pid);
+                    changed = true;
                 }
             }
         }

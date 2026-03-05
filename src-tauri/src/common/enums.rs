@@ -1,29 +1,6 @@
 use serde::{Deserialize, Serialize};
 use std::fmt;
 
-#[allow(dead_code)]
-#[derive(Clone, Copy, Serialize, Deserialize, Default)]
-pub enum Drivers {
-    #[default]
-    PGSQL,
-}
-
-impl fmt::Display for Drivers {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Drivers::PGSQL => write!(f, "PGSQL"),
-        }
-    }
-}
-
-impl AsRef<str> for Drivers {
-    fn as_ref(&self) -> &str {
-        match self {
-            Drivers::PGSQL => "PGSQL",
-        }
-    }
-}
-
 #[derive(Clone, Default, Debug, PartialEq, Serialize, Deserialize)]
 pub enum ProjectConnectionStatus {
     Connected,
@@ -67,9 +44,6 @@ pub enum AppError {
 
 impl From<AppError> for tauri::Error {
     fn from(e: AppError) -> Self {
-        tauri::Error::Io(std::io::Error::new(
-            std::io::ErrorKind::Other,
-            e.to_string(),
-        ))
+        tauri::Error::Io(std::io::Error::other(e.to_string()))
     }
 }

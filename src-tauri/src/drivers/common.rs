@@ -194,10 +194,15 @@ pub async fn execute_query_streamed(
             let mut capped = false;
 
             loop {
-                let messages = client.simple_query(&fetch_sql).await.map_err(|e| {
-                    let _ = client.batch_execute("CLOSE _rsql_cur; ROLLBACK");
-                    AppError::QueryFailed(e.to_string())
-                })?;
+                let messages = match client.simple_query(&fetch_sql).await {
+                    Ok(msgs) => msgs,
+                    Err(e) => {
+                        let _ = client
+                            .batch_execute("CLOSE _rsql_cur; ROLLBACK")
+                            .await;
+                        return Err(AppError::QueryFailed(e.to_string()));
+                    }
+                };
 
                 let mut batch_rows: Vec<Vec<String>> = Vec::new();
                 let mut batch_columns: Option<Vec<String>> = None;
@@ -225,18 +230,16 @@ pub async fn execute_query_streamed(
                 }
 
                 // Emit columns on first batch
-                if !columns_sent {
-                    if let Some(cols) = batch_columns {
-                        let header = join_sep(&cols, CELL_SEP);
-                        let _ = app.emit(
-                            &event_name,
-                            QueryStreamEvent::Columns {
-                                columns: header,
-                                total_rows: 0,
-                            },
-                        );
-                        columns_sent = true;
-                    }
+                if !columns_sent && let Some(cols) = batch_columns {
+                    let header = join_sep(&cols, CELL_SEP);
+                    let _ = app.emit(
+                        &event_name,
+                        QueryStreamEvent::Columns {
+                            columns: header,
+                            total_rows: 0,
+                        },
+                    );
+                    columns_sent = true;
                 }
 
                 let packed = pack_rows_vec(&batch_rows);

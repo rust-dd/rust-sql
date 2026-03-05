@@ -2,7 +2,7 @@
 
 A high-performance PostgreSQL client built with Tauri v2, React, and Rust. Designed from the ground up to be fast — even with millions of rows.
 
-![Preview](https://i.ibb.co/Y7yfRw9Z/rsql.png)
+![Preview](https://i.ibb.co/S4sPh4TC/rsql.png)
 
 ## Why It's Fast
 
@@ -29,9 +29,6 @@ This means metadata loads never block while a long query runs, and vice versa.
 The results grid renders directly to a WebGL canvas via `@glideapps/glide-data-grid`. No DOM nodes per cell. Scrolling through 500K rows is as smooth as scrolling through 50.
 
 Virtual scroll invalidation uses `requestAnimationFrame` batching — multiple page fetches within one frame cause only one re-render. Theme override objects are pre-computed once, not re-created per cell.
-
-### Streaming IPC
-Large results are streamed in 10K-row chunks via Tauri events for progressive rendering. The frontend starts displaying rows before the query finishes. Capped at 500K rows to protect webview memory.
 
 ### Parallel Processing
 Results over 50K rows use Rayon for parallel page packing across CPU cores. Below that threshold, sequential processing is faster due to cache locality.

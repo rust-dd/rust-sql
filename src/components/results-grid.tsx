@@ -158,8 +158,8 @@ export function ResultsGrid({
       const ps = virtualQuery.pageSize;
       const firstVisible = Math.floor(y / ps);
       const lastVisible = Math.floor((y + height) / ps);
-      // Prefetch 1 page ahead
-      for (let p = firstVisible; p <= lastVisible + 1; p++) {
+      // Prefetch around viewport for smoother fast scrolling.
+      for (let p = firstVisible - 1; p <= lastVisible + 3; p++) {
         if (p >= 0 && p * ps < virtualQuery.totalRows) {
           onPageNeeded(p);
         }

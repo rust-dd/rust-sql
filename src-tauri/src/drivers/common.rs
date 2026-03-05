@@ -43,7 +43,7 @@ pub async fn execute_query(
 
     // Use rayon for parallel row processing on large result sets
     let col_count = rows[0].len();
-    let data: Vec<Vec<String>> = if rows.len() > 1000 {
+    let data: Vec<Vec<String>> = if rows.len() >= PARALLEL_PACK_THRESHOLD {
         rows.par_iter()
             .map(|row| (0..col_count).map(|i| reflective_get(row, i)).collect())
             .collect()
@@ -78,6 +78,8 @@ pub enum QueryStreamEvent {
 const MAX_STREAM_ROWS: usize = 500_000;
 /// Rows fetched per cursor FETCH round-trip.
 const CURSOR_FETCH_SIZE: usize = 10_000;
+/// Use rayon once batches are moderately large.
+const PARALLEL_PACK_THRESHOLD: usize = 256;
 
 /// Execute a timed query and return results in compact packed string format.
 /// Format: "col1\x1Fcol2\x1E row1val1\x1Frow1val2\x1E row2val1\x1Frow2val2"
@@ -110,7 +112,7 @@ pub async fn execute_query_packed(
     let header = columns.join(&cell_sep);
 
     // Use rayon for parallel row processing, then join
-    let row_strings: Vec<String> = if rows.len() > 1000 {
+    let row_strings: Vec<String> = if rows.len() >= PARALLEL_PACK_THRESHOLD {
         rows.par_iter()
             .map(|row| {
                 (0..col_count)
@@ -149,7 +151,7 @@ fn pack_rows_batch(rows: &[tokio_postgres::Row], col_count: usize) -> String {
     let cell_sep = CELL_SEP.to_string();
     let row_sep = ROW_SEP.to_string();
 
-    let row_strings: Vec<String> = if rows.len() > 1000 {
+    let row_strings: Vec<String> = if rows.len() >= PARALLEL_PACK_THRESHOLD {
         rows.par_iter()
             .map(|row| {
                 (0..col_count)
@@ -305,7 +307,7 @@ fn pack_rows_skip_rn(rows: &[tokio_postgres::Row], col_count: usize) -> String {
     let cell_sep = CELL_SEP.to_string();
     let row_sep = ROW_SEP.to_string();
 
-    let row_strings: Vec<String> = if rows.len() > 1000 {
+    let row_strings: Vec<String> = if rows.len() >= PARALLEL_PACK_THRESHOLD {
         rows.par_iter()
             .map(|row| {
                 (1..col_count)
@@ -366,6 +368,9 @@ pub async fn execute_virtual(
     // Create index for fast random access
     let index_sql = format!("CREATE INDEX ON {} (_rsql_rn)", table_name);
     client.batch_execute(&index_sql).await.ok();
+    // Refresh planner stats so fetch queries choose index range scans.
+    let analyze_sql = format!("ANALYZE {}", table_name);
+    client.batch_execute(&analyze_sql).await.ok();
 
     // Get total row count
     let count_sql = format!("SELECT max(_rsql_rn)::bigint FROM {}", table_name);

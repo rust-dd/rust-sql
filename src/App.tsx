@@ -21,7 +21,11 @@ import type { ProjectDetails } from "@/types";
 import "@/monaco/setup";
 
 const NOTIFY_THRESHOLD_MS = 5000;
-const PAGE_SIZE = 50_000;
+const DEFAULT_PAGE_SIZE = 2_000;
+const PAGE_SIZE_RAW = Number(import.meta.env.VITE_PAGE_SIZE ?? DEFAULT_PAGE_SIZE);
+const PAGE_SIZE = Number.isFinite(PAGE_SIZE_RAW) && PAGE_SIZE_RAW >= 100
+  ? Math.floor(PAGE_SIZE_RAW)
+  : DEFAULT_PAGE_SIZE;
 const CELL_SEP = "\x1F";
 const ROW_SEP = "\x1E";
 
@@ -53,7 +57,6 @@ export default function App() {
   const activeTab = useActiveTab();
   const updateContent = useTabStore((s) => s.updateContent);
   const updateResult = useTabStore((s) => s.updateResult);
-  const setResult = useTabStore((s) => s.setResult);
   const setExecuting = useTabStore((s) => s.setExecuting);
   const closeTab = useTabStore((s) => s.closeTab);
   const setExplainResult = useTabStore((s) => s.setExplainResult);
@@ -90,37 +93,57 @@ export default function App() {
       }
 
       if (driver.executeVirtual) {
+        const sql = tab.editorValue.replace(/;\s*$/, "");
         const queryId = crypto.randomUUID().replace(/-/g, "").slice(0, 12);
         const [colsPacked, totalRows, pagePacked, elapsed] =
-          await driver.executeVirtual(tab.projectId, tab.editorValue, queryId, PAGE_SIZE);
+          await driver.executeVirtual(tab.projectId, sql, queryId, PAGE_SIZE);
 
-        const columns = colsPacked ? colsPacked.split(CELL_SEP) : [];
-        const firstPage = pagePacked
-          ? pagePacked.split(ROW_SEP).map((r) => r.split(CELL_SEP))
-          : [];
+        if (!colsPacked) {
+          // Fallback format from backend: header + rows in one packed string.
+          const parts = pagePacked ? pagePacked.split(ROW_SEP) : [];
+          const columns = parts[0] ? parts[0].split(CELL_SEP) : [];
+          const rows = parts.slice(1).map((r) => r.split(CELL_SEP));
 
-        if (totalRows <= PAGE_SIZE || !colsPacked) {
-          // Small result or non-SELECT → one-shot, cleanup temp table
           await driver.closeVirtual?.(tab.projectId, queryId).catch(() => {});
-          updateResult(idx, { columns, rows: firstPage, time: elapsed });
-          notifyQueryComplete(tab.editorValue, elapsed, true, firstPage.length);
-        } else {
-          // Virtual mode
-          virtualCache.setPage(queryId, 0, firstPage);
-          setVirtualQuery(idx, { queryId, columns, totalRows, pageSize: PAGE_SIZE, time: elapsed });
-          setResult(idx, { columns, rows: firstPage, time: elapsed });
-          notifyQueryComplete(tab.editorValue, elapsed, true, totalRows);
-        }
+          updateResult(idx, { columns, rows, time: elapsed });
+          notifyQueryComplete(tab.editorValue, elapsed, true, rows.length);
 
-        addHistoryEntry({
-          projectId: tab.projectId,
-          database: d.database,
-          sql: tab.editorValue.trim(),
-          executionTime: elapsed,
-          rowCount: totalRows > PAGE_SIZE ? totalRows : firstPage.length,
-          success: true,
-          timestamp: startTime,
-        });
+          addHistoryEntry({
+            projectId: tab.projectId,
+            database: d.database,
+            sql: tab.editorValue.trim(),
+            executionTime: elapsed,
+            rowCount: rows.length,
+            success: true,
+            timestamp: startTime,
+          });
+        } else {
+          const columns = colsPacked.split(CELL_SEP);
+          const firstPage = pagePacked
+            ? pagePacked.split(ROW_SEP).map((r) => r.split(CELL_SEP))
+            : [];
+
+          if (totalRows <= PAGE_SIZE) {
+            await driver.closeVirtual?.(tab.projectId, queryId).catch(() => {});
+            updateResult(idx, { columns, rows: firstPage, time: elapsed });
+            notifyQueryComplete(tab.editorValue, elapsed, true, firstPage.length);
+          } else {
+            virtualCache.setPage(queryId, 0, firstPage);
+            setVirtualQuery(idx, { queryId, columns, totalRows, pageSize: PAGE_SIZE, time: elapsed });
+            updateResult(idx, { columns, rows: firstPage, time: elapsed });
+            notifyQueryComplete(tab.editorValue, elapsed, true, totalRows);
+          }
+
+          addHistoryEntry({
+            projectId: tab.projectId,
+            database: d.database,
+            sql: tab.editorValue.trim(),
+            executionTime: elapsed,
+            rowCount: totalRows > PAGE_SIZE ? totalRows : firstPage.length,
+            success: true,
+            timestamp: startTime,
+          });
+        }
       } else {
         // One-shot fallback
         const [cols, rows, time] = await driver.runQuery(tab.projectId, tab.editorValue);
@@ -157,7 +180,7 @@ export default function App() {
       });
     }
     useUIStore.getState().setSelectedRow(0);
-  }, [setExecuting, updateResult, setResult, setVirtualQuery, addHistoryEntry]);
+  }, [setExecuting, updateResult, setVirtualQuery, addHistoryEntry]);
 
   const runExplain = useCallback(async () => {
     const { tabs, selectedTabIndex: idx } = useTabStore.getState();

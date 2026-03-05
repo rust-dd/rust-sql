@@ -3513,8 +3513,6 @@ dependencies = [
  "bytes",
  "fallible-iterator 0.2.0",
  "postgres-protocol",
- "serde_core",
- "serde_json",
 ]
 
 [[package]]
@@ -4016,7 +4014,6 @@ dependencies = [
 name = "rsql"
 version = "1.0.0-rc.1"
 dependencies = [
- "chrono",
  "libsql",
  "native-tls",
  "portable-pty",

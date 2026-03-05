@@ -16,6 +16,7 @@ use crate::AppState;
 use native_tls::TlsConnector;
 use postgres_native_tls::MakeTlsConnector;
 use tauri::{AppHandle, Manager, Result, State};
+use tauri::ipc::Response;
 use tokio::time as tokio_time;
 use tokio_postgres::{Client, Config, NoTls};
 
@@ -378,13 +379,15 @@ pub async fn pgsql_load_trigger_functions(
 pub async fn pgsql_load_activity(
     project_id: &str,
     app_state: State<'_, AppState>,
-) -> Result<Vec<Vec<String>>> {
+) -> Result<Response> {
     let client = {
         let clients = app_state.meta_clients.lock().await;
         get_client(&clients, project_id)?
     };
 
-    load_activity(&client).await.map_err(Into::into)
+    let result = load_activity(&client).await?;
+    let json = sonic_rs::to_string(&result).map_err(|e| AppError::QueryFailed(e.to_string()))?;
+    Ok(Response::new(json))
 }
 
 #[tauri::command(rename_all = "snake_case")]
@@ -404,13 +407,15 @@ pub async fn pgsql_load_database_stats(
 pub async fn pgsql_load_table_stats(
     project_id: &str,
     app_state: State<'_, AppState>,
-) -> Result<Vec<Vec<String>>> {
+) -> Result<Response> {
     let client = {
         let clients = app_state.meta_clients.lock().await;
         get_client(&clients, project_id)?
     };
 
-    load_table_stats(&client).await.map_err(Into::into)
+    let result = load_table_stats(&client).await?;
+    let json = sonic_rs::to_string(&result).map_err(|e| AppError::QueryFailed(e.to_string()))?;
+    Ok(Response::new(json))
 }
 
 #[tauri::command(rename_all = "snake_case")]
@@ -434,13 +439,15 @@ pub async fn pgsql_run_query(
     project_id: &str,
     sql: &str,
     app_state: State<'_, AppState>,
-) -> Result<(Vec<String>, Vec<Vec<String>>, f32)> {
+) -> Result<Response> {
     let client = {
         let clients = app_state.clients.lock().await;
         get_client(&clients, project_id)?
     };
 
-    execute_query(&client, sql).await.map_err(Into::into)
+    let result = execute_query(&client, sql).await?;
+    let json = sonic_rs::to_string(&result).map_err(|e| AppError::QueryFailed(e.to_string()))?;
+    Ok(Response::new(json))
 }
 
 #[tauri::command(rename_all = "snake_case")]
@@ -485,13 +492,15 @@ pub async fn pgsql_run_query_packed(
     project_id: &str,
     sql: &str,
     app_state: State<'_, AppState>,
-) -> Result<(String, f32)> {
+) -> Result<Response> {
     let client = {
         let clients = app_state.clients.lock().await;
         get_client(&clients, project_id)?
     };
 
-    execute_query_packed(&client, sql).await.map_err(Into::into)
+    let result = execute_query_packed(&client, sql).await?;
+    let json = sonic_rs::to_string(&result).map_err(|e| AppError::QueryFailed(e.to_string()))?;
+    Ok(Response::new(json))
 }
 
 #[tauri::command(rename_all = "snake_case")]
@@ -519,15 +528,15 @@ pub async fn pgsql_execute_virtual(
     query_id: &str,
     page_size: usize,
     app_state: State<'_, AppState>,
-) -> Result<(String, usize, String, f32)> {
+) -> Result<Response> {
     let client = {
         let clients = app_state.clients.lock().await;
         get_client(&clients, project_id)?
     };
 
-    execute_virtual(&client, &app_state.virtual_cache, sql, query_id, page_size)
-        .await
-        .map_err(Into::into)
+    let result = execute_virtual(&client, &app_state.virtual_cache, sql, query_id, page_size).await?;
+    let json = sonic_rs::to_string(&result).map_err(|e| AppError::QueryFailed(e.to_string()))?;
+    Ok(Response::new(json))
 }
 
 #[tauri::command(rename_all = "snake_case")]
@@ -537,10 +546,10 @@ pub async fn pgsql_fetch_page(
     offset: usize,
     limit: usize,
     app_state: State<'_, AppState>,
-) -> Result<String> {
-    fetch_virtual_page(&app_state.virtual_cache, query_id, col_count, offset, limit)
-        .await
-        .map_err(Into::into)
+) -> Result<Response> {
+    let result = fetch_virtual_page(&app_state.virtual_cache, query_id, col_count, offset, limit).await?;
+    let json = sonic_rs::to_string(&result).map_err(|e| AppError::QueryFailed(e.to_string()))?;
+    Ok(Response::new(json))
 }
 
 #[tauri::command(rename_all = "snake_case")]

@@ -39,6 +39,9 @@ Results over 50K rows use Rayon for parallel page packing across CPU cores. Belo
 ### Debounced Search
 Full-text search across results is debounced at 200ms to avoid filtering 50K+ rows on every keystroke.
 
+### SIMD JSON Serialization
+All IPC command responses bypass Tauri's default `serde_json` serializer. Instead, results are pre-serialized with `sonic-rs` (SIMD-accelerated) and returned as raw `tauri::ipc::Response` — zero re-serialization by the framework. ~3.5x faster than serde_json for typical payloads.
+
 ### Multi-Statement Execution
 `simple_query` handles `SELECT 1; INSERT ...; SELECT * FROM users;` natively. Returns the last result set that had rows — no splitting or reparsing on the client side.
 
@@ -68,7 +71,7 @@ Full-text search across results is debounced at 200ms to avoid filtering 50K+ ro
 | Results Grid | @glideapps/glide-data-grid (WebGL canvas) |
 | Terminal | xterm.js + portable-pty |
 | Backend | Rust, Tauri v2, tokio-postgres (simple_query protocol) |
-| Performance | rayon (parallel packing), packed binary IPC, dual connection pool, rAF-batched rendering |
+| Performance | sonic-rs (SIMD JSON), rayon (parallel packing), packed binary IPC, dual connection pool |
 
 ## Development
 

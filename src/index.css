@@ -157,6 +157,20 @@
     background: var(--muted-foreground);
 }
 
+/* cmdk command palette */
+[cmdk-group-heading] {
+    padding: 0.375rem 1rem;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 0.625rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--muted-foreground);
+    opacity: 0.7;
+}
+[cmdk-input] {
+    caret-color: var(--primary);
+}
+
 /* Sidebar indent guides */
 .sidebar-indent-guide {
     position: absolute;

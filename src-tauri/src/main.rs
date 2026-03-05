@@ -17,7 +17,8 @@ use tokio_postgres::{CancelToken, Client};
 use tracing::Level;
 
 pub struct AppState {
-    pub client: Arc<Mutex<Option<BTreeMap<String, Arc<Client>>>>>,
+    pub clients: Arc<Mutex<BTreeMap<String, Arc<Client>>>>,
+    pub meta_clients: Arc<Mutex<BTreeMap<String, Arc<Client>>>>,
     pub cancel_tokens: Arc<Mutex<BTreeMap<String, CancelToken>>>,
     pub client_ssl: Arc<Mutex<BTreeMap<String, bool>>>,
     pub local_db: libsql::Database,
@@ -85,8 +86,19 @@ fn main() {
                 .await
                 .expect("Failed to create queries table");
 
+                conn.execute(
+                    "CREATE TABLE IF NOT EXISTS workspaces (
+                        name TEXT PRIMARY KEY,
+                        tabs TEXT NOT NULL DEFAULT '[]'
+                    )",
+                    (),
+                )
+                .await
+                .expect("Failed to create workspaces table");
+
                 let state = AppState {
-                    client: Arc::new(Mutex::new(Some(BTreeMap::new()))),
+                    clients: Arc::new(Mutex::new(BTreeMap::new())),
+                    meta_clients: Arc::new(Mutex::new(BTreeMap::new())),
                     cancel_tokens: Arc::new(Mutex::new(BTreeMap::new())),
                     client_ssl: Arc::new(Mutex::new(BTreeMap::new())),
                     local_db: db,
@@ -167,6 +179,9 @@ fn main() {
             dbs::query::query_db_select,
             dbs::query::query_db_insert,
             dbs::query::query_db_delete,
+            dbs::workspace::workspace_save,
+            dbs::workspace::workspace_load_all,
+            dbs::workspace::workspace_delete,
             drivers::pgsql::pgsql_connector,
             drivers::pgsql::pgsql_load_schemas,
             drivers::pgsql::pgsql_load_tables,

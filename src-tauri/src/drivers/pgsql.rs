@@ -16,8 +16,47 @@ use crate::AppState;
 use native_tls::TlsConnector;
 use postgres_native_tls::MakeTlsConnector;
 use tauri::{AppHandle, Manager, Result, State};
-use tokio::{sync::Mutex, time as tokio_time};
-use tokio_postgres::{Config, NoTls};
+use tokio::time as tokio_time;
+use tokio_postgres::{Client, Config, NoTls};
+
+/// Create a single PG client connection with the given config.
+async fn create_pg_client(cfg: &Config, use_ssl: bool) -> std::result::Result<Client, AppError> {
+    if use_ssl {
+        let tls_connector = TlsConnector::builder()
+            .build()
+            .map_err(|e| AppError::ConnectionFailed(e.to_string()))?;
+        let tls = MakeTlsConnector::new(tls_connector);
+        let (client, connection) = tokio_time::timeout(
+            tokio_time::Duration::from_secs(10),
+            cfg.connect(tls),
+        )
+        .await
+        .map_err(|_| AppError::ConnectionTimeout)?
+        .map_err(|e| AppError::ConnectionFailed(e.to_string()))?;
+
+        tokio::spawn(async move {
+            if let Err(e) = connection.await {
+                tracing::error!("Postgres TLS connection error: {:?}", e);
+            }
+        });
+        Ok(client)
+    } else {
+        let (client, connection) = tokio_time::timeout(
+            tokio_time::Duration::from_secs(10),
+            cfg.connect(NoTls),
+        )
+        .await
+        .map_err(|_| AppError::ConnectionTimeout)?
+        .map_err(|e| AppError::ConnectionFailed(e.to_string()))?;
+
+        tokio::spawn(async move {
+            if let Err(e) = connection.await {
+                tracing::error!("Postgres connection error: {:?}", e);
+            }
+        });
+        Ok(client)
+    }
+}
 
 #[tauri::command(rename_all = "snake_case")]
 pub async fn pgsql_connector(
@@ -27,12 +66,8 @@ pub async fn pgsql_connector(
 ) -> Result<ProjectConnectionStatus> {
     let app_state = app.state::<AppState>();
     {
-        let clients = app_state.client.lock().await;
-        let client_map = clients
-            .as_ref()
-            .ok_or(AppError::DatabaseError("No client map".into()))?;
-
-        if client_map.contains_key(project_id) {
+        let clients = app_state.clients.lock().await;
+        if clients.contains_key(project_id) {
             return Ok(ProjectConnectionStatus::Connected);
         }
     }
@@ -80,86 +115,34 @@ pub async fn pgsql_connector(
         .host(&host)
         .port(port);
 
-    let is_connection_error = Arc::new(Mutex::new(false));
-    let client = if use_ssl {
-        let tls_connector = TlsConnector::builder()
-            .build()
-            .map_err(|e| AppError::ConnectionFailed(e.to_string()))?;
-        let tls = MakeTlsConnector::new(tls_connector);
-        let connection = tokio_time::timeout(tokio_time::Duration::from_secs(10), cfg.connect(tls))
-            .await
-            .map_err(|_| AppError::ConnectionTimeout);
-
-        match connection {
-            Ok(Ok((client, connection))) => {
-                tokio::spawn({
-                    let flag = Arc::clone(&is_connection_error);
-                    async move {
-                        if let Err(e) = connection.await {
-                            tracing::error!("Postgres TLS connection error: {:?}", e);
-                            *flag.lock().await = true;
-                        }
-                    }
-                });
-                client
-            }
-            Ok(Err(e)) => {
-                tracing::error!("Postgres TLS connection error: {:?}", e);
-                return Ok(ProjectConnectionStatus::Failed);
-            }
-            Err(_) => {
-                tracing::error!("Postgres TLS connection timeout");
-                return Ok(ProjectConnectionStatus::Failed);
-            }
+    // Create two connections: one for user queries, one for metadata
+    let query_client = match create_pg_client(&cfg, use_ssl).await {
+        Ok(c) => Arc::new(c),
+        Err(e) => {
+            tracing::error!("Query client connection failed: {:?}", e);
+            return Ok(ProjectConnectionStatus::Failed);
         }
-    } else {
-        let connection = tokio_time::timeout(tokio_time::Duration::from_secs(10), cfg.connect(NoTls))
-            .await
-            .map_err(|_| AppError::ConnectionTimeout);
-
-        match connection {
-            Ok(Ok((client, connection))) => {
-                tokio::spawn({
-                    let flag = Arc::clone(&is_connection_error);
-                    async move {
-                        if let Err(e) = connection.await {
-                            tracing::error!("Postgres connection error: {:?}", e);
-                            *flag.lock().await = true;
-                        }
-                    }
-                });
-                client
-            }
-            Ok(Err(e)) => {
-                tracing::error!("Postgres connection error: {:?}", e);
-                return Ok(ProjectConnectionStatus::Failed);
-            }
-            Err(_) => {
-                tracing::error!("Postgres connection timeout");
-                return Ok(ProjectConnectionStatus::Failed);
-            }
+    };
+    let meta_client = match create_pg_client(&cfg, use_ssl).await {
+        Ok(c) => Arc::new(c),
+        Err(e) => {
+            tracing::error!("Meta client connection failed: {:?}", e);
+            return Ok(ProjectConnectionStatus::Failed);
         }
     };
 
-    if *is_connection_error.lock().await {
-        return Ok(ProjectConnectionStatus::Failed);
-    }
-
-    let client = Arc::new(client);
-
     {
-        let mut clients = app_state.client.lock().await;
-        let client_map = clients
-            .as_mut()
-            .ok_or(AppError::DatabaseError("No client map".into()))?;
-        client_map.insert(project_id.to_string(), Arc::clone(&client));
+        let mut clients = app_state.clients.lock().await;
+        clients.insert(project_id.to_string(), Arc::clone(&query_client));
     }
-
+    {
+        let mut meta_clients = app_state.meta_clients.lock().await;
+        meta_clients.insert(project_id.to_string(), Arc::clone(&meta_client));
+    }
     {
         let mut cancel_tokens = app_state.cancel_tokens.lock().await;
-        cancel_tokens.insert(project_id.to_string(), client.cancel_token());
+        cancel_tokens.insert(project_id.to_string(), query_client.cancel_token());
     }
-
     {
         let mut client_ssl = app_state.client_ssl.lock().await;
         client_ssl.insert(project_id.to_string(), use_ssl);
@@ -168,15 +151,16 @@ pub async fn pgsql_connector(
     Ok(ProjectConnectionStatus::Connected)
 }
 
+// ── Meta commands (use meta_clients) ─────────────────────────────────
+
 #[tauri::command(rename_all = "snake_case")]
 pub async fn pgsql_load_schemas(
     project_id: &str,
     app_state: State<'_, AppState>,
 ) -> Result<PgsqlLoadSchemas> {
     let client = {
-        let clients = app_state.client.lock().await;
-        let client_map = clients.as_ref().ok_or(AppError::DatabaseError("No client map".into()))?;
-        get_client(client_map, project_id)?
+        let clients = app_state.meta_clients.lock().await;
+        get_client(&clients, project_id)?
     };
 
     load_schemas(
@@ -196,9 +180,8 @@ pub async fn pgsql_load_tables(
     app_state: State<'_, AppState>,
 ) -> Result<PgsqlLoadTables> {
     let client = {
-        let clients = app_state.client.lock().await;
-        let client_map = clients.as_ref().ok_or(AppError::DatabaseError("No client map".into()))?;
-        get_client(client_map, project_id)?
+        let clients = app_state.meta_clients.lock().await;
+        get_client(&clients, project_id)?
     };
 
     load_tables(
@@ -222,9 +205,8 @@ pub async fn pgsql_load_columns(
     app_state: State<'_, AppState>,
 ) -> Result<PgsqlLoadColumns> {
     let client = {
-        let clients = app_state.client.lock().await;
-        let client_map = clients.as_ref().ok_or(AppError::DatabaseError("No client map".into()))?;
-        get_client(client_map, project_id)?
+        let clients = app_state.meta_clients.lock().await;
+        get_client(&clients, project_id)?
     };
 
     load_columns(&client, schema, table)
@@ -240,9 +222,8 @@ pub async fn pgsql_load_column_details(
     app_state: State<'_, AppState>,
 ) -> Result<Vec<ColumnDetail>> {
     let client = {
-        let clients = app_state.client.lock().await;
-        let client_map = clients.as_ref().ok_or(AppError::DatabaseError("No client map".into()))?;
-        get_client(client_map, project_id)?
+        let clients = app_state.meta_clients.lock().await;
+        get_client(&clients, project_id)?
     };
 
     load_column_details(&client, schema, table)
@@ -258,9 +239,8 @@ pub async fn pgsql_load_indexes(
     app_state: State<'_, AppState>,
 ) -> Result<Vec<IndexDetail>> {
     let client = {
-        let clients = app_state.client.lock().await;
-        let client_map = clients.as_ref().ok_or(AppError::DatabaseError("No client map".into()))?;
-        get_client(client_map, project_id)?
+        let clients = app_state.meta_clients.lock().await;
+        get_client(&clients, project_id)?
     };
 
     load_indexes(&client, schema, table)
@@ -276,9 +256,8 @@ pub async fn pgsql_load_constraints(
     app_state: State<'_, AppState>,
 ) -> Result<Vec<ConstraintDetail>> {
     let client = {
-        let clients = app_state.client.lock().await;
-        let client_map = clients.as_ref().ok_or(AppError::DatabaseError("No client map".into()))?;
-        get_client(client_map, project_id)?
+        let clients = app_state.meta_clients.lock().await;
+        get_client(&clients, project_id)?
     };
 
     load_constraints(&client, schema, table)
@@ -294,9 +273,8 @@ pub async fn pgsql_load_triggers(
     app_state: State<'_, AppState>,
 ) -> Result<Vec<TriggerDetail>> {
     let client = {
-        let clients = app_state.client.lock().await;
-        let client_map = clients.as_ref().ok_or(AppError::DatabaseError("No client map".into()))?;
-        get_client(client_map, project_id)?
+        let clients = app_state.meta_clients.lock().await;
+        get_client(&clients, project_id)?
     };
 
     load_triggers(&client, schema, table)
@@ -312,9 +290,8 @@ pub async fn pgsql_load_rules(
     app_state: State<'_, AppState>,
 ) -> Result<Vec<RuleDetail>> {
     let client = {
-        let clients = app_state.client.lock().await;
-        let client_map = clients.as_ref().ok_or(AppError::DatabaseError("No client map".into()))?;
-        get_client(client_map, project_id)?
+        let clients = app_state.meta_clients.lock().await;
+        get_client(&clients, project_id)?
     };
 
     load_rules(&client, schema, table).await.map_err(Into::into)
@@ -328,9 +305,8 @@ pub async fn pgsql_load_policies(
     app_state: State<'_, AppState>,
 ) -> Result<Vec<PolicyDetail>> {
     let client = {
-        let clients = app_state.client.lock().await;
-        let client_map = clients.as_ref().ok_or(AppError::DatabaseError("No client map".into()))?;
-        get_client(client_map, project_id)?
+        let clients = app_state.meta_clients.lock().await;
+        get_client(&clients, project_id)?
     };
 
     load_policies(&client, schema, table)
@@ -345,9 +321,8 @@ pub async fn pgsql_load_views(
     app_state: State<'_, AppState>,
 ) -> Result<Vec<String>> {
     let client = {
-        let clients = app_state.client.lock().await;
-        let client_map = clients.as_ref().ok_or(AppError::DatabaseError("No client map".into()))?;
-        get_client(client_map, project_id)?
+        let clients = app_state.meta_clients.lock().await;
+        get_client(&clients, project_id)?
     };
 
     load_views(&client, schema).await.map_err(Into::into)
@@ -360,9 +335,8 @@ pub async fn pgsql_load_materialized_views(
     app_state: State<'_, AppState>,
 ) -> Result<Vec<String>> {
     let client = {
-        let clients = app_state.client.lock().await;
-        let client_map = clients.as_ref().ok_or(AppError::DatabaseError("No client map".into()))?;
-        get_client(client_map, project_id)?
+        let clients = app_state.meta_clients.lock().await;
+        get_client(&clients, project_id)?
     };
 
     load_materialized_views(&client, schema)
@@ -377,9 +351,8 @@ pub async fn pgsql_load_functions(
     app_state: State<'_, AppState>,
 ) -> Result<Vec<FunctionInfo>> {
     let client = {
-        let clients = app_state.client.lock().await;
-        let client_map = clients.as_ref().ok_or(AppError::DatabaseError("No client map".into()))?;
-        get_client(client_map, project_id)?
+        let clients = app_state.meta_clients.lock().await;
+        get_client(&clients, project_id)?
     };
 
     load_functions(&client, schema).await.map_err(Into::into)
@@ -392,9 +365,8 @@ pub async fn pgsql_load_trigger_functions(
     app_state: State<'_, AppState>,
 ) -> Result<Vec<(String, String)>> {
     let client = {
-        let clients = app_state.client.lock().await;
-        let client_map = clients.as_ref().ok_or(AppError::DatabaseError("No client map".into()))?;
-        get_client(client_map, project_id)?
+        let clients = app_state.meta_clients.lock().await;
+        get_client(&clients, project_id)?
     };
 
     load_trigger_functions(&client, schema)
@@ -403,15 +375,69 @@ pub async fn pgsql_load_trigger_functions(
 }
 
 #[tauri::command(rename_all = "snake_case")]
+pub async fn pgsql_load_activity(
+    project_id: &str,
+    app_state: State<'_, AppState>,
+) -> Result<Vec<Vec<String>>> {
+    let client = {
+        let clients = app_state.meta_clients.lock().await;
+        get_client(&clients, project_id)?
+    };
+
+    load_activity(&client).await.map_err(Into::into)
+}
+
+#[tauri::command(rename_all = "snake_case")]
+pub async fn pgsql_load_database_stats(
+    project_id: &str,
+    app_state: State<'_, AppState>,
+) -> Result<Vec<DbStat>> {
+    let client = {
+        let clients = app_state.meta_clients.lock().await;
+        get_client(&clients, project_id)?
+    };
+
+    load_database_stats(&client).await.map_err(Into::into)
+}
+
+#[tauri::command(rename_all = "snake_case")]
+pub async fn pgsql_load_table_stats(
+    project_id: &str,
+    app_state: State<'_, AppState>,
+) -> Result<Vec<Vec<String>>> {
+    let client = {
+        let clients = app_state.meta_clients.lock().await;
+        get_client(&clients, project_id)?
+    };
+
+    load_table_stats(&client).await.map_err(Into::into)
+}
+
+#[tauri::command(rename_all = "snake_case")]
+pub async fn pgsql_load_foreign_keys(
+    project_id: &str,
+    schema: &str,
+    app_state: State<'_, AppState>,
+) -> Result<Vec<ForeignKeyInfo>> {
+    let client = {
+        let clients = app_state.meta_clients.lock().await;
+        get_client(&clients, project_id)?
+    };
+
+    load_foreign_keys(&client, schema).await.map_err(Into::into)
+}
+
+// ── Query commands (use clients) ─────────────────────────────────────
+
+#[tauri::command(rename_all = "snake_case")]
 pub async fn pgsql_run_query(
     project_id: &str,
     sql: &str,
     app_state: State<'_, AppState>,
 ) -> Result<(Vec<String>, Vec<Vec<String>>, f32)> {
     let client = {
-        let clients = app_state.client.lock().await;
-        let client_map = clients.as_ref().ok_or(AppError::DatabaseError("No client map".into()))?;
-        get_client(client_map, project_id)?
+        let clients = app_state.clients.lock().await;
+        get_client(&clients, project_id)?
     };
 
     execute_query(&client, sql).await.map_err(Into::into)
@@ -461,9 +487,8 @@ pub async fn pgsql_run_query_packed(
     app_state: State<'_, AppState>,
 ) -> Result<(String, f32)> {
     let client = {
-        let clients = app_state.client.lock().await;
-        let client_map = clients.as_ref().ok_or(AppError::DatabaseError("No client map".into()))?;
-        get_client(client_map, project_id)?
+        let clients = app_state.clients.lock().await;
+        get_client(&clients, project_id)?
     };
 
     execute_query_packed(&client, sql).await.map_err(Into::into)
@@ -478,71 +503,13 @@ pub async fn pgsql_run_query_streamed(
 ) -> Result<()> {
     let client = {
         let app_state = app.state::<AppState>();
-        let clients = app_state.client.lock().await;
-        let client_map = clients.as_ref().ok_or(AppError::DatabaseError("No client map".into()))?;
-        get_client(client_map, project_id)?
+        let clients = app_state.clients.lock().await;
+        get_client(&clients, project_id)?
     };
 
     execute_query_streamed(&client, sql, stream_id, &app)
         .await
         .map_err(Into::into)
-}
-
-#[tauri::command(rename_all = "snake_case")]
-pub async fn pgsql_load_activity(
-    project_id: &str,
-    app_state: State<'_, AppState>,
-) -> Result<Vec<Vec<String>>> {
-    let client = {
-        let clients = app_state.client.lock().await;
-        let client_map = clients.as_ref().ok_or(AppError::DatabaseError("No client map".into()))?;
-        get_client(client_map, project_id)?
-    };
-
-    load_activity(&client).await.map_err(Into::into)
-}
-
-#[tauri::command(rename_all = "snake_case")]
-pub async fn pgsql_load_database_stats(
-    project_id: &str,
-    app_state: State<'_, AppState>,
-) -> Result<Vec<DbStat>> {
-    let client = {
-        let clients = app_state.client.lock().await;
-        let client_map = clients.as_ref().ok_or(AppError::DatabaseError("No client map".into()))?;
-        get_client(client_map, project_id)?
-    };
-
-    load_database_stats(&client).await.map_err(Into::into)
-}
-
-#[tauri::command(rename_all = "snake_case")]
-pub async fn pgsql_load_table_stats(
-    project_id: &str,
-    app_state: State<'_, AppState>,
-) -> Result<Vec<Vec<String>>> {
-    let client = {
-        let clients = app_state.client.lock().await;
-        let client_map = clients.as_ref().ok_or(AppError::DatabaseError("No client map".into()))?;
-        get_client(client_map, project_id)?
-    };
-
-    load_table_stats(&client).await.map_err(Into::into)
-}
-
-#[tauri::command(rename_all = "snake_case")]
-pub async fn pgsql_load_foreign_keys(
-    project_id: &str,
-    schema: &str,
-    app_state: State<'_, AppState>,
-) -> Result<Vec<ForeignKeyInfo>> {
-    let client = {
-        let clients = app_state.client.lock().await;
-        let client_map = clients.as_ref().ok_or(AppError::DatabaseError("No client map".into()))?;
-        get_client(client_map, project_id)?
-    };
-
-    load_foreign_keys(&client, schema).await.map_err(Into::into)
 }
 
 #[tauri::command(rename_all = "snake_case")]
@@ -554,9 +521,8 @@ pub async fn pgsql_execute_virtual(
     app_state: State<'_, AppState>,
 ) -> Result<(String, usize, String, f32)> {
     let client = {
-        let clients = app_state.client.lock().await;
-        let client_map = clients.as_ref().ok_or(AppError::DatabaseError("No client map".into()))?;
-        get_client(client_map, project_id)?
+        let clients = app_state.clients.lock().await;
+        get_client(&clients, project_id)?
     };
 
     execute_virtual(&client, &app_state.virtual_cache, sql, query_id, page_size)

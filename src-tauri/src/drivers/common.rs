@@ -2,11 +2,10 @@ use std::sync::Arc;
 use std::time::Instant;
 use rayon::prelude::*;
 use tokio::time as tokio_time;
-use tokio_postgres::Client;
+use tokio_postgres::{Client, SimpleQueryMessage};
 
 use crate::common::enums::AppError;
 use crate::common::pgsql::{PgsqlLoadColumns, PgsqlLoadSchemas, PgsqlLoadTables};
-use crate::utils::reflective_get;
 
 /// Safely get a client Arc from the AppState client map.
 /// Returns a cloned Arc so the caller can drop the MutexGuard immediately.
@@ -20,41 +19,78 @@ pub fn get_client(
         .ok_or_else(|| AppError::ClientNotConnected(project_id.to_string()))
 }
 
+/// Process simple_query messages, returning the last result set that had rows.
+/// If no result set had rows but commands ran, returns synthetic "N rows affected".
+/// If nothing at all, returns empty vecs.
+fn process_simple_messages(messages: Vec<SimpleQueryMessage>) -> (Vec<String>, Vec<Vec<String>>) {
+    let mut cur_columns: Vec<String> = Vec::new();
+    let mut cur_rows: Vec<Vec<String>> = Vec::new();
+    let mut last_columns: Vec<String> = Vec::new();
+    let mut last_rows: Vec<Vec<String>> = Vec::new();
+    let mut has_row_result = false;
+    let mut total_affected: u64 = 0;
+
+    for msg in messages {
+        match msg {
+            SimpleQueryMessage::Row(row) => {
+                if cur_columns.is_empty() {
+                    cur_columns = row.columns().iter().map(|c| c.name().to_string()).collect();
+                }
+                let col_count = row.columns().len();
+                cur_rows.push(
+                    (0..col_count)
+                        .map(|i| row.get(i).unwrap_or("null").to_string())
+                        .collect(),
+                );
+            }
+            SimpleQueryMessage::CommandComplete(n) => {
+                if !cur_rows.is_empty() {
+                    last_columns = std::mem::take(&mut cur_columns);
+                    last_rows = std::mem::take(&mut cur_rows);
+                    has_row_result = true;
+                } else {
+                    cur_columns.clear();
+                    cur_rows.clear();
+                }
+                total_affected += n;
+            }
+            _ => {}
+        }
+    }
+
+    // Handle trailing rows (shouldn't happen but be safe)
+    if !cur_rows.is_empty() {
+        return (cur_columns, cur_rows);
+    }
+
+    if has_row_result {
+        (last_columns, last_rows)
+    } else if total_affected > 0 {
+        (
+            vec!["Result".to_string()],
+            vec![vec![format!("{} rows affected", total_affected)]],
+        )
+    } else {
+        (Vec::new(), Vec::new())
+    }
+}
+
 /// Execute a timed query and return (columns, rows_as_strings, elapsed_ms).
+/// Uses simple_query protocol — PG returns all values as text, no type conversion needed.
+/// Supports multi-statement: returns the last result set that had rows.
 pub async fn execute_query(
     client: &Client,
     sql: &str,
 ) -> Result<(Vec<String>, Vec<Vec<String>>, f32), AppError> {
     let start = Instant::now();
-    let rows = client
-        .query(sql, &[])
+    let messages = client
+        .simple_query(sql)
         .await
         .map_err(|e| AppError::QueryFailed(e.to_string()))?;
 
-    if rows.is_empty() {
-        return Ok((Vec::new(), Vec::new(), 0.0f32));
-    }
-
-    let columns = rows[0]
-        .columns()
-        .iter()
-        .map(|c| c.name().to_string())
-        .collect::<Vec<String>>();
-
-    // Use rayon for parallel row processing on large result sets
-    let col_count = rows[0].len();
-    let data: Vec<Vec<String>> = if rows.len() >= PARALLEL_PACK_THRESHOLD {
-        rows.par_iter()
-            .map(|row| (0..col_count).map(|i| reflective_get(row, i)).collect())
-            .collect()
-    } else {
-        rows.iter()
-            .map(|row| (0..col_count).map(|i| reflective_get(row, i)).collect())
-            .collect()
-    };
-
+    let (columns, rows) = process_simple_messages(messages);
     let elapsed = start.elapsed().as_millis() as f32;
-    Ok((columns, data, elapsed))
+    Ok((columns, rows, elapsed))
 }
 
 /// Cell separator for packed format (Unit Separator, ASCII 0x1F)
@@ -78,108 +114,38 @@ pub enum QueryStreamEvent {
 const MAX_STREAM_ROWS: usize = 500_000;
 /// Rows fetched per cursor FETCH round-trip.
 const CURSOR_FETCH_SIZE: usize = 10_000;
-/// Use rayon once batches are moderately large.
-const PARALLEL_PACK_THRESHOLD: usize = 256;
 
 /// Execute a timed query and return results in compact packed string format.
 /// Format: "col1\x1Fcol2\x1E row1val1\x1Frow1val2\x1E row2val1\x1Frow2val2"
-/// This avoids the massive JSON overhead of nested Vec<Vec<String>>.
+/// Uses simple_query protocol with multi-statement support.
 pub async fn execute_query_packed(
     client: &Client,
     sql: &str,
 ) -> Result<(String, f32), AppError> {
     let start = Instant::now();
-    let rows = client
-        .query(sql, &[])
+    let messages = client
+        .simple_query(sql)
         .await
         .map_err(|e| AppError::QueryFailed(e.to_string()))?;
 
-    if rows.is_empty() {
-        return Ok((String::new(), 0.0f32));
+    let (columns, rows) = process_simple_messages(messages);
+
+    if columns.is_empty() {
+        return Ok((String::new(), start.elapsed().as_millis() as f32));
     }
 
-    let columns = rows[0]
-        .columns()
-        .iter()
-        .map(|c| c.name().to_string())
-        .collect::<Vec<String>>();
-
-    let col_count = rows[0].len();
     let cell_sep = CELL_SEP.to_string();
     let row_sep = ROW_SEP.to_string();
-
-    // Build header
     let header = columns.join(&cell_sep);
+    let body = pack_rows_vec(&rows);
 
-    // Use rayon for parallel row processing, then join
-    let row_strings: Vec<String> = if rows.len() >= PARALLEL_PACK_THRESHOLD {
-        rows.par_iter()
-            .map(|row| {
-                (0..col_count)
-                    .map(|i| {
-                        // Replace separator chars in values to avoid corruption
-                        reflective_get(row, i)
-                            .replace(CELL_SEP, " ")
-                            .replace(ROW_SEP, " ")
-                    })
-                    .collect::<Vec<_>>()
-                    .join(&cell_sep)
-            })
-            .collect()
+    let packed = if body.is_empty() {
+        header
     } else {
-        rows.iter()
-            .map(|row| {
-                (0..col_count)
-                    .map(|i| {
-                        reflective_get(row, i)
-                            .replace(CELL_SEP, " ")
-                            .replace(ROW_SEP, " ")
-                    })
-                    .collect::<Vec<_>>()
-                    .join(&cell_sep)
-            })
-            .collect()
+        format!("{}{}{}", header, row_sep, body)
     };
-
-    let packed = format!("{}{}{}", header, row_sep, row_strings.join(&row_sep));
     let elapsed = start.elapsed().as_millis() as f32;
     Ok((packed, elapsed))
-}
-
-/// Pack a batch of rows into the wire format string.
-fn pack_rows_batch(rows: &[tokio_postgres::Row], col_count: usize) -> String {
-    let cell_sep = CELL_SEP.to_string();
-    let row_sep = ROW_SEP.to_string();
-
-    let row_strings: Vec<String> = if rows.len() >= PARALLEL_PACK_THRESHOLD {
-        rows.par_iter()
-            .map(|row| {
-                (0..col_count)
-                    .map(|i| {
-                        reflective_get(row, i)
-                            .replace(CELL_SEP, " ")
-                            .replace(ROW_SEP, " ")
-                    })
-                    .collect::<Vec<_>>()
-                    .join(&cell_sep)
-            })
-            .collect()
-    } else {
-        rows.iter()
-            .map(|row| {
-                (0..col_count)
-                    .map(|i| {
-                        reflective_get(row, i)
-                            .replace(CELL_SEP, " ")
-                            .replace(ROW_SEP, " ")
-                    })
-                    .collect::<Vec<_>>()
-                    .join(&cell_sep)
-            })
-            .collect()
-    };
-
-    row_strings.join(&row_sep)
 }
 
 /// Stream query results using a PostgreSQL cursor.
@@ -203,45 +169,59 @@ pub async fn execute_query_streamed(
     let cursor_sql = format!("DECLARE _rsql_cur NO SCROLL CURSOR FOR {}", sql);
     match client.batch_execute(&cursor_sql).await {
         Ok(_) => {
-            // Cursor-based fetch loop
+            // Cursor-based fetch loop using simple_query for zero type conversion
             let fetch_sql = format!("FETCH {} FROM _rsql_cur", CURSOR_FETCH_SIZE);
             let mut total_sent: usize = 0;
             let mut columns_sent = false;
             let mut capped = false;
+            let cell_sep = CELL_SEP.to_string();
 
             loop {
-                let rows = client.query(&fetch_sql, &[]).await
+                let messages = client.simple_query(&fetch_sql).await
                     .map_err(|e| {
-                        // Clean up on error
                         let _ = client.batch_execute("CLOSE _rsql_cur; ROLLBACK");
                         AppError::QueryFailed(e.to_string())
                     })?;
 
-                if rows.is_empty() {
+                let mut batch_rows: Vec<Vec<String>> = Vec::new();
+                let mut batch_columns: Option<Vec<String>> = None;
+
+                for msg in messages {
+                    if let SimpleQueryMessage::Row(row) = msg {
+                        if batch_columns.is_none() {
+                            batch_columns = Some(
+                                row.columns().iter().map(|c| c.name().to_string()).collect(),
+                            );
+                        }
+                        let col_count = row.columns().len();
+                        batch_rows.push(
+                            (0..col_count)
+                                .map(|i| row.get(i).unwrap_or("null").to_string())
+                                .collect(),
+                        );
+                    }
+                }
+
+                if batch_rows.is_empty() {
                     break;
                 }
 
                 // Emit columns on first batch
                 if !columns_sent {
-                    let columns: Vec<String> = rows[0]
-                        .columns()
-                        .iter()
-                        .map(|c| c.name().to_string())
-                        .collect();
-                    let cell_sep = CELL_SEP.to_string();
-                    let header = columns.join(&cell_sep);
-                    let _ = app.emit(&event_name, QueryStreamEvent::Columns {
-                        columns: header,
-                        total_rows: 0, // unknown with cursors
-                    });
-                    columns_sent = true;
+                    if let Some(cols) = batch_columns {
+                        let header = cols.join(&cell_sep);
+                        let _ = app.emit(&event_name, QueryStreamEvent::Columns {
+                            columns: header,
+                            total_rows: 0,
+                        });
+                        columns_sent = true;
+                    }
                 }
 
-                let col_count = rows[0].len();
-                let packed = pack_rows_batch(&rows, col_count);
+                let packed = pack_rows_vec(&batch_rows);
                 let _ = app.emit(&event_name, QueryStreamEvent::Chunk { data: packed });
 
-                total_sent += rows.len();
+                total_sent += batch_rows.len();
                 if total_sent >= MAX_STREAM_ROWS {
                     capped = true;
                     break;
@@ -267,21 +247,18 @@ pub async fn execute_query_streamed(
             // DECLARE CURSOR failed (non-SELECT query like INSERT/UPDATE/DDL)
             client.batch_execute("ROLLBACK").await.ok();
 
-            // Re-execute directly — these typically return few/no rows
-            let rows = client.query(sql, &[]).await
+            // Re-execute with simple_query for multi-statement support
+            let messages = client.simple_query(sql).await
                 .map_err(|e| AppError::QueryFailed(e.to_string()))?;
 
-            if rows.is_empty() {
+            let (columns, rows) = process_simple_messages(messages);
+
+            if columns.is_empty() {
                 let _ = app.emit(&event_name, QueryStreamEvent::Columns {
                     columns: String::new(),
                     total_rows: 0,
                 });
             } else {
-                let columns: Vec<String> = rows[0]
-                    .columns()
-                    .iter()
-                    .map(|c| c.name().to_string())
-                    .collect();
                 let cell_sep = CELL_SEP.to_string();
                 let header = columns.join(&cell_sep);
                 let _ = app.emit(&event_name, QueryStreamEvent::Columns {
@@ -289,8 +266,7 @@ pub async fn execute_query_streamed(
                     total_rows: rows.len(),
                 });
 
-                let col_count = rows[0].len();
-                let packed = pack_rows_batch(&rows, col_count);
+                let packed = pack_rows_vec(&rows);
                 let _ = app.emit(&event_name, QueryStreamEvent::Chunk { data: packed });
             }
 
@@ -328,10 +304,11 @@ fn pack_rows_vec(rows: &[Vec<String>]) -> String {
     row_strings.join(&row_sep)
 }
 
-/// Execute a query in one shot (read-only on remote, no temp tables / cursors).
+/// Execute a query in one shot using simple_query protocol.
 /// Pre-packs results into page-sized strings cached in-memory.
 /// Returns (columns_packed, total_rows, first_page_packed, elapsed_ms).
-/// If the SQL is non-SELECT / returns 0 rows, returns empty columns_packed signal.
+/// If the SQL is non-SELECT / returns 0 rows, returns empty columns_packed signal
+/// with a synthetic affected-rows message in first_page_packed when applicable.
 pub async fn execute_virtual(
     client: &Client,
     cache: &tokio::sync::Mutex<VirtualCache>,
@@ -341,37 +318,39 @@ pub async fn execute_virtual(
 ) -> Result<(String, usize, String, f32), AppError> {
     let start = Instant::now();
 
-    // One-shot query — single network roundtrip, read-only on remote
-    let pg_rows = client.query(sql, &[]).await
+    let messages = client.simple_query(sql).await
         .map_err(|e| AppError::QueryFailed(e.to_string()))?;
 
-    if pg_rows.is_empty() {
+    let (columns, all_rows) = process_simple_messages(messages);
+
+    // Non-SELECT or empty result
+    if columns.is_empty() {
         let elapsed = start.elapsed().as_millis() as f32;
         return Ok((String::new(), 0, String::new(), elapsed));
     }
 
-    let col_count = pg_rows[0].len();
-    let columns: Vec<String> = pg_rows[0]
-        .columns()
-        .iter()
-        .map(|c| c.name().to_string())
-        .collect();
-    let total_rows = pg_rows.len();
+    // Synthetic "N rows affected" result — pass through as fallback format
+    if columns.len() == 1 && columns[0] == "Result" {
+        let cell_sep = CELL_SEP.to_string();
+        let row_sep = ROW_SEP.to_string();
+        let fallback = format!(
+            "{}{}{}",
+            columns[0],
+            row_sep,
+            all_rows.first().map(|r| r.join(&cell_sep)).unwrap_or_default()
+        );
+        let elapsed = start.elapsed().as_millis() as f32;
+        return Ok((String::new(), 0, fallback, elapsed));
+    }
 
-    // Convert PG rows → strings AND pre-pack into pages in one parallel pass.
-    // Each page becomes a single large String (~1-2 MB) — the OS reclaims these on free.
-    let pg_chunks: Vec<&[tokio_postgres::Row]> = pg_rows.chunks(page_size).collect();
-    let pages: Vec<String> = pg_chunks
+    let total_rows = all_rows.len();
+
+    // Pre-pack into pages in parallel
+    let chunks: Vec<&[Vec<String>]> = all_rows.chunks(page_size).collect();
+    let pages: Vec<String> = chunks
         .par_iter()
-        .map(|chunk| {
-            let rows: Vec<Vec<String>> = chunk
-                .iter()
-                .map(|row| (0..col_count).map(|i| reflective_get(row, i)).collect())
-                .collect();
-            pack_rows_vec(&rows)
-        })
+        .map(|chunk| pack_rows_vec(chunk))
         .collect();
-    drop(pg_rows); // free PG row memory
 
     let cell_sep = CELL_SEP.to_string();
     let columns_packed = columns.join(&cell_sep);

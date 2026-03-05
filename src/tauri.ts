@@ -44,3 +44,15 @@ export async function deleteQuery(query_id: string): Promise<void> {
 export async function getSystemResourceUsage(): Promise<SystemResourceUsage> {
   return await invoke<SystemResourceUsage>("system_resource_usage");
 }
+
+export async function workspaceSave(name: string, tabs: string): Promise<void> {
+  await invoke("workspace_save", { name, tabs });
+}
+
+export async function workspaceLoadAll(): Promise<[string, string][]> {
+  return await invoke<[string, string][]>("workspace_load_all");
+}
+
+export async function workspaceDelete(name: string): Promise<void> {
+  await invoke("workspace_delete", { name });
+}

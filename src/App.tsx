@@ -111,7 +111,7 @@ export default function App() {
       }
 
       if (driver.executeVirtual) {
-        const sql = tab.editorValue.replace(/;\s*$/, "");
+        const sql = tab.editorValue;
         const queryId = crypto.randomUUID().replace(/-/g, "").slice(0, 12);
         const [colsPacked, totalRows, pagePacked, elapsed] =
           await driver.executeVirtual(tab.projectId, sql, queryId, PAGE_SIZE);

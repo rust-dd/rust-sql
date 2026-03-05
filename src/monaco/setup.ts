@@ -6,6 +6,7 @@ import pgWorker from 'monaco-sql-languages/esm/languages/pgsql/pgsql.worker?work
 import 'monaco-sql-languages/esm/languages/pgsql/pgsql.contribution'
 import { setupLanguageFeatures } from 'monaco-sql-languages/esm/setupLanguageFeatures'
 import { LanguageIdEnum } from 'monaco-sql-languages/esm/common/constants'
+import { registerContextAwareCompletions } from './completion-provider'
 
 // @ts-expect-error MonacoEnvironment is attached to global scope at runtime
 self.MonacoEnvironment = {
@@ -27,3 +28,6 @@ setupLanguageFeatures(LanguageIdEnum.PG, {
   definitions: true,
   references: true,
 })
+
+// Register our custom completion provider once, at init time
+registerContextAwareCompletions(monaco)

@@ -11,6 +11,7 @@ const LOCAL_DB_NAME: &str = "rsql.db";
 
 use std::{collections::BTreeMap, sync::Arc};
 use tauri::Manager;
+use tauri::menu::{AboutMetadata, MenuBuilder, SubmenuBuilder};
 use tokio::sync::Mutex;
 use tokio_postgres::Client;
 use tracing::Level;
@@ -92,6 +93,56 @@ fn main() {
                 app_handle.manage(terminal_state);
             });
 
+            // Native menu
+            let handle = app.handle();
+
+            let app_menu = SubmenuBuilder::new(handle, "RSQL")
+                .about(Some(AboutMetadata {
+                    name: Some("RSQL".into()),
+                    version: Some(env!("CARGO_PKG_VERSION").into()),
+                    copyright: Some("\u{00a9} 2025 rust-dd".into()),
+                    comments: Some("Modern SQL client for PostgreSQL and Redshift.\nBuilt with Tauri, React, and Rust.".into()),
+                    website: Some("https://github.com/rust-dd/rsql".into()),
+                    website_label: Some("GitHub".into()),
+                    ..Default::default()
+                }))
+                .separator()
+                .services()
+                .separator()
+                .hide()
+                .hide_others()
+                .show_all()
+                .separator()
+                .quit()
+                .build()?;
+
+            let edit_menu = SubmenuBuilder::new(handle, "Edit")
+                .undo()
+                .redo()
+                .separator()
+                .cut()
+                .copy()
+                .paste()
+                .select_all()
+                .build()?;
+
+            let view_menu = SubmenuBuilder::new(handle, "View")
+                .fullscreen()
+                .build()?;
+
+            let window_menu = SubmenuBuilder::new(handle, "Window")
+                .minimize()
+                .maximize()
+                .separator()
+                .close_window()
+                .build()?;
+
+            let menu = MenuBuilder::new(handle)
+                .items(&[&app_menu, &edit_menu, &view_menu, &window_menu])
+                .build()?;
+
+            handle.set_menu(menu)?;
+
             #[cfg(debug_assertions)]
             {
                 let window = app.get_webview_window("main").expect("main window not found");
@@ -128,6 +179,7 @@ fn main() {
             drivers::pgsql::pgsql_load_table_stats,
             drivers::pgsql::pgsql_load_foreign_keys,
             drivers::pgsql::pgsql_run_query_packed,
+            drivers::pgsql::pgsql_run_query_streamed,
             drivers::redshift::redshift_connector,
             drivers::redshift::redshift_load_schemas,
             drivers::redshift::redshift_load_tables,

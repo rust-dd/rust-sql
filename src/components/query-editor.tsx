@@ -1,7 +1,6 @@
 import { useRef, useCallback } from "react";
 import Editor from "@monaco-editor/react";
 import type * as Monaco from "monaco-editor";
-import { registerContextAwareCompletions } from "@/monaco/completion-provider";
 import { useUIStore } from "@/stores/ui-store";
 
 interface QueryEditorProps {
@@ -17,10 +16,6 @@ export function QueryEditor({ value, onChange, onExecute, onExplain }: QueryEdit
   onExecuteRef.current = onExecute;
   const onExplainRef = useRef(onExplain);
   onExplainRef.current = onExplain;
-
-  const handleBeforeMount = useCallback((monaco: typeof Monaco) => {
-    registerContextAwareCompletions(monaco);
-  }, []);
 
   const handleMount = useCallback(
     (editor: Monaco.editor.IStandaloneCodeEditor, monaco: typeof Monaco) => {
@@ -56,7 +51,6 @@ export function QueryEditor({ value, onChange, onExecute, onExplain }: QueryEdit
               <span className="text-muted-foreground text-sm">Loading editor...</span>
             </div>
           }
-          beforeMount={handleBeforeMount}
           options={{
             automaticLayout: true,
             minimap: { enabled: false },
@@ -69,6 +63,17 @@ export function QueryEditor({ value, onChange, onExecute, onExplain }: QueryEdit
               strings: true,
             },
             suggestOnTriggerCharacters: true,
+            wordBasedSuggestions: "currentDocument",
+            acceptSuggestionOnEnter: "on",
+            tabCompletion: "on",
+            suggest: {
+              showKeywords: true,
+              showSnippets: true,
+              showFunctions: true,
+              showVariables: true,
+              preview: true,
+              filterGraceful: true,
+            },
           }}
           value={value}
           onChange={(v) => onChange(v ?? "")}

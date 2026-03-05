@@ -20,48 +20,48 @@ export function TerminalPanel({ terminalId }: TerminalPanelProps) {
   const getTermTheme = useCallback(() => {
     if (theme === "dark") {
       return {
-        background: "hsl(224, 20%, 10%)",
-        foreground: "hsl(220, 15%, 85%)",
-        cursor: "hsl(220, 70%, 55%)",
-        cursorAccent: "hsl(224, 20%, 10%)",
-        selectionBackground: "hsla(220, 70%, 55%, 0.3)",
-        black: "#1a1a2e",
+        background: "hsl(250, 15%, 10%)",
+        foreground: "hsl(250, 10%, 88%)",
+        cursor: "hsl(260, 70%, 65%)",
+        cursorAccent: "hsl(250, 15%, 10%)",
+        selectionBackground: "hsla(260, 70%, 60%, 0.3)",
+        black: "#16141f",
         red: "#ef4444",
-        green: "#22c55e",
-        yellow: "#eab308",
-        blue: "#3b82f6",
-        magenta: "#a855f7",
-        cyan: "#06b6d4",
-        white: "#e5e7eb",
-        brightBlack: "#6b7280",
+        green: "#34d399",
+        yellow: "#fbbf24",
+        blue: "#818cf8",
+        magenta: "#c084fc",
+        cyan: "#22d3ee",
+        white: "#e2e0eb",
+        brightBlack: "#6b6880",
         brightRed: "#f87171",
-        brightGreen: "#4ade80",
-        brightYellow: "#fde047",
-        brightBlue: "#60a5fa",
-        brightMagenta: "#c084fc",
-        brightCyan: "#22d3ee",
-        brightWhite: "#f9fafb",
+        brightGreen: "#6ee7b7",
+        brightYellow: "#fde68a",
+        brightBlue: "#a5b4fc",
+        brightMagenta: "#d8b4fe",
+        brightCyan: "#67e8f9",
+        brightWhite: "#f5f3ff",
       };
     }
     return {
-      background: "#ffffff",
-      foreground: "#1a1a1a",
-      cursor: "#3b82f6",
-      cursorAccent: "#ffffff",
-      selectionBackground: "rgba(59, 130, 246, 0.2)",
-      black: "#1a1a1a",
+      background: "#faf9ff",
+      foreground: "#1a1830",
+      cursor: "hsl(260, 70%, 50%)",
+      cursorAccent: "#faf9ff",
+      selectionBackground: "rgba(120, 80, 220, 0.15)",
+      black: "#1a1830",
       red: "#dc2626",
       green: "#16a34a",
       yellow: "#ca8a04",
-      blue: "#2563eb",
+      blue: "#4f46e5",
       magenta: "#9333ea",
       cyan: "#0891b2",
-      white: "#f5f5f5",
-      brightBlack: "#9ca3af",
+      white: "#f5f3ff",
+      brightBlack: "#8b85a0",
       brightRed: "#ef4444",
       brightGreen: "#22c55e",
       brightYellow: "#eab308",
-      brightBlue: "#3b82f6",
+      brightBlue: "#6366f1",
       brightMagenta: "#a855f7",
       brightCyan: "#06b6d4",
       brightWhite: "#ffffff",
@@ -74,10 +74,12 @@ export function TerminalPanel({ terminalId }: TerminalPanelProps) {
     const term = new Terminal({
       fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
       fontSize: 13,
-      lineHeight: 1.2,
+      lineHeight: 1.3,
       theme: getTermTheme(),
       cursorBlink: true,
+      cursorStyle: "bar",
       allowProposedApi: true,
+      scrollback: 5000,
     });
 
     const fitAddon = new FitAddon();
@@ -144,8 +146,8 @@ export function TerminalPanel({ terminalId }: TerminalPanelProps) {
   return (
     <div
       ref={containerRef}
-      className="flex-1 min-h-0 overflow-hidden p-1"
-      style={{ backgroundColor: theme === "dark" ? "hsl(224, 20%, 10%)" : "#ffffff" }}
+      className="flex-1 min-h-0 overflow-hidden px-2 py-1"
+      style={{ backgroundColor: theme === "dark" ? "hsl(250, 15%, 10%)" : "#faf9ff" }}
     />
   );
 }

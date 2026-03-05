@@ -533,18 +533,21 @@ export function ServerSidebar({
         })()}
       </div>
 
-      {/* Saved Queries */}
-      {savedQueries.length > 0 && (
-        <div className="border-t border-sidebar-border">
-          <div className="flex h-8 items-center px-3">
-            <span className="tracking-widest uppercase text-[10px] font-semibold text-sidebar-foreground">SAVED QUERIES</span>
-          </div>
+      {/* Saved Queries — always visible */}
+      <div className="border-t border-sidebar-border">
+        <div className="flex h-8 items-center justify-between px-3">
+          <span className="tracking-widest uppercase text-[10px] font-semibold text-sidebar-foreground">SAVED QUERIES</span>
+          {savedQueries.length > 0 && (
+            <span className="text-[10px] text-muted-foreground">{savedQueries.length}</span>
+          )}
+        </div>
+        {savedQueries.length > 0 ? (
           <div className="overflow-y-auto p-1 max-h-48">
             {savedQueries.map((q) => (
               <TreeRow
                 key={q.id}
                 indent={I.server}
-                icon={<FileText className="h-3.5 w-3.5 text-muted-foreground" />}
+                icon={<FileText className="h-3.5 w-3.5 text-primary/60" />}
                 label={q.title}
                 onClick={() => openTab(q.projectId, q.sql)}
                 onContextMenu={(e) => showMenu(e, [
@@ -559,8 +562,12 @@ export function ServerSidebar({
               />
             ))}
           </div>
-        </div>
-      )}
+        ) : (
+          <div className="px-3 pb-2 text-[11px] text-muted-foreground/60">
+            No saved queries yet. Use the Save button in the toolbar to save the current query.
+          </div>
+        )}
+      </div>
 
       {menu && <ContextMenu x={menu.x} y={menu.y} items={menu.items} onClose={closeMenu} />}
     </div>

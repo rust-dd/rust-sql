@@ -19,6 +19,7 @@ interface TabState {
   selectTab: (index: number) => void;
   updateContent: (index: number, value: string) => void;
   updateResult: (index: number, result: QueryResult) => void;
+  setResult: (index: number, result: QueryResult) => void;
   setExecuting: (index: number, executing: boolean) => void;
   setProjectId: (index: number, projectId: string) => void;
   setExplainResult: (index: number, plan: ExplainPlan | undefined) => void;
@@ -136,6 +137,14 @@ export const useTabStore = create<TabState>()(
         set((s) => {
           const tabs = s.tabs.slice();
           tabs[index] = { ...tabs[index], result, isExecuting: false };
+          return { tabs };
+        });
+      },
+
+      setResult: (index: number, result: QueryResult) => {
+        set((s) => {
+          const tabs = s.tabs.slice();
+          tabs[index] = { ...tabs[index], result };
           return { tabs };
         });
       },

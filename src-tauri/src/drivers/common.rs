@@ -59,6 +59,18 @@ const CELL_SEP: char = '\x1F';
 /// Row separator for packed format (Record Separator, ASCII 0x1E)
 const ROW_SEP: char = '\x1E';
 
+/// Events emitted during streamed query execution.
+#[derive(serde::Serialize, Clone)]
+#[serde(tag = "type")]
+pub enum QueryStreamEvent {
+    #[serde(rename = "columns")]
+    Columns { columns: String, total_rows: usize },
+    #[serde(rename = "chunk")]
+    Chunk { data: String },
+    #[serde(rename = "done")]
+    Done { elapsed: f32 },
+}
+
 /// Execute a timed query and return results in compact packed string format.
 /// Format: "col1\x1Fcol2\x1E row1val1\x1Frow1val2\x1E row2val1\x1Frow2val2"
 /// This avoids the massive JSON overhead of nested Vec<Vec<String>>.
@@ -122,6 +134,93 @@ pub async fn execute_query_packed(
     let packed = format!("{}{}{}", header, row_sep, row_strings.join(&row_sep));
     let elapsed = start.elapsed().as_millis() as f32;
     Ok((packed, elapsed))
+}
+
+/// Stream query results in chunks via Tauri events.
+/// Each chunk uses the packed wire format (CELL_SEP / ROW_SEP).
+pub async fn execute_query_streamed(
+    client: &Client,
+    sql: &str,
+    stream_id: &str,
+    app: &tauri::AppHandle,
+) -> Result<(), AppError> {
+    use tauri::Emitter;
+
+    let start = Instant::now();
+    let rows = client
+        .query(sql, &[])
+        .await
+        .map_err(|e| AppError::QueryFailed(e.to_string()))?;
+
+    let event_name = format!("query-stream-{}", stream_id);
+
+    if rows.is_empty() {
+        let _ = app.emit(&event_name, QueryStreamEvent::Columns {
+            columns: String::new(),
+            total_rows: 0,
+        });
+        let _ = app.emit(&event_name, QueryStreamEvent::Done { elapsed: 0.0 });
+        return Ok(());
+    }
+
+    let columns = rows[0]
+        .columns()
+        .iter()
+        .map(|c| c.name().to_string())
+        .collect::<Vec<String>>();
+
+    let col_count = rows[0].len();
+    let total_rows = rows.len();
+    let cell_sep = CELL_SEP.to_string();
+    let header = columns.join(&cell_sep);
+
+    let _ = app.emit(&event_name, QueryStreamEvent::Columns {
+        columns: header,
+        total_rows,
+    });
+
+    const CHUNK_SIZE: usize = 5000;
+    let row_sep = ROW_SEP.to_string();
+
+    for chunk in rows.chunks(CHUNK_SIZE) {
+        let row_strings: Vec<String> = if chunk.len() > 1000 {
+            chunk
+                .par_iter()
+                .map(|row| {
+                    (0..col_count)
+                        .map(|i| {
+                            reflective_get(row, i)
+                                .replace(CELL_SEP, " ")
+                                .replace(ROW_SEP, " ")
+                        })
+                        .collect::<Vec<_>>()
+                        .join(&cell_sep)
+                })
+                .collect()
+        } else {
+            chunk
+                .iter()
+                .map(|row| {
+                    (0..col_count)
+                        .map(|i| {
+                            reflective_get(row, i)
+                                .replace(CELL_SEP, " ")
+                                .replace(ROW_SEP, " ")
+                        })
+                        .collect::<Vec<_>>()
+                        .join(&cell_sep)
+                })
+                .collect()
+        };
+
+        let packed_chunk = row_strings.join(&row_sep);
+        let _ = app.emit(&event_name, QueryStreamEvent::Chunk { data: packed_chunk });
+    }
+
+    let elapsed = start.elapsed().as_millis() as f32;
+    let _ = app.emit(&event_name, QueryStreamEvent::Done { elapsed });
+
+    Ok(())
 }
 
 /// Load schemas with a timeout. The query string is driver-specific.

@@ -289,6 +289,7 @@ export function ResultsPanel() {
     setViewMode,
     viewMode,
     hasExplain,
+    isExecuting: !!isExecuting,
     isEditing,
     editableTable: !!editableTable,
     changeCount,
@@ -308,7 +309,7 @@ export function ResultsPanel() {
     );
   }
 
-  if (panelView !== "history" && isExecuting) {
+  if (panelView !== "history" && isExecuting && !result) {
     return (
       <div className="flex h-full flex-col">
         <ResultsToolbar {...toolbarProps} result={null} columns={[]} filteredRows={[]} filteredCount={0} />
@@ -407,6 +408,7 @@ interface ToolbarProps {
   setViewMode: (mode: "grid" | "record") => void;
   viewMode: "grid" | "record";
   hasExplain: boolean;
+  isExecuting: boolean;
   isEditing: boolean;
   editableTable: boolean;
   changeCount: number;
@@ -430,6 +432,7 @@ function ResultsToolbar(props: ToolbarProps) {
     setViewMode,
     viewMode,
     hasExplain,
+    isExecuting,
     isEditing,
     editableTable,
     changeCount,
@@ -531,7 +534,11 @@ function ResultsToolbar(props: ToolbarProps) {
         {/* Result stats */}
         {panelView !== "history" && result && (
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <CheckCircle2 className="h-3 w-3 text-success" />
+            {isExecuting ? (
+              <Loader2 className="h-3 w-3 animate-spin text-primary" />
+            ) : (
+              <CheckCircle2 className="h-3 w-3 text-success" />
+            )}
             <span>
               {searchTerm
                 ? `${filteredCount.toLocaleString()} / ${result.rows.length.toLocaleString()}`

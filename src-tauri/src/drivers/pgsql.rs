@@ -3,7 +3,7 @@ use std::sync::Arc;
 use crate::common::enums::{AppError, ProjectConnectionStatus};
 use crate::common::pgsql::{PgsqlLoadColumns, PgsqlLoadSchemas, PgsqlLoadTables};
 use crate::drivers::common::{
-    execute_query, execute_query_packed, get_client, load_activity, load_column_details, load_columns,
+    execute_query, execute_query_packed, execute_query_streamed, get_client, load_activity, load_column_details, load_columns,
     load_constraints, load_database_stats, load_foreign_keys, load_functions, load_indexes,
     load_materialized_views, load_policies, load_rules, load_schemas, load_table_stats, load_tables,
     load_trigger_functions, load_triggers, load_views, ColumnDetail, ConstraintDetail, DbStat,
@@ -371,6 +371,25 @@ pub async fn pgsql_run_query_packed(
     let client = get_client(client_map, project_id)?;
 
     execute_query_packed(client, sql).await.map_err(Into::into)
+}
+
+#[tauri::command(rename_all = "snake_case")]
+pub async fn pgsql_run_query_streamed(
+    project_id: &str,
+    sql: &str,
+    stream_id: &str,
+    app: AppHandle,
+) -> Result<()> {
+    let app_state = app.state::<AppState>();
+    let clients = app_state.client.lock().await;
+    let client_map = clients
+        .as_ref()
+        .ok_or(AppError::DatabaseError("No client map".into()))?;
+    let client = get_client(client_map, project_id)?;
+
+    execute_query_streamed(client, sql, stream_id, &app)
+        .await
+        .map_err(Into::into)
 }
 
 #[tauri::command(rename_all = "snake_case")]

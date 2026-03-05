@@ -49,6 +49,7 @@ export default function App() {
   const activeTab = useActiveTab();
   const updateContent = useTabStore((s) => s.updateContent);
   const updateResult = useTabStore((s) => s.updateResult);
+  const setResult = useTabStore((s) => s.setResult);
   const setExecuting = useTabStore((s) => s.setExecuting);
   const closeTab = useTabStore((s) => s.closeTab);
   const setExplainResult = useTabStore((s) => s.setExplainResult);
@@ -74,18 +75,56 @@ export default function App() {
     const startTime = Date.now();
     try {
       const driver = DriverFactory.getDriver(d.driver);
-      const [cols, rows, time] = await driver.runQuery(tab.projectId, tab.editorValue);
-      updateResult(idx, { columns: cols, rows, time });
-      notifyQueryComplete(tab.editorValue, time, true, rows.length);
-      addHistoryEntry({
-        projectId: tab.projectId,
-        database: d.database,
-        sql: tab.editorValue.trim(),
-        executionTime: time,
-        rowCount: rows.length,
-        success: true,
-        timestamp: startTime,
-      });
+
+      if (driver.runQueryStreamed) {
+        // Streaming: progressive chunk loading via Tauri events
+        const streamId = crypto.randomUUID();
+        let columns: string[] = [];
+        const allRows: string[][] = [];
+        let lastUIUpdate = 0;
+
+        await driver.runQueryStreamed(tab.projectId, tab.editorValue, streamId, {
+          onColumns(cols, _totalRows) {
+            columns = cols;
+            setResult(idx, { columns: cols, rows: [], time: 0 });
+          },
+          onChunk(rows) {
+            for (const r of rows) allRows.push(r);
+            const now = Date.now();
+            if (now - lastUIUpdate > 100) {
+              setResult(idx, { columns, rows: allRows.slice(), time: 0 });
+              lastUIUpdate = now;
+            }
+          },
+          onDone(elapsed) {
+            updateResult(idx, { columns, rows: allRows, time: elapsed });
+            notifyQueryComplete(tab.editorValue, elapsed, true, allRows.length);
+            addHistoryEntry({
+              projectId: tab.projectId!,
+              database: d.database,
+              sql: tab.editorValue.trim(),
+              executionTime: elapsed,
+              rowCount: allRows.length,
+              success: true,
+              timestamp: startTime,
+            });
+          },
+        });
+      } else {
+        // One-shot fallback
+        const [cols, rows, time] = await driver.runQuery(tab.projectId, tab.editorValue);
+        updateResult(idx, { columns: cols, rows, time });
+        notifyQueryComplete(tab.editorValue, time, true, rows.length);
+        addHistoryEntry({
+          projectId: tab.projectId,
+          database: d.database,
+          sql: tab.editorValue.trim(),
+          executionTime: time,
+          rowCount: rows.length,
+          success: true,
+          timestamp: startTime,
+        });
+      }
     } catch (err: any) {
       const elapsed = Date.now() - startTime;
       const errorMsg = err?.message ?? String(err);
@@ -107,7 +146,7 @@ export default function App() {
       });
     }
     useUIStore.getState().setSelectedRow(0);
-  }, [setExecuting, updateResult, addHistoryEntry]);
+  }, [setExecuting, updateResult, setResult, addHistoryEntry]);
 
   const runExplain = useCallback(async () => {
     const { tabs, selectedTabIndex: idx } = useTabStore.getState();
@@ -182,7 +221,7 @@ export default function App() {
   const handleSaveConnection = useCallback(
     async (connection: { name: string; driver: string; username: string; password: string; database: string; host: string; port: string; ssl: boolean }) => {
       const details = {
-        driver: connection.driver as "PGSQL" | "REDSHIFT",
+        driver: connection.driver as "PGSQL",
         username: connection.username,
         password: connection.password,
         database: connection.database,

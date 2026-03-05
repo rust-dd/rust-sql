@@ -1,4 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 import { ProjectConnectionStatus } from "@/types";
 import type {
   DriverType, ColumnDetail, IndexDetail, ConstraintDetail,
@@ -38,6 +39,18 @@ export interface ForeignKey {
   targetColumn: string;
 }
 
+/** Events received during streamed query execution */
+type QueryStreamEvent =
+  | { type: "columns"; columns: string; total_rows: number }
+  | { type: "chunk"; data: string }
+  | { type: "done"; elapsed: number };
+
+export interface StreamCallbacks {
+  onColumns: (columns: string[], totalRows: number) => void;
+  onChunk: (rows: string[][]) => void;
+  onDone: (elapsed: number) => void;
+}
+
 export interface DatabaseDriver {
   connect(projectId: string, key: [string, string, string, string, string, string]): Promise<ProjectConnectionStatus>;
   loadSchemas(projectId: string): Promise<string[]>;
@@ -54,6 +67,7 @@ export interface DatabaseDriver {
   loadFunctions(projectId: string, schema: string): Promise<FunctionInfo[]>;
   loadTriggerFunctions(projectId: string, schema: string): Promise<TriggerFunctionInfo[]>;
   runQuery(projectId: string, sql: string): Promise<WireQueryResult>;
+  runQueryStreamed?(projectId: string, sql: string, streamId: string, callbacks: StreamCallbacks): Promise<void>;
   loadActivity(projectId: string): Promise<string[][]>;
   loadDatabaseStats(projectId: string): Promise<[string, string][]>;
   loadTableStats(projectId: string): Promise<string[][]>;
@@ -162,6 +176,57 @@ class PostgreSQLDriver implements DatabaseDriver {
     const [packed, time] = await invoke<WirePackedResult>("pgsql_run_query_packed", { project_id: projectId, sql });
     return unpackResult(packed, time);
   }
+  async runQueryStreamed(
+    projectId: string,
+    sql: string,
+    streamId: string,
+    { onColumns, onChunk, onDone }: StreamCallbacks,
+  ): Promise<void> {
+    let resolveStream: () => void;
+    let rejectStream: (err: unknown) => void;
+    const streamDone = new Promise<void>((resolve, reject) => {
+      resolveStream = resolve;
+      rejectStream = reject;
+    });
+
+    const unlisten = await listen<QueryStreamEvent>(
+      `query-stream-${streamId}`,
+      (event) => {
+        const p = event.payload;
+        switch (p.type) {
+          case "columns": {
+            const cols = p.columns ? p.columns.split(CELL_SEP) : [];
+            onColumns(cols, p.total_rows);
+            break;
+          }
+          case "chunk": {
+            if (p.data) {
+              const rows = p.data.split(ROW_SEP).map((r) => r.split(CELL_SEP));
+              onChunk(rows);
+            }
+            break;
+          }
+          case "done": {
+            onDone(p.elapsed);
+            unlisten();
+            resolveStream!();
+            break;
+          }
+        }
+      },
+    );
+
+    invoke("pgsql_run_query_streamed", {
+      project_id: projectId,
+      sql,
+      stream_id: streamId,
+    }).catch((err) => {
+      unlisten();
+      rejectStream!(err);
+    });
+
+    return streamDone;
+  }
   async loadActivity(projectId: string) {
     return invoke<string[][]>("pgsql_load_activity", { project_id: projectId });
   }
@@ -179,82 +244,9 @@ class PostgreSQLDriver implements DatabaseDriver {
   }
 }
 
-class RedshiftDriver implements DatabaseDriver {
-  async connect(projectId: string, key: [string, string, string, string, string, string]) {
-    return invoke<ProjectConnectionStatus>("redshift_connector", { project_id: projectId, key });
-  }
-  async loadSchemas(projectId: string) {
-    return invoke<string[]>("redshift_load_schemas", { project_id: projectId });
-  }
-  async loadTables(projectId: string, schema: string) {
-    return invoke<WireTableInfo[]>("redshift_load_tables", { project_id: projectId, schema });
-  }
-  async loadColumns(projectId: string, schema: string, table: string) {
-    return invoke<string[]>("redshift_load_columns", { project_id: projectId, schema, table });
-  }
-  async loadColumnDetails(projectId: string, schema: string, table: string) {
-    const wire = await invoke<WireColumnDetail[]>("redshift_load_column_details", { project_id: projectId, schema, table });
-    return parseColumnDetails(wire);
-  }
-  async loadIndexes(projectId: string, schema: string, table: string) {
-    const wire = await invoke<WireIndexDetail[]>("redshift_load_indexes", { project_id: projectId, schema, table });
-    return parseIndexDetails(wire);
-  }
-  async loadConstraints(projectId: string, schema: string, table: string) {
-    const wire = await invoke<WireConstraintDetail[]>("redshift_load_constraints", { project_id: projectId, schema, table });
-    return parseConstraintDetails(wire);
-  }
-  async loadTriggers(projectId: string, schema: string, table: string) {
-    const wire = await invoke<WireTriggerDetail[]>("redshift_load_triggers", { project_id: projectId, schema, table });
-    return parseTriggerDetails(wire);
-  }
-  async loadRules(projectId: string, schema: string, table: string) {
-    const wire = await invoke<WireRuleDetail[]>("redshift_load_rules", { project_id: projectId, schema, table });
-    return parseRuleDetails(wire);
-  }
-  async loadPolicies(projectId: string, schema: string, table: string) {
-    const wire = await invoke<WirePolicyDetail[]>("redshift_load_policies", { project_id: projectId, schema, table });
-    return parsePolicyDetails(wire);
-  }
-  async loadViews(projectId: string, schema: string) {
-    return invoke<string[]>("redshift_load_views", { project_id: projectId, schema });
-  }
-  async loadMaterializedViews(projectId: string, schema: string) {
-    return invoke<string[]>("redshift_load_materialized_views", { project_id: projectId, schema });
-  }
-  async loadFunctions(projectId: string, schema: string) {
-    const wire = await invoke<WireFunctionInfo[]>("redshift_load_functions", { project_id: projectId, schema });
-    return parseFunctionInfo(wire);
-  }
-  async loadTriggerFunctions(projectId: string, schema: string) {
-    const wire = await invoke<WireTriggerFunctionInfo[]>("redshift_load_trigger_functions", { project_id: projectId, schema });
-    return parseTriggerFunctionInfo(wire);
-  }
-  async runQuery(projectId: string, sql: string) {
-    const [packed, time] = await invoke<WirePackedResult>("redshift_run_query_packed", { project_id: projectId, sql });
-    return unpackResult(packed, time);
-  }
-  async loadActivity(projectId: string) {
-    return invoke<string[][]>("redshift_load_activity", { project_id: projectId });
-  }
-  async loadDatabaseStats(projectId: string) {
-    return invoke<[string, string][]>("redshift_load_database_stats", { project_id: projectId });
-  }
-  async loadTableStats(projectId: string) {
-    return invoke<string[][]>("redshift_load_table_stats", { project_id: projectId });
-  }
-  async loadForeignKeys(projectId: string, schema: string) {
-    const wire = await invoke<WireForeignKeyInfo[]>("redshift_load_foreign_keys", { project_id: projectId, schema });
-    return wire.map(([sourceTable, sourceColumn, targetTable, targetColumn]) => ({
-      sourceTable, sourceColumn, targetTable, targetColumn,
-    }));
-  }
-}
-
 export class DriverFactory {
   private static drivers: Map<DriverType, DatabaseDriver> = new Map([
     ["PGSQL", new PostgreSQLDriver()],
-    ["REDSHIFT", new RedshiftDriver()],
   ]);
 
   static getDriver(driverType: DriverType): DatabaseDriver {
@@ -277,7 +269,6 @@ export interface DriverConfig {
 
 export const DRIVER_CONFIGS: Record<DriverType, DriverConfig> = {
   PGSQL: { name: "PostgreSQL", defaultPort: "5432" },
-  REDSHIFT: { name: "Amazon Redshift", defaultPort: "5439" },
 };
 
 export type { DriverType };

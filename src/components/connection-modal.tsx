@@ -4,7 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from "./ui/button"
 import { Input } from "./ui/input"
 import { Label } from "./ui/label"
-import { DriverFactory, DRIVER_CONFIGS } from "@/lib/database-driver"
+import { DRIVER_CONFIGS } from "@/lib/database-driver"
 import type { DriverType, ProjectDetails } from "@/types"
 
 interface ConnectionModalProps {
@@ -69,17 +69,6 @@ export function ConnectionModal({ open, onOpenChange, onSave, editData }: Connec
     onOpenChange(false)
   }
 
-  const handleDriverChange = (driver: DriverType) => {
-    const config = DRIVER_CONFIGS[driver]
-    setFormData({
-      ...formData,
-      driver,
-      port: config.defaultPort,
-    })
-  }
-
-  const supportedDrivers = DriverFactory.getSupportedDrivers()
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="bg-card border-border/50 rounded-xl sm:max-w-[500px]">
@@ -96,19 +85,9 @@ export function ConnectionModal({ open, onOpenChange, onSave, editData }: Connec
             <Label htmlFor="driver" className="font-mono text-xs text-foreground">
               Database Type
             </Label>
-            <select
-              id="driver"
-              value={formData.driver}
-              onChange={(e) => handleDriverChange(e.target.value as DriverType)}
-              className="w-full bg-input/80 border border-border/50 text-foreground font-mono text-sm rounded-lg px-3 py-2"
-              disabled={isEditing}
-            >
-              {supportedDrivers.map((driverType) => (
-                <option key={driverType} value={driverType}>
-                  {DRIVER_CONFIGS[driverType].name}
-                </option>
-              ))}
-            </select>
+            <div className="w-full bg-input/80 border border-border/50 text-foreground font-mono text-sm rounded-lg px-3 py-2">
+              {DRIVER_CONFIGS[formData.driver].name}
+            </div>
           </div>
 
           <div className="space-y-2">

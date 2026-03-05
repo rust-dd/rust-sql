@@ -8,7 +8,7 @@ export interface ProjectDetails {
   ssl: string;
 }
 
-export type DriverType = "PGSQL" | "REDSHIFT";
+export type DriverType = "PGSQL";
 
 export type ProjectMap = Record<string, ProjectDetails>;
 

@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "rsql",
+        "title": "RSQL",
         "width": 1280,
         "height": 768,
         "minWidth": 1280,

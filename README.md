@@ -20,7 +20,7 @@ A high-performance SQL database client built with Tauri v2, React 19, and Rust.
 - Grid view, record view, and map view (for PostGIS/geometry data)
 - Column sorting
 - Full-text search/filter across results
-- Export to CSV, JSON, SQL INSERT, and clipboard
+- Export to CSV, JSON, SQL INSERT, Markdown, XML, and clipboard
 - Pin results for later diff comparison
 - Diff tool (computed in Rust for performance) showing added/removed rows
 - Inline table editing: UPDATE and DELETE directly from the grid with transaction support
@@ -29,7 +29,7 @@ A high-performance SQL database client built with Tauri v2, React 19, and Rust.
 - Tree-based sidebar with schemas, tables, views, materialized views, functions, trigger functions
 - Column details with types, indexes, constraints, triggers, rules, policies
 - DDL view (SHOW CREATE TABLE/VIEW/FUNCTION)
-- Connection groups/folders for organizing connections
+- Saved queries with per-project organization
 - Global fuzzy search (Cmd+P) across all database objects
 
 ### ERD Diagram
@@ -62,32 +62,32 @@ A high-performance SQL database client built with Tauri v2, React 19, and Rust.
 - Open with Cmd+` or terminal button in tab bar
 
 ### Performance
-- Bytestream IPC: compact packed string format between Rust and JS (avoids JSON overhead)
+- Streaming IPC: query results streamed in 5K-row chunks via Tauri events for progressive rendering
+- Packed wire format with ASCII separators (avoids JSON overhead of nested arrays)
 - SIMD JSON serialization with sonic-rs
-- Parallel row processing with rayon for large datasets (>1000 rows)
+- Parallel row processing with rayon for large datasets (>1000 rows per chunk)
 - WebGL canvas rendering for millions of rows without DOM overhead
 
 ### Supported Databases
 - PostgreSQL
-- Amazon Redshift
 
 ### Other
-- Light/dark theme toggle
+- Light/dark theme with blue-purple accent palette
+- Native macOS menu with About dialog
 - OS notifications for long-running queries
 - Saved queries with per-project organization
 - Tab persistence across app restarts (editor content, ERD tabs)
-- Minimum window size: 1280x768
 
 ## Tech Stack
 
 | Layer | Technology |
 |-------|-----------|
 | Frontend | React 19, TypeScript, Zustand, Monaco Editor, Leaflet |
-| UI | Tailwind CSS v4, shadcn/ui components |
+| UI | Tailwind CSS v4, shadcn/ui components, oklch color system |
 | Results Grid | @glideapps/glide-data-grid (WebGL canvas) |
 | Terminal | xterm.js + portable-pty |
 | Backend | Rust, Tauri v2, tokio-postgres |
-| Performance | sonic-rs (SIMD JSON), rayon (parallel), packed IPC |
+| Performance | sonic-rs (SIMD JSON), rayon (parallel), streaming IPC |
 
 ## Development
 

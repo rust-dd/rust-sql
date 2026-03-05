@@ -74,11 +74,11 @@ All IPC command responses bypass Tauri's default `serde_json` serializer. Instea
 
 ```bash
 # Install dependencies
-npm install
+yarn install
 
 # Run in development mode
-npm run tauri dev
+yarn tauri dev
 
 # Build for production
-npm run tauri build
+yarn tauri build
 ```

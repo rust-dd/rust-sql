@@ -24,7 +24,9 @@ pub async fn redshift_connector(
 ) -> Result<ProjectConnectionStatus> {
     let app_state = app.state::<AppState>();
     let mut clients = app_state.client.lock().await;
-    let client_map = clients.as_mut().ok_or(AppError::DatabaseError("No client map".into()))?;
+    let client_map = clients
+        .as_mut()
+        .ok_or(AppError::DatabaseError("No client map".into()))?;
 
     if client_map.contains_key(project_id) {
         return Ok(ProjectConnectionStatus::Connected);
@@ -32,11 +34,17 @@ pub async fn redshift_connector(
 
     let (user, password, database, host, port_str, _use_ssl) = match key {
         Some(key) => (
-            key[0].to_string(), key[1].to_string(), key[2].to_string(),
-            key[3].to_string(), key[4].to_string(), key[5] == "true",
+            key[0].to_string(),
+            key[1].to_string(),
+            key[2].to_string(),
+            key[3].to_string(),
+            key[4].to_string(),
+            key[5] == "true",
         ),
         None => {
-            let conn = app_state.local_db.connect()
+            let conn = app_state
+                .local_db
+                .connect()
                 .map_err(|e| AppError::DatabaseError(e.to_string()))?;
             let mut rows = conn
                 .query(
@@ -63,7 +71,11 @@ pub async fn redshift_connector(
 
     let port: u16 = port_str.parse().unwrap_or(5439);
     let mut cfg = Config::new();
-    cfg.user(&user).password(&password).dbname(&database).host(&host).port(port);
+    cfg.user(&user)
+        .password(&password)
+        .dbname(&database)
+        .host(&host)
+        .port(port);
 
     // Redshift uses TLS with self-signed certs
     let tls_connector = TlsConnector::builder()
@@ -72,12 +84,9 @@ pub async fn redshift_connector(
         .map_err(|e| AppError::ConnectionFailed(e.to_string()))?;
     let tls = MakeTlsConnector::new(tls_connector);
 
-    let connection = tokio_time::timeout(
-        tokio_time::Duration::from_secs(10),
-        cfg.connect(tls),
-    )
-    .await
-    .map_err(|_| AppError::ConnectionTimeout);
+    let connection = tokio_time::timeout(tokio_time::Duration::from_secs(10), cfg.connect(tls))
+        .await
+        .map_err(|_| AppError::ConnectionTimeout);
 
     let (client, connection) = match connection {
         Ok(Ok(pair)) => pair,
@@ -106,7 +115,7 @@ pub async fn redshift_connector(
         return Ok(ProjectConnectionStatus::Failed);
     }
 
-    client_map.insert(project_id.to_string(), client);
+    client_map.insert(project_id.to_string(), Arc::new(client));
     Ok(ProjectConnectionStatus::Connected)
 }
 
@@ -116,11 +125,13 @@ pub async fn redshift_load_schemas(
     app_state: State<'_, AppState>,
 ) -> Result<PgsqlLoadSchemas> {
     let clients = app_state.client.lock().await;
-    let client_map = clients.as_ref().ok_or(AppError::DatabaseError("No client map".into()))?;
+    let client_map = clients
+        .as_ref()
+        .ok_or(AppError::DatabaseError("No client map".into()))?;
     let client = get_client(client_map, project_id)?;
 
     load_schemas(
-        client,
+        &client,
         r#"SELECT nspname AS schema_name
            FROM pg_catalog.pg_namespace
            WHERE nspname NOT LIKE 'pg_%'
@@ -138,11 +149,13 @@ pub async fn redshift_load_tables(
     app_state: State<'_, AppState>,
 ) -> Result<PgsqlLoadTables> {
     let clients = app_state.client.lock().await;
-    let client_map = clients.as_ref().ok_or(AppError::DatabaseError("No client map".into()))?;
+    let client_map = clients
+        .as_ref()
+        .ok_or(AppError::DatabaseError("No client map".into()))?;
     let client = get_client(client_map, project_id)?;
 
     load_tables(
-        client,
+        &client,
         r#"SELECT table_name, table_type AS size
            FROM information_schema.tables
            WHERE table_schema = $1
@@ -161,10 +174,12 @@ pub async fn redshift_load_columns(
     app_state: State<'_, AppState>,
 ) -> Result<PgsqlLoadColumns> {
     let clients = app_state.client.lock().await;
-    let client_map = clients.as_ref().ok_or(AppError::DatabaseError("No client map".into()))?;
+    let client_map = clients
+        .as_ref()
+        .ok_or(AppError::DatabaseError("No client map".into()))?;
     let client = get_client(client_map, project_id)?;
 
-    load_columns(client, schema, table)
+    load_columns(&client, schema, table)
         .await
         .map_err(Into::into)
 }
@@ -177,10 +192,12 @@ pub async fn redshift_load_column_details(
     app_state: State<'_, AppState>,
 ) -> Result<Vec<ColumnDetail>> {
     let clients = app_state.client.lock().await;
-    let client_map = clients.as_ref().ok_or(AppError::DatabaseError("No client map".into()))?;
+    let client_map = clients
+        .as_ref()
+        .ok_or(AppError::DatabaseError("No client map".into()))?;
     let client = get_client(client_map, project_id)?;
 
-    load_column_details(client, schema, table)
+    load_column_details(&client, schema, table)
         .await
         .map_err(Into::into)
 }
@@ -193,10 +210,12 @@ pub async fn redshift_load_indexes(
     app_state: State<'_, AppState>,
 ) -> Result<Vec<IndexDetail>> {
     let clients = app_state.client.lock().await;
-    let client_map = clients.as_ref().ok_or(AppError::DatabaseError("No client map".into()))?;
+    let client_map = clients
+        .as_ref()
+        .ok_or(AppError::DatabaseError("No client map".into()))?;
     let client = get_client(client_map, project_id)?;
 
-    load_indexes(client, schema, table)
+    load_indexes(&client, schema, table)
         .await
         .map_err(Into::into)
 }
@@ -209,10 +228,12 @@ pub async fn redshift_load_constraints(
     app_state: State<'_, AppState>,
 ) -> Result<Vec<ConstraintDetail>> {
     let clients = app_state.client.lock().await;
-    let client_map = clients.as_ref().ok_or(AppError::DatabaseError("No client map".into()))?;
+    let client_map = clients
+        .as_ref()
+        .ok_or(AppError::DatabaseError("No client map".into()))?;
     let client = get_client(client_map, project_id)?;
 
-    load_constraints(client, schema, table)
+    load_constraints(&client, schema, table)
         .await
         .map_err(Into::into)
 }
@@ -225,10 +246,12 @@ pub async fn redshift_load_triggers(
     app_state: State<'_, AppState>,
 ) -> Result<Vec<TriggerDetail>> {
     let clients = app_state.client.lock().await;
-    let client_map = clients.as_ref().ok_or(AppError::DatabaseError("No client map".into()))?;
+    let client_map = clients
+        .as_ref()
+        .ok_or(AppError::DatabaseError("No client map".into()))?;
     let client = get_client(client_map, project_id)?;
 
-    load_triggers(client, schema, table)
+    load_triggers(&client, schema, table)
         .await
         .map_err(Into::into)
 }
@@ -262,12 +285,12 @@ pub async fn redshift_load_views(
     app_state: State<'_, AppState>,
 ) -> Result<Vec<String>> {
     let clients = app_state.client.lock().await;
-    let client_map = clients.as_ref().ok_or(AppError::DatabaseError("No client map".into()))?;
+    let client_map = clients
+        .as_ref()
+        .ok_or(AppError::DatabaseError("No client map".into()))?;
     let client = get_client(client_map, project_id)?;
 
-    load_views(client, schema)
-        .await
-        .map_err(Into::into)
+    load_views(&client, schema).await.map_err(Into::into)
 }
 
 #[tauri::command(rename_all = "snake_case")]
@@ -307,12 +330,12 @@ pub async fn redshift_run_query(
     app_state: State<'_, AppState>,
 ) -> Result<(Vec<String>, Vec<Vec<String>>, f32)> {
     let clients = app_state.client.lock().await;
-    let client_map = clients.as_ref().ok_or(AppError::DatabaseError("No client map".into()))?;
+    let client_map = clients
+        .as_ref()
+        .ok_or(AppError::DatabaseError("No client map".into()))?;
     let client = get_client(client_map, project_id)?;
 
-    execute_query(client, sql)
-        .await
-        .map_err(Into::into)
+    execute_query(&client, sql).await.map_err(Into::into)
 }
 
 #[tauri::command(rename_all = "snake_case")]
@@ -322,12 +345,12 @@ pub async fn redshift_run_query_packed(
     app_state: State<'_, AppState>,
 ) -> Result<(String, f32)> {
     let clients = app_state.client.lock().await;
-    let client_map = clients.as_ref().ok_or(AppError::DatabaseError("No client map".into()))?;
+    let client_map = clients
+        .as_ref()
+        .ok_or(AppError::DatabaseError("No client map".into()))?;
     let client = get_client(client_map, project_id)?;
 
-    execute_query_packed(client, sql)
-        .await
-        .map_err(Into::into)
+    execute_query_packed(&client, sql).await.map_err(Into::into)
 }
 
 #[tauri::command(rename_all = "snake_case")]
@@ -367,5 +390,5 @@ pub async fn redshift_load_foreign_keys(
         .ok_or(AppError::DatabaseError("No client map".into()))?;
     let client = get_client(client_map, project_id)?;
 
-    load_foreign_keys(client, schema).await.map_err(Into::into)
+    load_foreign_keys(&client, schema).await.map_err(Into::into)
 }

@@ -43,12 +43,12 @@ export interface ForeignKey {
 type QueryStreamEvent =
   | { type: "columns"; columns: string; total_rows: number }
   | { type: "chunk"; data: string }
-  | { type: "done"; elapsed: number };
+  | { type: "done"; elapsed: number; capped: boolean };
 
 export interface StreamCallbacks {
   onColumns: (columns: string[], totalRows: number) => void;
   onChunk: (rows: string[][]) => void;
-  onDone: (elapsed: number) => void;
+  onDone: (elapsed: number, capped: boolean) => void;
 }
 
 export interface DatabaseDriver {
@@ -68,6 +68,9 @@ export interface DatabaseDriver {
   loadTriggerFunctions(projectId: string, schema: string): Promise<TriggerFunctionInfo[]>;
   runQuery(projectId: string, sql: string): Promise<WireQueryResult>;
   runQueryStreamed?(projectId: string, sql: string, streamId: string, callbacks: StreamCallbacks): Promise<void>;
+  executeVirtual?(projectId: string, sql: string, queryId: string, pageSize: number): Promise<[string, number, string, number]>;
+  fetchPage?(projectId: string, queryId: string, offset: number, limit: number): Promise<string>;
+  closeVirtual?(projectId: string, queryId: string): Promise<void>;
   loadActivity(projectId: string): Promise<string[][]>;
   loadDatabaseStats(projectId: string): Promise<[string, string][]>;
   loadTableStats(projectId: string): Promise<string[][]>;
@@ -207,7 +210,7 @@ class PostgreSQLDriver implements DatabaseDriver {
             break;
           }
           case "done": {
-            onDone(p.elapsed);
+            onDone(p.elapsed, p.capped);
             unlisten();
             resolveStream!();
             break;
@@ -226,6 +229,21 @@ class PostgreSQLDriver implements DatabaseDriver {
     });
 
     return streamDone;
+  }
+  async executeVirtual(projectId: string, sql: string, queryId: string, pageSize: number) {
+    return invoke<[string, number, string, number]>("pgsql_execute_virtual", {
+      project_id: projectId, sql, query_id: queryId, page_size: pageSize,
+    });
+  }
+  async fetchPage(projectId: string, queryId: string, offset: number, limit: number) {
+    return invoke<string>("pgsql_fetch_page", {
+      project_id: projectId, query_id: queryId, offset, limit,
+    });
+  }
+  async closeVirtual(projectId: string, queryId: string) {
+    return invoke<void>("pgsql_close_virtual", {
+      project_id: projectId, query_id: queryId,
+    });
   }
   async loadActivity(projectId: string) {
     return invoke<string[][]>("pgsql_load_activity", { project_id: projectId });

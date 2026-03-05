@@ -12,6 +12,7 @@ import { TopBar } from "@/components/top-bar";
 import { StatusBar } from "@/components/status-bar";
 import { CommandPalette } from "@/components/command-palette";
 import { DriverFactory } from "@/lib/database-driver";
+import * as virtualCache from "@/lib/virtual-cache";
 import { useProjectStore } from "@/stores/project-store";
 import { useTabStore, useActiveTab } from "@/stores/tab-store";
 import { useUIStore } from "@/stores/ui-store";
@@ -20,6 +21,9 @@ import type { ProjectDetails } from "@/types";
 import "@/monaco/setup";
 
 const NOTIFY_THRESHOLD_MS = 5000;
+const PAGE_SIZE = 50_000;
+const CELL_SEP = "\x1F";
+const ROW_SEP = "\x1E";
 
 function notifyQueryComplete(sql: string, time: number, success: boolean, rowCount?: number) {
   if (document.hasFocus() || time < NOTIFY_THRESHOLD_MS) return;
@@ -53,6 +57,7 @@ export default function App() {
   const setExecuting = useTabStore((s) => s.setExecuting);
   const closeTab = useTabStore((s) => s.closeTab);
   const setExplainResult = useTabStore((s) => s.setExplainResult);
+  const setVirtualQuery = useTabStore((s) => s.setVirtualQuery);
   const addHistoryEntry = useHistoryStore((s) => s.addEntry);
 
   // Edit connection state
@@ -76,39 +81,45 @@ export default function App() {
     try {
       const driver = DriverFactory.getDriver(d.driver);
 
-      if (driver.runQueryStreamed) {
-        // Streaming: progressive chunk loading via Tauri events
-        const streamId = crypto.randomUUID();
-        let columns: string[] = [];
-        const allRows: string[][] = [];
-        let lastUIUpdate = 0;
+      // Clean up previous virtual query
+      const prevVQ = tab.virtualQuery;
+      if (prevVQ?.queryId) {
+        await driver.closeVirtual?.(tab.projectId, prevVQ.queryId).catch(() => {});
+        virtualCache.clearQuery(prevVQ.queryId);
+        setVirtualQuery(idx, undefined);
+      }
 
-        await driver.runQueryStreamed(tab.projectId, tab.editorValue, streamId, {
-          onColumns(cols, _totalRows) {
-            columns = cols;
-            setResult(idx, { columns: cols, rows: [], time: 0 });
-          },
-          onChunk(rows) {
-            for (const r of rows) allRows.push(r);
-            const now = Date.now();
-            if (now - lastUIUpdate > 100) {
-              setResult(idx, { columns, rows: allRows.slice(), time: 0 });
-              lastUIUpdate = now;
-            }
-          },
-          onDone(elapsed) {
-            updateResult(idx, { columns, rows: allRows, time: elapsed });
-            notifyQueryComplete(tab.editorValue, elapsed, true, allRows.length);
-            addHistoryEntry({
-              projectId: tab.projectId!,
-              database: d.database,
-              sql: tab.editorValue.trim(),
-              executionTime: elapsed,
-              rowCount: allRows.length,
-              success: true,
-              timestamp: startTime,
-            });
-          },
+      if (driver.executeVirtual) {
+        const queryId = crypto.randomUUID().replace(/-/g, "").slice(0, 12);
+        const [colsPacked, totalRows, pagePacked, elapsed] =
+          await driver.executeVirtual(tab.projectId, tab.editorValue, queryId, PAGE_SIZE);
+
+        const columns = colsPacked ? colsPacked.split(CELL_SEP) : [];
+        const firstPage = pagePacked
+          ? pagePacked.split(ROW_SEP).map((r) => r.split(CELL_SEP))
+          : [];
+
+        if (totalRows <= PAGE_SIZE || !colsPacked) {
+          // Small result or non-SELECT → one-shot, cleanup temp table
+          await driver.closeVirtual?.(tab.projectId, queryId).catch(() => {});
+          updateResult(idx, { columns, rows: firstPage, time: elapsed });
+          notifyQueryComplete(tab.editorValue, elapsed, true, firstPage.length);
+        } else {
+          // Virtual mode
+          virtualCache.setPage(queryId, 0, firstPage);
+          setVirtualQuery(idx, { queryId, columns, totalRows, pageSize: PAGE_SIZE, time: elapsed });
+          setResult(idx, { columns, rows: firstPage, time: elapsed });
+          notifyQueryComplete(tab.editorValue, elapsed, true, totalRows);
+        }
+
+        addHistoryEntry({
+          projectId: tab.projectId,
+          database: d.database,
+          sql: tab.editorValue.trim(),
+          executionTime: elapsed,
+          rowCount: totalRows > PAGE_SIZE ? totalRows : firstPage.length,
+          success: true,
+          timestamp: startTime,
         });
       } else {
         // One-shot fallback
@@ -146,7 +157,7 @@ export default function App() {
       });
     }
     useUIStore.getState().setSelectedRow(0);
-  }, [setExecuting, updateResult, setResult, addHistoryEntry]);
+  }, [setExecuting, updateResult, setResult, setVirtualQuery, addHistoryEntry]);
 
   const runExplain = useCallback(async () => {
     const { tabs, selectedTabIndex: idx } = useTabStore.getState();
@@ -199,7 +210,15 @@ export default function App() {
       if ((e.metaKey || e.ctrlKey) && e.key === "w") {
         e.preventDefault();
         const { tabs: t, selectedTabIndex: idx } = useTabStore.getState();
-        if (t.length > 1) closeTab(idx);
+        if (t.length > 1) {
+          const closingTab = t[idx];
+          if (closingTab?.virtualQuery?.queryId && closingTab.projectId) {
+            const dd = projects[closingTab.projectId];
+            if (dd) DriverFactory.getDriver(dd.driver).closeVirtual?.(closingTab.projectId, closingTab.virtualQuery.queryId).catch(() => {});
+            virtualCache.clearQuery(closingTab.virtualQuery.queryId);
+          }
+          closeTab(idx);
+        }
       }
       if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === "Enter") {
         e.preventDefault();

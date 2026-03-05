@@ -1,3 +1,4 @@
+use std::sync::Arc;
 use std::time::Instant;
 use rayon::prelude::*;
 use tokio::time as tokio_time;
@@ -7,13 +8,15 @@ use crate::common::enums::AppError;
 use crate::common::pgsql::{PgsqlLoadColumns, PgsqlLoadSchemas, PgsqlLoadTables};
 use crate::utils::reflective_get;
 
-/// Safely get a client reference from the AppState client map.
-pub fn get_client<'a>(
-    clients_guard: &'a std::collections::BTreeMap<String, Client>,
+/// Safely get a client Arc from the AppState client map.
+/// Returns a cloned Arc so the caller can drop the MutexGuard immediately.
+pub fn get_client(
+    clients_guard: &std::collections::BTreeMap<String, Arc<Client>>,
     project_id: &str,
-) -> Result<&'a Client, AppError> {
+) -> Result<Arc<Client>, AppError> {
     clients_guard
         .get(project_id)
+        .cloned()
         .ok_or_else(|| AppError::ClientNotConnected(project_id.to_string()))
 }
 
@@ -68,8 +71,13 @@ pub enum QueryStreamEvent {
     #[serde(rename = "chunk")]
     Chunk { data: String },
     #[serde(rename = "done")]
-    Done { elapsed: f32 },
+    Done { elapsed: f32, capped: bool },
 }
+
+/// Maximum rows to send to the frontend to prevent OOM in the webview.
+const MAX_STREAM_ROWS: usize = 500_000;
+/// Rows fetched per cursor FETCH round-trip.
+const CURSOR_FETCH_SIZE: usize = 10_000;
 
 /// Execute a timed query and return results in compact packed string format.
 /// Format: "col1\x1Fcol2\x1E row1val1\x1Frow1val2\x1E row2val1\x1Frow2val2"
@@ -136,8 +144,45 @@ pub async fn execute_query_packed(
     Ok((packed, elapsed))
 }
 
-/// Stream query results in chunks via Tauri events.
-/// Each chunk uses the packed wire format (CELL_SEP / ROW_SEP).
+/// Pack a batch of rows into the wire format string.
+fn pack_rows_batch(rows: &[tokio_postgres::Row], col_count: usize) -> String {
+    let cell_sep = CELL_SEP.to_string();
+    let row_sep = ROW_SEP.to_string();
+
+    let row_strings: Vec<String> = if rows.len() > 1000 {
+        rows.par_iter()
+            .map(|row| {
+                (0..col_count)
+                    .map(|i| {
+                        reflective_get(row, i)
+                            .replace(CELL_SEP, " ")
+                            .replace(ROW_SEP, " ")
+                    })
+                    .collect::<Vec<_>>()
+                    .join(&cell_sep)
+            })
+            .collect()
+    } else {
+        rows.iter()
+            .map(|row| {
+                (0..col_count)
+                    .map(|i| {
+                        reflective_get(row, i)
+                            .replace(CELL_SEP, " ")
+                            .replace(ROW_SEP, " ")
+                    })
+                    .collect::<Vec<_>>()
+                    .join(&cell_sep)
+            })
+            .collect()
+    };
+
+    row_strings.join(&row_sep)
+}
+
+/// Stream query results using a PostgreSQL cursor.
+/// Fetches rows in batches from the server — never loads the full result into Rust memory.
+/// Caps at MAX_STREAM_ROWS to protect the webview from OOM.
 pub async fn execute_query_streamed(
     client: &Client,
     sql: &str,
@@ -147,79 +192,254 @@ pub async fn execute_query_streamed(
     use tauri::Emitter;
 
     let start = Instant::now();
-    let rows = client
-        .query(sql, &[])
-        .await
-        .map_err(|e| AppError::QueryFailed(e.to_string()))?;
-
     let event_name = format!("query-stream-{}", stream_id);
 
-    if rows.is_empty() {
-        let _ = app.emit(&event_name, QueryStreamEvent::Columns {
-            columns: String::new(),
-            total_rows: 0,
-        });
-        let _ = app.emit(&event_name, QueryStreamEvent::Done { elapsed: 0.0 });
-        return Ok(());
+    // Begin transaction + declare cursor for memory-efficient streaming
+    client.batch_execute("BEGIN").await
+        .map_err(|e| AppError::QueryFailed(e.to_string()))?;
+
+    let cursor_sql = format!("DECLARE _rsql_cur NO SCROLL CURSOR FOR {}", sql);
+    match client.batch_execute(&cursor_sql).await {
+        Ok(_) => {
+            // Cursor-based fetch loop
+            let fetch_sql = format!("FETCH {} FROM _rsql_cur", CURSOR_FETCH_SIZE);
+            let mut total_sent: usize = 0;
+            let mut columns_sent = false;
+            let mut capped = false;
+
+            loop {
+                let rows = client.query(&fetch_sql, &[]).await
+                    .map_err(|e| {
+                        // Clean up on error
+                        let _ = client.batch_execute("CLOSE _rsql_cur; ROLLBACK");
+                        AppError::QueryFailed(e.to_string())
+                    })?;
+
+                if rows.is_empty() {
+                    break;
+                }
+
+                // Emit columns on first batch
+                if !columns_sent {
+                    let columns: Vec<String> = rows[0]
+                        .columns()
+                        .iter()
+                        .map(|c| c.name().to_string())
+                        .collect();
+                    let cell_sep = CELL_SEP.to_string();
+                    let header = columns.join(&cell_sep);
+                    let _ = app.emit(&event_name, QueryStreamEvent::Columns {
+                        columns: header,
+                        total_rows: 0, // unknown with cursors
+                    });
+                    columns_sent = true;
+                }
+
+                let col_count = rows[0].len();
+                let packed = pack_rows_batch(&rows, col_count);
+                let _ = app.emit(&event_name, QueryStreamEvent::Chunk { data: packed });
+
+                total_sent += rows.len();
+                if total_sent >= MAX_STREAM_ROWS {
+                    capped = true;
+                    break;
+                }
+            }
+
+            // No rows at all
+            if !columns_sent {
+                let _ = app.emit(&event_name, QueryStreamEvent::Columns {
+                    columns: String::new(),
+                    total_rows: 0,
+                });
+            }
+
+            // Clean up cursor + transaction
+            client.batch_execute("CLOSE _rsql_cur").await.ok();
+            client.batch_execute("COMMIT").await.ok();
+
+            let elapsed = start.elapsed().as_millis() as f32;
+            let _ = app.emit(&event_name, QueryStreamEvent::Done { elapsed, capped });
+        }
+        Err(_cursor_err) => {
+            // DECLARE CURSOR failed (non-SELECT query like INSERT/UPDATE/DDL)
+            client.batch_execute("ROLLBACK").await.ok();
+
+            // Re-execute directly — these typically return few/no rows
+            let rows = client.query(sql, &[]).await
+                .map_err(|e| AppError::QueryFailed(e.to_string()))?;
+
+            if rows.is_empty() {
+                let _ = app.emit(&event_name, QueryStreamEvent::Columns {
+                    columns: String::new(),
+                    total_rows: 0,
+                });
+            } else {
+                let columns: Vec<String> = rows[0]
+                    .columns()
+                    .iter()
+                    .map(|c| c.name().to_string())
+                    .collect();
+                let cell_sep = CELL_SEP.to_string();
+                let header = columns.join(&cell_sep);
+                let _ = app.emit(&event_name, QueryStreamEvent::Columns {
+                    columns: header,
+                    total_rows: rows.len(),
+                });
+
+                let col_count = rows[0].len();
+                let packed = pack_rows_batch(&rows, col_count);
+                let _ = app.emit(&event_name, QueryStreamEvent::Chunk { data: packed });
+            }
+
+            let elapsed = start.elapsed().as_millis() as f32;
+            let _ = app.emit(&event_name, QueryStreamEvent::Done { elapsed, capped: false });
+        }
     }
 
-    let columns = rows[0]
-        .columns()
-        .iter()
-        .map(|c| c.name().to_string())
-        .collect::<Vec<String>>();
+    Ok(())
+}
 
-    let col_count = rows[0].len();
-    let total_rows = rows.len();
+/// Pack rows skipping the first column (_rsql_rn row number).
+fn pack_rows_skip_rn(rows: &[tokio_postgres::Row], col_count: usize) -> String {
     let cell_sep = CELL_SEP.to_string();
-    let header = columns.join(&cell_sep);
-
-    let _ = app.emit(&event_name, QueryStreamEvent::Columns {
-        columns: header,
-        total_rows,
-    });
-
-    const CHUNK_SIZE: usize = 5000;
     let row_sep = ROW_SEP.to_string();
 
-    for chunk in rows.chunks(CHUNK_SIZE) {
-        let row_strings: Vec<String> = if chunk.len() > 1000 {
-            chunk
-                .par_iter()
-                .map(|row| {
-                    (0..col_count)
-                        .map(|i| {
-                            reflective_get(row, i)
-                                .replace(CELL_SEP, " ")
-                                .replace(ROW_SEP, " ")
-                        })
-                        .collect::<Vec<_>>()
-                        .join(&cell_sep)
-                })
-                .collect()
-        } else {
-            chunk
-                .iter()
-                .map(|row| {
-                    (0..col_count)
-                        .map(|i| {
-                            reflective_get(row, i)
-                                .replace(CELL_SEP, " ")
-                                .replace(ROW_SEP, " ")
-                        })
-                        .collect::<Vec<_>>()
-                        .join(&cell_sep)
-                })
-                .collect()
-        };
+    let row_strings: Vec<String> = if rows.len() > 1000 {
+        rows.par_iter()
+            .map(|row| {
+                (1..col_count)
+                    .map(|i| {
+                        reflective_get(row, i)
+                            .replace(CELL_SEP, " ")
+                            .replace(ROW_SEP, " ")
+                    })
+                    .collect::<Vec<_>>()
+                    .join(&cell_sep)
+            })
+            .collect()
+    } else {
+        rows.iter()
+            .map(|row| {
+                (1..col_count)
+                    .map(|i| {
+                        reflective_get(row, i)
+                            .replace(CELL_SEP, " ")
+                            .replace(ROW_SEP, " ")
+                    })
+                    .collect::<Vec<_>>()
+                    .join(&cell_sep)
+            })
+            .collect()
+    };
 
-        let packed_chunk = row_strings.join(&row_sep);
-        let _ = app.emit(&event_name, QueryStreamEvent::Chunk { data: packed_chunk });
+    row_strings.join(&row_sep)
+}
+
+/// Execute a query using a temp table for virtual pagination.
+/// Returns (columns_packed, total_rows, first_page_packed, elapsed_ms).
+/// If the SQL is not a SELECT (e.g. DDL), falls back to execute_query_packed
+/// and returns an empty query_id signal (empty columns_packed).
+pub async fn execute_virtual(
+    client: &Client,
+    sql: &str,
+    query_id: &str,
+    page_size: usize,
+) -> Result<(String, usize, String, f32), AppError> {
+    let start = Instant::now();
+    let table_name = format!("_rsql_{}", query_id);
+
+    // Try to create the temp table
+    let create_sql = format!(
+        "CREATE TEMP TABLE {} AS SELECT row_number() OVER () AS _rsql_rn, _q.* FROM ({}) AS _q",
+        table_name, sql
+    );
+    match client.batch_execute(&create_sql).await {
+        Ok(_) => {}
+        Err(_) => {
+            // Non-SELECT fallback: execute directly with packed format
+            let (packed, elapsed) = execute_query_packed(client, sql).await?;
+            return Ok((String::new(), 0, packed, elapsed));
+        }
     }
 
-    let elapsed = start.elapsed().as_millis() as f32;
-    let _ = app.emit(&event_name, QueryStreamEvent::Done { elapsed });
+    // Create index for fast random access
+    let index_sql = format!("CREATE INDEX ON {} (_rsql_rn)", table_name);
+    client.batch_execute(&index_sql).await.ok();
 
+    // Get total row count
+    let count_sql = format!("SELECT max(_rsql_rn)::bigint FROM {}", table_name);
+    let count_rows = client.query(&count_sql, &[]).await
+        .map_err(|e| AppError::QueryFailed(e.to_string()))?;
+    let total_rows: i64 = count_rows.first()
+        .and_then(|r| r.get::<_, Option<i64>>(0))
+        .unwrap_or(0);
+    let total_rows = total_rows as usize;
+
+    // Fetch first page
+    let first_page_sql = format!(
+        "SELECT * FROM {} WHERE _rsql_rn <= {} ORDER BY _rsql_rn",
+        table_name, page_size
+    );
+    let rows = client.query(&first_page_sql, &[]).await
+        .map_err(|e| AppError::QueryFailed(e.to_string()))?;
+
+    // Pack columns (skip _rsql_rn at index 0)
+    let columns_packed = if rows.is_empty() {
+        String::new()
+    } else {
+        let cell_sep = CELL_SEP.to_string();
+        rows[0].columns().iter().skip(1)
+            .map(|c| c.name().to_string())
+            .collect::<Vec<_>>()
+            .join(&cell_sep)
+    };
+
+    // Pack first page rows (skip _rsql_rn)
+    let col_count = if rows.is_empty() { 0 } else { rows[0].len() };
+    let first_page_packed = if rows.is_empty() {
+        String::new()
+    } else {
+        pack_rows_skip_rn(&rows, col_count)
+    };
+
+    let elapsed = start.elapsed().as_millis() as f32;
+    Ok((columns_packed, total_rows, first_page_packed, elapsed))
+}
+
+/// Fetch a page from the virtual temp table.
+/// Returns packed rows (skip _rsql_rn).
+pub async fn fetch_virtual_page(
+    client: &Client,
+    query_id: &str,
+    offset: usize,
+    limit: usize,
+) -> Result<String, AppError> {
+    let table_name = format!("_rsql_{}", query_id);
+    let sql = format!(
+        "SELECT * FROM {} WHERE _rsql_rn > {} AND _rsql_rn <= {} ORDER BY _rsql_rn",
+        table_name, offset, offset + limit
+    );
+    let rows = client.query(&sql, &[]).await
+        .map_err(|e| AppError::QueryFailed(e.to_string()))?;
+
+    if rows.is_empty() {
+        return Ok(String::new());
+    }
+
+    let col_count = rows[0].len();
+    Ok(pack_rows_skip_rn(&rows, col_count))
+}
+
+/// Drop the virtual temp table.
+pub async fn close_virtual(
+    client: &Client,
+    query_id: &str,
+) -> Result<(), AppError> {
+    let table_name = format!("_rsql_{}", query_id);
+    let sql = format!("DROP TABLE IF EXISTS {}", table_name);
+    client.batch_execute(&sql).await
+        .map_err(|e| AppError::QueryFailed(e.to_string()))?;
     Ok(())
 }
 

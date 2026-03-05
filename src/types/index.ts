@@ -24,6 +24,7 @@ export interface Tab {
   isExecuting: boolean;
   result?: QueryResult;
   explainResult?: ExplainPlan;
+  virtualQuery?: VirtualQuery;
 }
 
 export interface ExplainNode {
@@ -62,6 +63,15 @@ export interface ExplainPlan {
 export interface QueryResult {
   columns: string[];
   rows: string[][];
+  time: number;
+  capped?: boolean;
+}
+
+export interface VirtualQuery {
+  queryId: string;
+  columns: string[];
+  totalRows: number;
+  pageSize: number;
   time: number;
 }
 

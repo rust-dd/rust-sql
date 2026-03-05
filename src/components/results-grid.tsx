@@ -11,6 +11,8 @@ import DataEditor, {
 } from "@glideapps/glide-data-grid";
 import "@glideapps/glide-data-grid/dist/index.css";
 import { useUIStore } from "@/stores/ui-store";
+import * as virtualCache from "@/lib/virtual-cache";
+import type { VirtualQuery } from "@/types";
 
 interface ResultsGridProps {
   columns: string[];
@@ -23,6 +25,9 @@ interface ResultsGridProps {
   onRowRestore?: (rowIndex: number) => void;
   fkColumns?: Map<string, { schema: string; table: string; column: string }>;
   onFKNavigate?: (colName: string, value: string) => void;
+  virtualQuery?: VirtualQuery;
+  onPageNeeded?: (pageIndex: number) => void;
+  cacheVersion?: number;
 }
 
 const MIN_COL_WIDTH = 80;
@@ -41,6 +46,9 @@ export function ResultsGrid({
   onRowRestore,
   fkColumns,
   onFKNavigate,
+  virtualQuery,
+  onPageNeeded,
+  cacheVersion,
 }: ResultsGridProps) {
   const setSelectedRow = useUIStore((s) => s.setSelectedRow);
   const setViewMode = useUIStore((s) => s.setViewMode);
@@ -94,10 +102,27 @@ export function ResultsGrid({
     return s;
   }, [columns, fkColumns]);
 
+  // Total row count: virtual mode uses totalRows, otherwise rows.length
+  const totalRowCount = virtualQuery ? virtualQuery.totalRows : rows.length;
+
   // Get cell content callback (the core of glide-data-grid)
   const getCellContent = useCallback(
     (cell: Item): GridCell => {
       const [colIdx, rowIdx] = cell;
+
+      // Virtual mode: read from cache
+      if (virtualQuery) {
+        const row = virtualCache.getRow(virtualQuery.queryId, rowIdx, virtualQuery.pageSize);
+        const value = row ? (row[colIdx] ?? "") : "...";
+        return {
+          kind: GridCellKind.Text,
+          data: value,
+          displayData: value,
+          allowOverlay: false,
+          readonly: true,
+        };
+      }
+
       const key = `${rowIdx}:${colIdx}`;
       const isModified = cellEdits?.has(key);
       const isDeleted = deletedRows?.has(rowIdx);
@@ -121,7 +146,26 @@ export function ResultsGrid({
 
       return baseCell;
     },
-    [rows, cellEdits, deletedRows, isEditing, theme, fkColIndices],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [rows, cellEdits, deletedRows, isEditing, theme, fkColIndices, virtualQuery, cacheVersion],
+  );
+
+  // Virtual scroll handler: trigger page loads on scroll
+  const handleVisibleRegionChanged = useCallback(
+    (range: { x: number; y: number; width: number; height: number }) => {
+      if (!virtualQuery || !onPageNeeded) return;
+      const { y, height } = range;
+      const ps = virtualQuery.pageSize;
+      const firstVisible = Math.floor(y / ps);
+      const lastVisible = Math.floor((y + height) / ps);
+      // Prefetch 1 page ahead
+      for (let p = firstVisible; p <= lastVisible + 1; p++) {
+        if (p >= 0 && p * ps < virtualQuery.totalRows) {
+          onPageNeeded(p);
+        }
+      }
+    },
+    [virtualQuery, onPageNeeded],
   );
 
   // Handle cell edit
@@ -249,10 +293,11 @@ export function ResultsGrid({
     <div ref={containerRef} className="flex-1 min-h-0 overflow-hidden">
       <DataEditor
         columns={gridColumns}
-        rows={rows.length}
+        rows={totalRowCount}
         getCellContent={getCellContent}
         onCellEdited={isEditing ? onCellEdited : undefined}
         onCellClicked={handleRowClick}
+        onVisibleRegionChanged={virtualQuery ? handleVisibleRegionChanged : undefined}
         theme={gridTheme}
         width={containerSize.width}
         height={containerSize.height}
@@ -263,7 +308,7 @@ export function ResultsGrid({
         gridSelection={isEditing ? selection : undefined}
         onGridSelectionChange={isEditing ? handleSelectionChange : undefined}
         getCellsForSelection={true}
-        keybindings={{ search: true }}
+        keybindings={{ search: !virtualQuery }}
         overscrollX={0}
         overscrollY={0}
         rowHeight={32}

@@ -17,7 +17,7 @@ use tokio_postgres::Client;
 use tracing::Level;
 
 pub struct AppState {
-    pub client: Arc<Mutex<Option<BTreeMap<String, Client>>>>,
+    pub client: Arc<Mutex<Option<BTreeMap<String, Arc<Client>>>>>,
     pub local_db: libsql::Database,
 }
 
@@ -180,6 +180,9 @@ fn main() {
             drivers::pgsql::pgsql_load_foreign_keys,
             drivers::pgsql::pgsql_run_query_packed,
             drivers::pgsql::pgsql_run_query_streamed,
+            drivers::pgsql::pgsql_execute_virtual,
+            drivers::pgsql::pgsql_fetch_page,
+            drivers::pgsql::pgsql_close_virtual,
             drivers::redshift::redshift_connector,
             drivers::redshift::redshift_load_schemas,
             drivers::redshift::redshift_load_tables,

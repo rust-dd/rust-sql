@@ -29,6 +29,10 @@ import { exportResults, copyToClipboard, type ExportFormat } from "@/lib/export"
 import { parseSelectTable, generateUpdate, generateDelete, quoteIdent, quoteLiteral } from "@/lib/sql-utils";
 import { ResultsMap, hasGeometryColumn } from "./results-map";
 import type { ForeignKey } from "@/lib/database-driver";
+import * as virtualCache from "@/lib/virtual-cache";
+
+const CELL_SEP = "\x1F";
+const ROW_SEP = "\x1E";
 
 type PanelView = "grid" | "record" | "history" | "explain" | "diff" | "map";
 
@@ -53,6 +57,31 @@ export function ResultsPanel() {
   const [isCommitting, setIsCommitting] = useState(false);
   const result = activeTab?.result;
   const isExecuting = activeTab?.isExecuting;
+  const vq = activeTab?.virtualQuery;
+
+  // Virtual page loading
+  const loadingPages = useRef(new Set<number>());
+  const [cacheVersion, setCacheVersion] = useState(0);
+
+  const handlePageNeeded = useCallback(async (pageIndex: number) => {
+    if (!vq || !activeTab?.projectId) return;
+    if (loadingPages.current.has(pageIndex) || virtualCache.hasPage(vq.queryId, pageIndex)) return;
+    loadingPages.current.add(pageIndex);
+    try {
+      const d = useProjectStore.getState().projects[activeTab.projectId];
+      if (!d) return;
+      const driver = DriverFactory.getDriver(d.driver);
+      if (!driver.fetchPage) return;
+      const offset = pageIndex * vq.pageSize;
+      const packed = await driver.fetchPage(activeTab.projectId, vq.queryId, offset, vq.pageSize);
+      const rows = packed ? packed.split(ROW_SEP).map((r) => r.split(CELL_SEP)) : [];
+      virtualCache.setPage(vq.queryId, pageIndex, rows);
+      virtualCache.evictDistant(vq.queryId, pageIndex, 5);
+      setCacheVersion((v) => v + 1);
+    } finally {
+      loadingPages.current.delete(pageIndex);
+    }
+  }, [vq, activeTab?.projectId]);
 
   const filteredRows = useMemo(() => {
     if (isEditing) return result?.rows ?? [];
@@ -291,13 +320,14 @@ export function ResultsPanel() {
     hasExplain,
     isExecuting: !!isExecuting,
     isEditing,
-    editableTable: !!editableTable,
+    editableTable: !!editableTable && !vq,
     changeCount,
     isCommitting,
     editError,
     onEnterEdit: handleEnterEdit,
     onCommit: handleCommit,
     onDiscard: handleDiscard,
+    virtualQuery: vq,
   };
 
   if (panelView === "explain" && hasExplain) {
@@ -388,6 +418,9 @@ export function ResultsPanel() {
           onRowRestore={handleRowRestore}
           fkColumns={fkMap}
           onFKNavigate={handleFKNavigate}
+          virtualQuery={vq}
+          onPageNeeded={vq ? handlePageNeeded : undefined}
+          cacheVersion={cacheVersion}
         />
       ) : (
         <ResultsRecord columns={result.columns} rows={filteredRows} />
@@ -399,7 +432,7 @@ export function ResultsPanel() {
 interface ToolbarProps {
   panelView: PanelView;
   setPanelView: (v: PanelView) => void;
-  result: { rows: string[][]; time: number } | null;
+  result: { rows: string[][]; time: number; capped?: boolean } | null;
   columns: string[];
   filteredRows: string[][];
   searchTerm: string;
@@ -417,6 +450,7 @@ interface ToolbarProps {
   onEnterEdit: () => void;
   onCommit: () => void;
   onDiscard: () => void;
+  virtualQuery?: { queryId: string; totalRows: number; time: number; pageSize: number };
 }
 
 function ResultsToolbar(props: ToolbarProps) {
@@ -441,6 +475,7 @@ function ResultsToolbar(props: ToolbarProps) {
     onEnterEdit,
     onCommit,
     onDiscard,
+    virtualQuery,
   } = props;
 
   const [exportOpen, setExportOpen] = useState(false);
@@ -540,10 +575,14 @@ function ResultsToolbar(props: ToolbarProps) {
               <CheckCircle2 className="h-3 w-3 text-success" />
             )}
             <span>
-              {searchTerm
-                ? `${filteredCount.toLocaleString()} / ${result.rows.length.toLocaleString()}`
-                : result.rows.length.toLocaleString()}{" "}
-              rows
+              {virtualQuery
+                ? `${virtualQuery.totalRows.toLocaleString()} rows (virtual)`
+                : searchTerm
+                  ? `${filteredCount.toLocaleString()} / ${result.rows.length.toLocaleString()} rows`
+                  : `${result.rows.length.toLocaleString()} rows`}
+              {result.capped && !virtualQuery && (
+                <span className="text-warning ml-1">(capped at 500K)</span>
+              )}
             </span>
             <span className="text-muted-foreground/50">&bull;</span>
             <Clock className="h-3 w-3" />
@@ -649,7 +688,7 @@ function ResultsToolbar(props: ToolbarProps) {
             )}
 
             {/* Export dropdown */}
-            {panelView !== "history" && result && result.rows.length > 0 && (
+            {panelView !== "history" && result && result.rows.length > 0 && !virtualQuery && (
               <div className="relative" ref={exportRef}>
                 <button
                   onClick={() => setExportOpen(!exportOpen)}
@@ -696,7 +735,7 @@ function ResultsToolbar(props: ToolbarProps) {
             )}
 
             {/* Search */}
-            {panelView !== "history" && result && (
+            {panelView !== "history" && result && !virtualQuery && (
               <div className="relative flex items-center">
                 <Search className="absolute left-2 h-3 w-3 text-muted-foreground pointer-events-none" />
                 <input

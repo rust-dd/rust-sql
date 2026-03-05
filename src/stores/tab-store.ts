@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import type { Tab, QueryResult, ExplainPlan } from "@/types";
+import type { Tab, QueryResult, ExplainPlan, VirtualQuery } from "@/types";
 
 let nextId = 1;
 function genTabId(): string {
@@ -23,6 +23,7 @@ interface TabState {
   setExecuting: (index: number, executing: boolean) => void;
   setProjectId: (index: number, projectId: string) => void;
   setExplainResult: (index: number, plan: ExplainPlan | undefined) => void;
+  setVirtualQuery: (index: number, vq: VirtualQuery | undefined) => void;
 }
 
 export const useTabStore = create<TabState>()(
@@ -169,6 +170,14 @@ export const useTabStore = create<TabState>()(
         set((s) => {
           const tabs = s.tabs.slice();
           tabs[index] = { ...tabs[index], explainResult: plan };
+          return { tabs };
+        });
+      },
+
+      setVirtualQuery: (index: number, vq: VirtualQuery | undefined) => {
+        set((s) => {
+          const tabs = s.tabs.slice();
+          tabs[index] = { ...tabs[index], virtualQuery: vq };
           return { tabs };
         });
       },

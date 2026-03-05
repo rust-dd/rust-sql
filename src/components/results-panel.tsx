@@ -459,19 +459,19 @@ function ResultsToolbar(props: ToolbarProps) {
   };
 
   return (
-    <div className="flex items-center justify-between border-b border-border px-4 py-2 flex-shrink-0">
+    <div className="flex items-center justify-between border-b border-border/50 bg-card/80 backdrop-blur px-4 py-2 flex-shrink-0">
       <div className="flex items-center gap-3">
-        {/* Panel tabs */}
-        <div className="flex items-center gap-1">
+        {/* Panel tabs — segment control */}
+        <div className="inline-flex rounded-lg bg-muted p-0.5">
           <button
             onClick={() => {
               setPanelView("grid");
               setViewMode("grid");
             }}
-            className={`px-2 py-0.5 rounded text-xs font-mono transition-colors ${
+            className={`px-2 py-0.5 rounded-md text-xs font-mono transition-all duration-150 ${
               panelView !== "history" && viewMode === "grid"
-                ? "bg-primary text-primary-foreground"
-                : "text-muted-foreground hover:text-foreground hover:bg-accent"
+                ? "bg-accent text-foreground shadow-sm"
+                : "text-muted-foreground hover:text-foreground"
             }`}
           >
             Grid
@@ -481,10 +481,10 @@ function ResultsToolbar(props: ToolbarProps) {
               setPanelView("record");
               setViewMode("record");
             }}
-            className={`px-2 py-0.5 rounded text-xs font-mono transition-colors ${
+            className={`px-2 py-0.5 rounded-md text-xs font-mono transition-all duration-150 ${
               panelView !== "history" && viewMode === "record"
-                ? "bg-primary text-primary-foreground"
-                : "text-muted-foreground hover:text-foreground hover:bg-accent"
+                ? "bg-accent text-foreground shadow-sm"
+                : "text-muted-foreground hover:text-foreground"
             }`}
             disabled={!result?.rows.length}
           >
@@ -493,10 +493,10 @@ function ResultsToolbar(props: ToolbarProps) {
           {hasExplain && (
             <button
               onClick={() => setPanelView("explain")}
-              className={`px-2 py-0.5 rounded text-xs font-mono transition-colors flex items-center gap-1 ${
+              className={`px-2 py-0.5 rounded-md text-xs font-mono transition-all duration-150 flex items-center gap-1 ${
                 panelView === "explain"
-                  ? "bg-primary text-primary-foreground"
-                  : "text-muted-foreground hover:text-foreground hover:bg-accent"
+                  ? "bg-accent text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
               }`}
             >
               <GitBranch className="h-3 w-3" />
@@ -505,10 +505,10 @@ function ResultsToolbar(props: ToolbarProps) {
           )}
           <button
             onClick={() => setPanelView("history")}
-            className={`px-2 py-0.5 rounded text-xs font-mono transition-colors flex items-center gap-1 ${
+            className={`px-2 py-0.5 rounded-md text-xs font-mono transition-all duration-150 flex items-center gap-1 ${
               panelView === "history"
-                ? "bg-primary text-primary-foreground"
-                : "text-muted-foreground hover:text-foreground hover:bg-accent"
+                ? "bg-accent text-foreground shadow-sm"
+                : "text-muted-foreground hover:text-foreground"
             }`}
           >
             <History className="h-3 w-3" />
@@ -517,10 +517,10 @@ function ResultsToolbar(props: ToolbarProps) {
           {result && hasGeometryColumn(columns, filteredRows) && (
             <button
               onClick={() => setPanelView("map")}
-              className={`px-2 py-0.5 rounded text-xs font-mono transition-colors flex items-center gap-1 ${
+              className={`px-2 py-0.5 rounded-md text-xs font-mono transition-all duration-150 flex items-center gap-1 ${
                 panelView === "map"
-                  ? "bg-primary text-primary-foreground"
-                  : "text-muted-foreground hover:text-foreground hover:bg-accent"
+                  ? "bg-accent text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
               }`}
             >
               Map

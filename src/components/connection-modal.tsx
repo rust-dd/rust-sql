@@ -82,7 +82,7 @@ export function ConnectionModal({ open, onOpenChange, onSave, editData }: Connec
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-background border-border sm:max-w-[500px]">
+      <DialogContent className="bg-card border-border/50 rounded-xl sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle className="font-mono text-foreground">
             {isEditing ? "Edit Connection" : "New Connection"}
@@ -100,7 +100,7 @@ export function ConnectionModal({ open, onOpenChange, onSave, editData }: Connec
               id="driver"
               value={formData.driver}
               onChange={(e) => handleDriverChange(e.target.value as DriverType)}
-              className="w-full bg-input border border-border text-foreground font-mono text-sm rounded-md px-3 py-2"
+              className="w-full bg-input/80 border border-border/50 text-foreground font-mono text-sm rounded-lg px-3 py-2"
               disabled={isEditing}
             >
               {supportedDrivers.map((driverType) => (
@@ -122,7 +122,7 @@ export function ConnectionModal({ open, onOpenChange, onSave, editData }: Connec
               placeholder="production-db"
               required
               disabled={isEditing}
-              className="bg-input border-border text-foreground font-mono text-sm"
+              className="bg-input/80 border-border/50 text-foreground font-mono text-sm rounded-lg"
             />
           </div>
 
@@ -137,7 +137,7 @@ export function ConnectionModal({ open, onOpenChange, onSave, editData }: Connec
                 onChange={(e) => setFormData({ ...formData, host: e.target.value })}
                 placeholder="localhost"
                 required
-                className="bg-input border-border text-foreground font-mono text-sm"
+                className="bg-input/80 border-border/50 text-foreground font-mono text-sm rounded-lg"
               />
             </div>
             <div className="space-y-2">
@@ -150,7 +150,7 @@ export function ConnectionModal({ open, onOpenChange, onSave, editData }: Connec
                 onChange={(e) => setFormData({ ...formData, port: e.target.value })}
                 placeholder="5432"
                 required
-                className="bg-input border-border text-foreground font-mono text-sm"
+                className="bg-input/80 border-border/50 text-foreground font-mono text-sm rounded-lg"
               />
             </div>
           </div>
@@ -165,7 +165,7 @@ export function ConnectionModal({ open, onOpenChange, onSave, editData }: Connec
               onChange={(e) => setFormData({ ...formData, database: e.target.value })}
               placeholder="mydb"
               required
-              className="bg-input border-border text-foreground font-mono text-sm"
+              className="bg-input/80 border-border/50 text-foreground font-mono text-sm rounded-lg"
             />
           </div>
 
@@ -179,7 +179,7 @@ export function ConnectionModal({ open, onOpenChange, onSave, editData }: Connec
               onChange={(e) => setFormData({ ...formData, username: e.target.value })}
               placeholder="postgres"
               required
-              className="bg-input border-border text-foreground font-mono text-sm"
+              className="bg-input/80 border-border/50 text-foreground font-mono text-sm rounded-lg"
             />
           </div>
 
@@ -193,7 +193,7 @@ export function ConnectionModal({ open, onOpenChange, onSave, editData }: Connec
               value={formData.password}
               onChange={(e) => setFormData({ ...formData, password: e.target.value })}
               placeholder="••••••••"
-              className="bg-input border-border text-foreground font-mono text-sm"
+              className="bg-input/80 border-border/50 text-foreground font-mono text-sm rounded-lg"
             />
           </div>
 
@@ -214,7 +214,7 @@ export function ConnectionModal({ open, onOpenChange, onSave, editData }: Connec
             <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} className="font-mono text-xs">
               Cancel
             </Button>
-            <Button type="submit" className="font-mono text-xs bg-primary text-primary-foreground">
+            <Button type="submit" variant="gradient" className="font-mono text-xs">
               {isEditing ? "Save Changes" : "Connect"}
             </Button>
           </div>

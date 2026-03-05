@@ -165,7 +165,7 @@ export function ServerSidebar({
   return (
     <div className="flex h-full flex-col border-r border-sidebar-border bg-sidebar">
       <div className="flex h-12 items-center justify-between border-b border-sidebar-border px-3">
-        <span className="font-mono text-xs font-semibold text-sidebar-foreground">CONNECTIONS</span>
+        <span className="tracking-widest uppercase text-[10px] font-semibold text-sidebar-foreground">CONNECTIONS</span>
         <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setConnectionModalOpen(true)}>
           <Plus className="h-3 w-3" />
         </Button>
@@ -215,9 +215,9 @@ export function ServerSidebar({
                 ])}
                 trailing={
                   <div className={cn("h-2 w-2 rounded-full shrink-0",
-                    isConnected && "bg-success",
-                    conn === ProjectConnectionStatus.Connecting && "bg-warning",
-                    conn === ProjectConnectionStatus.Failed && "bg-destructive",
+                    isConnected && "bg-success shadow-[0_0_6px_currentColor]",
+                    conn === ProjectConnectionStatus.Connecting && "bg-warning shadow-[0_0_6px_currentColor]",
+                    conn === ProjectConnectionStatus.Failed && "bg-destructive shadow-[0_0_6px_currentColor]",
                     !conn && "bg-muted",
                   )} />
                 }
@@ -305,7 +305,7 @@ export function ServerSidebar({
                                       { separator: true as const },
                                       { label: "Copy Name", icon: <Copy className="h-3 w-3" />, onClick: () => copy(`"${schema}"."${ti.name}"`) },
                                     ])}
-                                    trailing={<span className="rounded bg-muted px-1 py-0.5 font-mono text-[10px] text-muted-foreground shrink-0">{ti.size}</span>}
+                                    trailing={<span className="rounded-full bg-accent/60 px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground shrink-0">{ti.size}</span>}
                                   />
                                   {isTableOpen && cols && (
                                     <>
@@ -537,7 +537,7 @@ export function ServerSidebar({
       {savedQueries.length > 0 && (
         <div className="border-t border-sidebar-border">
           <div className="flex h-8 items-center px-3">
-            <span className="font-mono text-xs font-semibold text-sidebar-foreground">SAVED QUERIES</span>
+            <span className="tracking-widest uppercase text-[10px] font-semibold text-sidebar-foreground">SAVED QUERIES</span>
           </div>
           <div className="overflow-y-auto p-1 max-h-48">
             {savedQueries.map((q) => (
@@ -604,7 +604,7 @@ function TreeRow({
       onClick={onClick}
       onDoubleClick={onDoubleClick}
       onContextMenu={onContextMenu}
-      className="relative flex w-full items-center gap-1.5 py-1 text-left text-sm hover:bg-sidebar-accent transition-colors rounded-sm whitespace-nowrap"
+      className="relative flex w-full items-center gap-1.5 py-1 text-left text-sm hover:bg-white/[0.06] dark:hover:bg-white/[0.06] hover:bg-black/[0.04] transition-colors rounded-sm whitespace-nowrap"
       style={{ paddingLeft: `${indent}px` }}
     >
       <IndentGuides indent={indent} />

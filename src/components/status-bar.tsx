@@ -18,10 +18,16 @@ export function StatusBar() {
   const isExecuting = activeTab?.isExecuting;
 
   return (
-    <div className="flex h-6 items-center justify-between border-t border-border bg-card px-3 text-[11px] font-mono text-muted-foreground">
+    <div className="flex h-7 items-center justify-between border-t border-border/30 bg-card/60 backdrop-blur-sm px-3 text-[11px] font-mono text-muted-foreground">
       <div className="flex items-center gap-2">
         {projectId && details ? (
-          <>
+          <div className={cn(
+            "flex items-center gap-1.5 rounded-full px-2 py-0.5",
+            connStatus === ProjectConnectionStatus.Connected && "bg-success/10 text-success",
+            connStatus === ProjectConnectionStatus.Connecting && "bg-warning/10 text-warning",
+            connStatus === ProjectConnectionStatus.Failed && "bg-destructive/10 text-destructive",
+            !connStatus && "text-muted-foreground",
+          )}>
             <div
               className={cn(
                 "h-1.5 w-1.5 rounded-full",
@@ -32,9 +38,9 @@ export function StatusBar() {
               )}
             />
             <span>{projectId}</span>
-            <span className="text-muted-foreground/50">&bull;</span>
+            <span className="opacity-50">&bull;</span>
             <span>{details.database}</span>
-          </>
+          </div>
         ) : (
           <span>No connection</span>
         )}

@@ -45,15 +45,15 @@ export function ResizeHandle({ direction, onResize }: ResizeHandleProps) {
     <div
       onMouseDown={handleMouseDown}
       className={`group relative flex-shrink-0 ${
-        direction === "horizontal" ? "w-1 cursor-col-resize hover:bg-accent" : "h-1 cursor-row-resize hover:bg-accent"
-      } bg-border transition-colors`}
+        direction === "horizontal" ? "w-px cursor-col-resize hover:w-1 hover:bg-primary/50" : "h-px cursor-row-resize hover:h-1 hover:bg-primary/50"
+      } bg-border transition-all duration-150`}
     >
       <div
         className={`absolute ${
           direction === "horizontal"
             ? "left-1/2 top-1/2 h-12 w-1 -translate-x-1/2 -translate-y-1/2"
             : "left-1/2 top-1/2 h-1 w-12 -translate-x-1/2 -translate-y-1/2"
-        } rounded-full bg-muted-foreground opacity-0 transition-opacity group-hover:opacity-50`}
+        } rounded-full bg-primary opacity-0 transition-opacity group-hover:opacity-50`}
       />
     </div>
   )

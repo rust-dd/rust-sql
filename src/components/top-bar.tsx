@@ -44,21 +44,21 @@ export function TopBar({ onExecute, onExplain }: { onExecute: () => void; onExpl
   };
 
   return (
-    <div className="flex h-12 items-center justify-between border-b border-border bg-card px-4">
+    <div className="flex h-11 items-center justify-between border-b border-border/50 bg-card/80 backdrop-blur-xl px-4">
       <div className="flex items-center gap-3">
         <div className="flex items-center gap-2">
-          <Database className="h-5 w-5" />
-          <span className="font-mono text-sm font-semibold">PostgresGUI</span>
+          <Database className="h-4 w-4 text-primary" />
+          <span className="font-mono text-sm font-semibold">RSQL</span>
         </div>
-        <div className="h-4 w-px bg-border" />
+        <div className="h-4 w-px bg-border/50" />
         {activeProject && activeProjectDetails ? (
-          <div className="flex items-center gap-1 text-xs text-muted-foreground">
+          <div className="flex items-center gap-1.5 bg-accent rounded-full px-2.5 py-0.5 text-xs text-muted-foreground">
             <div
               className={cn(
                 "h-2 w-2 rounded-full",
-                status[activeProject] === ProjectConnectionStatus.Connected && "bg-success",
-                status[activeProject] === ProjectConnectionStatus.Connecting && "bg-warning",
-                status[activeProject] === ProjectConnectionStatus.Failed && "bg-destructive",
+                status[activeProject] === ProjectConnectionStatus.Connected && "bg-success shadow-[0_0_6px_oklch(0.65_0.18_150)]",
+                status[activeProject] === ProjectConnectionStatus.Connecting && "bg-warning shadow-[0_0_6px_oklch(0.75_0.18_85)]",
+                status[activeProject] === ProjectConnectionStatus.Failed && "bg-destructive shadow-[0_0_6px_oklch(0.55_0.22_25)]",
                 !status[activeProject] && "bg-destructive",
               )}
             />
@@ -72,7 +72,7 @@ export function TopBar({ onExecute, onExplain }: { onExecute: () => void; onExpl
           <div className="flex items-center gap-2">
             {connectedProjects.length > 0 ? (
               <select
-                className="bg-input border border-border text-foreground font-mono text-xs rounded px-2 py-1"
+                className="bg-input border border-border/50 text-foreground font-mono text-xs rounded-lg px-2 py-1"
                 value=""
                 onChange={(e) => {
                   if (e.target.value) {
@@ -126,20 +126,20 @@ export function TopBar({ onExecute, onExplain }: { onExecute: () => void; onExpl
           <span className="text-xs">Explain</span>
         </Button>
         <Button
-          variant="default"
+          variant="gradient"
           size="sm"
-          className="h-8 gap-2 bg-primary text-primary-foreground"
+          className="h-8 gap-2"
           onClick={onExecute}
           disabled={!activeProject || activeTab?.isExecuting}
         >
           <Play className="h-4 w-4" />
           <span className="text-xs">Execute ({navigator.platform.includes("Mac") ? "\u2318" : "Ctrl"}+Enter)</span>
         </Button>
-        <div className="h-4 w-px bg-border" />
+        <div className="h-4 w-px bg-border/50" />
         <Button
           variant="ghost"
           size="icon"
-          className="h-8 w-8"
+          className="h-8 w-8 hover:rotate-12 transition-all duration-200"
           onClick={toggleTheme}
         >
           {theme === "light" ? (

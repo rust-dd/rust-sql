@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { cn } from "@/lib/utils";
+
 import { useProjectStore } from "@/stores/project-store";
 import { useTabStore, useActiveTab } from "@/stores/tab-store";
 import { useUIStore } from "@/stores/ui-store";
@@ -34,9 +34,6 @@ export function TopBar({
   const [saveTitle, setSaveTitle] = useState("");
   const saveInputRef = useRef<HTMLInputElement>(null);
 
-  const connectedProjects = Object.entries(projects).filter(
-    ([id]) => status[id] === ProjectConnectionStatus.Connected,
-  );
 
   useEffect(() => {
     if (saveDialogOpen) {
@@ -71,17 +68,9 @@ export function TopBar({
             <span className="font-mono text-sm font-semibold">RSQL</span>
           </div>
           <div className="h-4 w-px bg-border/50" />
-          {activeProject && activeProjectDetails ? (
+          {activeProject && activeProjectDetails && status[activeProject] === ProjectConnectionStatus.Connected ? (
             <div className="flex items-center gap-1.5 bg-accent rounded-full px-2.5 py-0.5 text-xs text-muted-foreground">
-              <div
-                className={cn(
-                  "h-2 w-2 rounded-full",
-                  status[activeProject] === ProjectConnectionStatus.Connected && "bg-success shadow-[0_0_6px_oklch(0.65_0.18_150)]",
-                  status[activeProject] === ProjectConnectionStatus.Connecting && "bg-warning shadow-[0_0_6px_oklch(0.75_0.18_85)]",
-                  status[activeProject] === ProjectConnectionStatus.Failed && "bg-destructive shadow-[0_0_6px_oklch(0.55_0.22_25)]",
-                  !status[activeProject] && "bg-destructive",
-                )}
-              />
+              <div className="h-2 w-2 rounded-full bg-success shadow-[0_0_6px_oklch(0.65_0.18_150)]" />
               <span className="font-mono">{activeProject}</span>
               <span className="text-muted-foreground/50">&bull;</span>
               <span>
@@ -90,10 +79,10 @@ export function TopBar({
             </div>
           ) : (
             <div className="flex items-center gap-2">
-              {connectedProjects.length > 0 ? (
+              {Object.keys(projects).length > 0 ? (
                 <select
                   className="bg-input border border-border/50 text-foreground font-mono text-xs rounded-lg px-2 py-1"
-                  value=""
+                  value={activeProject ?? ""}
                   onChange={(e) => {
                     if (e.target.value) {
                       setProjectId(selectedTabIndex, e.target.value);
@@ -101,14 +90,14 @@ export function TopBar({
                   }}
                 >
                   <option value="">Select connection...</option>
-                  {connectedProjects.map(([id, details]) => (
+                  {Object.entries(projects).map(([id, details]) => (
                     <option key={id} value={id}>
-                      {id} ({details.database})
+                      {id} ({details.database}){status[id] === ProjectConnectionStatus.Connected ? "" : " \u2022 disconnected"}
                     </option>
                   ))}
                 </select>
               ) : (
-                <span className="text-xs text-muted-foreground">No active connection</span>
+                <span className="text-xs text-muted-foreground">No connection</span>
               )}
             </div>
           )}

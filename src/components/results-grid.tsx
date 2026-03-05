@@ -35,6 +35,16 @@ const MAX_COL_WIDTH = 400;
 const CHAR_WIDTH = 7.5;
 const PADDING = 24;
 
+// Pre-allocated static cell for unloaded virtual rows — avoids GC pressure
+const LOADING_CELL: GridCell = {
+  kind: GridCellKind.Text,
+  data: "",
+  displayData: "\u2026",
+  allowOverlay: false,
+  readonly: true,
+  themeOverride: { textDark: "#888", textLight: "#666" },
+};
+
 export function ResultsGrid({
   columns,
   rows,
@@ -78,8 +88,7 @@ export function ResultsGrid({
   // Calculate column widths based on content
   const gridColumns = useMemo((): GridColumn[] => {
     const sampleRows = rows.slice(0, 100);
-    return columns.map((col) => {
-      const colIdx = columns.indexOf(col);
+    return columns.map((col, colIdx) => {
       let maxLen = col.length + 2;
       for (const row of sampleRows) {
         const cellLen = (row[colIdx] ?? "").length;
@@ -111,7 +120,8 @@ export function ResultsGrid({
       // Virtual mode: read from cache
       if (virtualQuery) {
         const row = virtualCache.getRow(virtualQuery.queryId, rowIdx, virtualQuery.pageSize);
-        const value = row ? (row[colIdx] ?? "") : "...";
+        if (!row) return LOADING_CELL;
+        const value = row[colIdx] ?? "";
         return {
           kind: GridCellKind.Text,
           data: value,
@@ -130,7 +140,7 @@ export function ResultsGrid({
       const baseCell: GridCell = {
         kind: GridCellKind.Text,
         data: value,
-        displayData: isFK && value !== "null" ? `${value} →` : value,
+        displayData: isFK && value !== "null" ? `${value} \u2192` : value,
         allowOverlay: !!isEditing && !isDeleted,
         readonly: !isEditing || !!isDeleted,
         themeOverride: isDeleted
@@ -148,20 +158,23 @@ export function ResultsGrid({
     [rows, cellEdits, deletedRows, isEditing, theme, fkColIndices, virtualQuery, cacheVersion],
   );
 
-  // Virtual scroll handler: trigger page loads on scroll
+  // Virtual scroll handler: trigger page loads on scroll (throttled via rAF)
+  const scrollRafId = useRef(0);
   const handleVisibleRegionChanged = useCallback(
     (range: { x: number; y: number; width: number; height: number }) => {
       if (!virtualQuery || !onPageNeeded) return;
-      const { y, height } = range;
-      const ps = virtualQuery.pageSize;
-      const firstVisible = Math.floor(y / ps);
-      const lastVisible = Math.floor((y + height) / ps);
-      // Prefetch around viewport for smoother fast scrolling.
-      for (let p = firstVisible - 1; p <= lastVisible + 3; p++) {
-        if (p >= 0 && p * ps < virtualQuery.totalRows) {
-          onPageNeeded(p);
+      cancelAnimationFrame(scrollRafId.current);
+      scrollRafId.current = requestAnimationFrame(() => {
+        const { y, height } = range;
+        const ps = virtualQuery.pageSize;
+        const firstVisible = Math.floor(y / ps);
+        const lastVisible = Math.floor((y + height) / ps);
+        for (let p = firstVisible - 1; p <= lastVisible + 3; p++) {
+          if (p >= 0 && p * ps < virtualQuery.totalRows) {
+            onPageNeeded(p);
+          }
         }
-      }
+      });
     },
     [virtualQuery, onPageNeeded],
   );

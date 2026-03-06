@@ -52,6 +52,12 @@ export function StatusBar() {
   const cpu = resources ? `${resources.app_cpu_percent.toFixed(1)}%` : "--";
   const rss = resources ? formatMb(resources.app_memory_rss_mb) : "--";
   const proc = resources ? `${resources.app_process_count}` : "--";
+  const conn = resources
+    ? `${resources.db_connections_in_use}/${resources.db_connections_open}`
+    : "--";
+  const connWaiting = resources && resources.db_connections_waiting > 0
+    ? ` (${resources.db_connections_waiting} wait)`
+    : "";
   const net = resources
     ? `↓ ${formatMbps(resources.network_rx_mbps)} ↑ ${formatMbps(resources.network_tx_mbps)}`
     : "--";
@@ -91,6 +97,8 @@ export function StatusBar() {
         <span>RSS {rss}</span>
         <span className="opacity-40">&bull;</span>
         <span>PROC {proc}</span>
+        <span className="opacity-40">&bull;</span>
+        <span>CONN {conn}{connWaiting}</span>
         <span className="opacity-40">&bull;</span>
         <span>NET {net}</span>
       </div>

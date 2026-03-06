@@ -1,18 +1,19 @@
 use rayon::prelude::*;
 use std::sync::Arc;
 use std::time::Instant;
+use deadpool_postgres::Pool;
 use tokio::time as tokio_time;
 use tokio_postgres::{Client, SimpleQueryMessage};
 
 use crate::common::enums::AppError;
 use crate::common::pgsql::{PgsqlLoadColumns, PgsqlLoadSchemas, PgsqlLoadTables};
 
-/// Safely get a client Arc from the AppState client map.
+/// Safely get a pool Arc from the AppState client map.
 /// Returns a cloned Arc so the caller can drop the MutexGuard immediately.
-pub fn get_client(
-    clients_guard: &std::collections::BTreeMap<String, Arc<Client>>,
+pub fn get_pool(
+    clients_guard: &std::collections::BTreeMap<String, Arc<Pool>>,
     project_id: &str,
-) -> Result<Arc<Client>, AppError> {
+) -> Result<Arc<Pool>, AppError> {
     clients_guard
         .get(project_id)
         .cloned()

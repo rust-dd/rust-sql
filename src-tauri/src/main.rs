@@ -10,15 +10,16 @@ mod utils;
 const LOCAL_DB_NAME: &str = "rsql.db";
 
 use std::{collections::BTreeMap, sync::Arc};
+use deadpool_postgres::Pool;
 use tauri::menu::{AboutMetadata, MenuBuilder, SubmenuBuilder};
 use tauri::Manager;
 use tokio::sync::Mutex;
-use tokio_postgres::{CancelToken, Client};
+use tokio_postgres::CancelToken;
 use tracing::Level;
 
 pub struct AppState {
-    pub clients: Arc<Mutex<BTreeMap<String, Arc<Client>>>>,
-    pub meta_clients: Arc<Mutex<BTreeMap<String, Arc<Client>>>>,
+    pub clients: Arc<Mutex<BTreeMap<String, Arc<Pool>>>>,
+    pub meta_clients: Arc<Mutex<BTreeMap<String, Arc<Pool>>>>,
     pub cancel_tokens: Arc<Mutex<BTreeMap<String, CancelToken>>>,
     pub client_ssl: Arc<Mutex<BTreeMap<String, bool>>>,
     pub local_db: libsql::Database,

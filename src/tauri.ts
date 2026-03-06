@@ -9,6 +9,10 @@ export interface SystemResourceUsage {
   app_process_count: number;
   network_rx_mbps: number;
   network_tx_mbps: number;
+  db_connections_in_use: number;
+  db_connections_open: number;
+  db_connections_max: number;
+  db_connections_waiting: number;
 }
 
 export async function getProjects(): Promise<RawProjectMap> {

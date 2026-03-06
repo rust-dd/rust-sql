@@ -14,6 +14,10 @@ pub struct SystemResourceUsage {
     pub app_process_count: usize,
     pub network_rx_mbps: f32,
     pub network_tx_mbps: f32,
+    pub db_connections_in_use: usize,
+    pub db_connections_open: usize,
+    pub db_connections_max: usize,
+    pub db_connections_waiting: usize,
 }
 
 pub struct ResourceMonitor {
@@ -93,6 +97,10 @@ impl ResourceMonitor {
             app_process_count: included.len(),
             network_rx_mbps,
             network_tx_mbps,
+            db_connections_in_use: 0,
+            db_connections_open: 0,
+            db_connections_max: 0,
+            db_connections_waiting: 0,
         }
     }
 }
@@ -101,8 +109,52 @@ impl ResourceMonitor {
 pub async fn system_resource_usage(
     app_state: State<'_, AppState>,
 ) -> Result<SystemResourceUsage, String> {
-    let mut monitor = app_state.resource_monitor.lock().await;
-    Ok(monitor.sample())
+    let mut usage = {
+        let mut monitor = app_state.resource_monitor.lock().await;
+        monitor.sample()
+    };
+
+    let (query_open, query_available, query_max, query_waiting) = {
+        let clients = app_state.clients.lock().await;
+        let mut open = 0usize;
+        let mut available = 0usize;
+        let mut max = 0usize;
+        let mut waiting = 0usize;
+        for pool in clients.values() {
+            let status = pool.status();
+            open = open.saturating_add(status.size);
+            available = available.saturating_add(status.available);
+            max = max.saturating_add(status.max_size);
+            waiting = waiting.saturating_add(status.waiting);
+        }
+        (open, available, max, waiting)
+    };
+
+    let (meta_open, meta_available, meta_max, meta_waiting) = {
+        let clients = app_state.meta_clients.lock().await;
+        let mut open = 0usize;
+        let mut available = 0usize;
+        let mut max = 0usize;
+        let mut waiting = 0usize;
+        for pool in clients.values() {
+            let status = pool.status();
+            open = open.saturating_add(status.size);
+            available = available.saturating_add(status.available);
+            max = max.saturating_add(status.max_size);
+            waiting = waiting.saturating_add(status.waiting);
+        }
+        (open, available, max, waiting)
+    };
+
+    let total_open = query_open.saturating_add(meta_open);
+    let total_available = query_available.saturating_add(meta_available);
+
+    usage.db_connections_open = total_open;
+    usage.db_connections_max = query_max.saturating_add(meta_max);
+    usage.db_connections_waiting = query_waiting.saturating_add(meta_waiting);
+    usage.db_connections_in_use = total_open.saturating_sub(total_available);
+
+    Ok(usage)
 }
 
 const ROW_SEP: char = '\x1E';

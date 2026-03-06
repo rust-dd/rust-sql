@@ -157,6 +157,15 @@
     background: var(--muted-foreground);
 }
 
+/* Slightly wider scrollbar for result grid only */
+.results-grid-scroll .dvn-scroller::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+.results-grid-scroll .dvn-scroller::-webkit-scrollbar-thumb {
+    border-radius: 6px;
+}
+
 /* cmdk command palette */
 .cmdk-overlay {
     position: fixed;

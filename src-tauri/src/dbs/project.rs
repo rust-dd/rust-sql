@@ -1,6 +1,6 @@
-use crate::common::enums::AppError;
-use crate::common::BTreeVecStore;
 use crate::AppState;
+use crate::common::BTreeVecStore;
+use crate::common::enums::AppError;
 use std::collections::BTreeMap;
 use tauri::{Result, State};
 
@@ -99,6 +99,23 @@ pub async fn project_db_delete(project_id: &str, app_state: State<'_, AppState>)
 
     conn.execute(
         "DELETE FROM projects WHERE id = ?1",
+        libsql::params![project_id],
+    )
+    .await
+    .map_err(|e| AppError::DatabaseError(e.to_string()))?;
+
+    // Remove persisted virtual snapshots tied to this project.
+    conn.execute(
+        "DELETE FROM virtual_query_pages
+         WHERE query_id IN (
+             SELECT query_id FROM virtual_query_snapshots WHERE project_id = ?1
+         )",
+        libsql::params![project_id],
+    )
+    .await
+    .map_err(|e| AppError::DatabaseError(e.to_string()))?;
+    conn.execute(
+        "DELETE FROM virtual_query_snapshots WHERE project_id = ?1",
         libsql::params![project_id],
     )
     .await

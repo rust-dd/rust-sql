@@ -1,24 +1,37 @@
-use std::{collections::BTreeMap, sync::Arc};
+use std::{
+    collections::BTreeMap,
+    sync::Arc,
+    time::{SystemTime, UNIX_EPOCH},
+};
 
 use deadpool_postgres::{Manager as PgManager, ManagerConfig, Pool, RecyclingMethod};
 
+use crate::AppState;
 use crate::common::enums::{AppError, ProjectConnectionStatus};
 use crate::common::pgsql::{PgsqlLoadColumns, PgsqlLoadSchemas, PgsqlLoadTables};
 use crate::drivers::common::{
-    close_virtual, execute_query, execute_query_packed, execute_query_streamed, execute_virtual,
-    fetch_virtual_page, get_pool, load_activity, load_column_details, load_columns,
-    load_constraints, load_database_stats, load_foreign_keys, load_functions, load_indexes,
-    load_materialized_views, load_policies, load_rules, load_schemas, load_table_stats,
-    load_tables, load_trigger_functions, load_triggers, load_views, ColumnDetail, ConstraintDetail,
-    DbStat, ForeignKeyInfo, FunctionInfo, IndexDetail, PolicyDetail, RuleDetail, TriggerDetail,
+    ColumnDetail, ConstraintDetail, DbStat, ForeignKeyInfo, FunctionInfo, IndexDetail,
+    PolicyDetail, RuleDetail, TriggerDetail, close_virtual, execute_query, execute_query_packed,
+    execute_query_streamed, execute_virtual, fetch_virtual_page, get_pool, load_activity,
+    load_column_details, load_columns, load_constraints, load_database_stats, load_foreign_keys,
+    load_functions, load_indexes, load_materialized_views, load_policies, load_rules, load_schemas,
+    load_table_stats, load_tables, load_trigger_functions, load_triggers, load_views,
 };
-use crate::AppState;
 
 use native_tls::TlsConnector;
 use postgres_native_tls::MakeTlsConnector;
 use tauri::ipc::Response;
 use tauri::{AppHandle, Manager, Result, State};
+use tokio::time::{Duration, sleep};
 use tokio_postgres::{CancelToken, Config, NoTls};
+
+const CELL_SEP: char = '\x1F';
+const SNAPSHOT_PAGE_WRITE_RETRIES: usize = 3;
+
+fn is_sqlite_lock_error(message: &str) -> bool {
+    let lower = message.to_ascii_lowercase();
+    lower.contains("database is locked") || lower.contains("database busy")
+}
 
 fn create_pg_pool(
     cfg: &Config,
@@ -70,6 +83,279 @@ async fn set_cancel_token(
     let mut cancel_tokens = app_state.cancel_tokens.lock().await;
     cancel_tokens.insert(project_id.to_string(), token);
     Ok(())
+}
+
+#[derive(Clone)]
+struct VirtualSnapshotMeta {
+    project_id: String,
+    sql: String,
+    page_size: usize,
+    col_count: usize,
+}
+
+fn now_unix_secs() -> i64 {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|d| d.as_secs() as i64)
+        .unwrap_or_default()
+}
+
+async fn snapshot_upsert_metadata(
+    app_state: &AppState,
+    project_id: &str,
+    query_id: &str,
+    sql: &str,
+    columns_packed: &str,
+    total_rows: usize,
+    page_size: usize,
+    col_count: usize,
+) -> std::result::Result<(), AppError> {
+    let conn = app_state
+        .local_db
+        .connect()
+        .map_err(|e| AppError::DatabaseError(e.to_string()))?;
+
+    conn.execute(
+        "INSERT OR REPLACE INTO virtual_query_snapshots (
+            query_id, project_id, sql, columns_packed, total_rows, page_size, col_count, created_at
+         ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
+        libsql::params![
+            query_id,
+            project_id,
+            sql,
+            columns_packed,
+            total_rows as i64,
+            page_size as i64,
+            col_count as i64,
+            now_unix_secs(),
+        ],
+    )
+    .await
+    .map_err(|e| AppError::DatabaseError(e.to_string()))?;
+
+    Ok(())
+}
+
+async fn snapshot_store_page(
+    app_state: &AppState,
+    query_id: &str,
+    page_index: usize,
+    packed_page: &str,
+) -> std::result::Result<(), AppError> {
+    if packed_page.is_empty() {
+        return Ok(());
+    }
+
+    let conn = app_state
+        .local_db
+        .connect()
+        .map_err(|e| AppError::DatabaseError(e.to_string()))?;
+
+    for attempt in 0..SNAPSHOT_PAGE_WRITE_RETRIES {
+        match conn
+            .execute(
+                "INSERT OR IGNORE INTO virtual_query_pages (query_id, page_index, packed_page)
+                 VALUES (?1, ?2, ?3)",
+                libsql::params![query_id, page_index as i64, packed_page],
+            )
+            .await
+        {
+            Ok(_) => return Ok(()),
+            Err(e) => {
+                let msg = e.to_string();
+                if is_sqlite_lock_error(&msg) {
+                    if attempt + 1 < SNAPSHOT_PAGE_WRITE_RETRIES {
+                        sleep(Duration::from_millis((attempt as u64 + 1) * 8)).await;
+                        continue;
+                    }
+                    // Snapshot persistence is best-effort; skip noisy lock errors.
+                    tracing::debug!(
+                        "Skipping snapshot page persist for {} page {} due to SQLite lock",
+                        query_id,
+                        page_index
+                    );
+                    return Ok(());
+                }
+                return Err(AppError::DatabaseError(msg));
+            }
+        }
+    }
+
+    Ok(())
+}
+
+async fn snapshot_load_page(
+    app_state: &AppState,
+    query_id: &str,
+    page_index: usize,
+) -> std::result::Result<Option<String>, AppError> {
+    let conn = app_state
+        .local_db
+        .connect()
+        .map_err(|e| AppError::DatabaseError(e.to_string()))?;
+
+    let mut rows = conn
+        .query(
+            "SELECT packed_page
+             FROM virtual_query_pages
+             WHERE query_id = ?1 AND page_index = ?2
+             LIMIT 1",
+            libsql::params![query_id, page_index as i64],
+        )
+        .await
+        .map_err(|e| AppError::DatabaseError(e.to_string()))?;
+
+    let maybe_row = rows
+        .next()
+        .await
+        .map_err(|e| AppError::DatabaseError(e.to_string()))?;
+    if let Some(row) = maybe_row {
+        let packed: String = row
+            .get(0)
+            .map_err(|e| AppError::DatabaseError(e.to_string()))?;
+        Ok(Some(packed))
+    } else {
+        Ok(None)
+    }
+}
+
+async fn snapshot_load_metadata(
+    app_state: &AppState,
+    query_id: &str,
+) -> std::result::Result<Option<VirtualSnapshotMeta>, AppError> {
+    let conn = app_state
+        .local_db
+        .connect()
+        .map_err(|e| AppError::DatabaseError(e.to_string()))?;
+
+    let mut rows = conn
+        .query(
+            "SELECT project_id, sql, page_size, col_count
+             FROM virtual_query_snapshots
+             WHERE query_id = ?1
+             LIMIT 1",
+            libsql::params![query_id],
+        )
+        .await
+        .map_err(|e| AppError::DatabaseError(e.to_string()))?;
+
+    let maybe_row = rows
+        .next()
+        .await
+        .map_err(|e| AppError::DatabaseError(e.to_string()))?;
+
+    let Some(row) = maybe_row else {
+        return Ok(None);
+    };
+
+    let project_id: String = row
+        .get(0)
+        .map_err(|e| AppError::DatabaseError(e.to_string()))?;
+    let sql: String = row
+        .get(1)
+        .map_err(|e| AppError::DatabaseError(e.to_string()))?;
+    let page_size_i64: i64 = row
+        .get(2)
+        .map_err(|e| AppError::DatabaseError(e.to_string()))?;
+    let col_count_i64: i64 = row
+        .get(3)
+        .map_err(|e| AppError::DatabaseError(e.to_string()))?;
+
+    if page_size_i64 <= 0 {
+        return Ok(None);
+    }
+
+    Ok(Some(VirtualSnapshotMeta {
+        project_id,
+        sql,
+        page_size: page_size_i64 as usize,
+        col_count: col_count_i64.max(0) as usize,
+    }))
+}
+
+async fn snapshot_cleanup_query(
+    app_state: &AppState,
+    query_id: &str,
+) -> std::result::Result<(), AppError> {
+    let conn = app_state
+        .local_db
+        .connect()
+        .map_err(|e| AppError::DatabaseError(e.to_string()))?;
+
+    conn.execute(
+        "DELETE FROM virtual_query_pages WHERE query_id = ?1",
+        libsql::params![query_id],
+    )
+    .await
+    .map_err(|e| AppError::DatabaseError(e.to_string()))?;
+
+    conn.execute(
+        "DELETE FROM virtual_query_snapshots WHERE query_id = ?1",
+        libsql::params![query_id],
+    )
+    .await
+    .map_err(|e| AppError::DatabaseError(e.to_string()))?;
+
+    Ok(())
+}
+
+async fn restore_virtual_from_snapshot(
+    app_state: &AppState,
+    query_id: &str,
+) -> std::result::Result<bool, AppError> {
+    let Some(meta) = snapshot_load_metadata(app_state, query_id).await? else {
+        return Ok(false);
+    };
+
+    let client = acquire_client(&app_state.clients, &meta.project_id).await?;
+    set_cancel_token(app_state, &meta.project_id, client.cancel_token()).await?;
+
+    let (columns_packed, total_rows, first_page_packed, _) = execute_virtual(
+        &client,
+        &app_state.virtual_cache,
+        &meta.sql,
+        query_id,
+        meta.page_size,
+    )
+    .await?;
+
+    if columns_packed.is_empty() {
+        return Ok(false);
+    }
+
+    let col_count = if meta.col_count > 0 {
+        meta.col_count
+    } else {
+        columns_packed.split(CELL_SEP).count()
+    };
+
+    if let Err(e) = snapshot_upsert_metadata(
+        app_state,
+        &meta.project_id,
+        query_id,
+        &meta.sql,
+        &columns_packed,
+        total_rows,
+        meta.page_size,
+        col_count,
+    )
+    .await
+    {
+        tracing::warn!(
+            "Failed to refresh snapshot metadata for {}: {:?}",
+            query_id,
+            e
+        );
+    }
+    if let Err(e) = snapshot_store_page(app_state, query_id, 0, &first_page_packed).await {
+        tracing::warn!(
+            "Failed to refresh snapshot first page for {}: {:?}",
+            query_id,
+            e
+        );
+    }
+
+    Ok(true)
 }
 
 #[tauri::command(rename_all = "snake_case")]
@@ -502,6 +788,31 @@ pub async fn pgsql_execute_virtual(
 
     let result =
         execute_virtual(&client, &app_state.virtual_cache, sql, query_id, page_size).await?;
+
+    let col_count = if result.0.is_empty() {
+        0
+    } else {
+        result.0.split(CELL_SEP).count()
+    };
+    if let Err(e) = snapshot_upsert_metadata(
+        &app_state, project_id, query_id, sql, &result.0, result.1, page_size, col_count,
+    )
+    .await
+    {
+        tracing::warn!(
+            "Failed to persist virtual snapshot metadata for {}: {:?}",
+            query_id,
+            e
+        );
+    }
+    if let Err(e) = snapshot_store_page(&app_state, query_id, 0, &result.2).await {
+        tracing::warn!(
+            "Failed to persist virtual snapshot first page for {}: {:?}",
+            query_id,
+            e
+        );
+    }
+
     let json = sonic_rs::to_string(&result).map_err(|e| AppError::QueryFailed(e.to_string()))?;
     Ok(Response::new(json))
 }
@@ -514,15 +825,65 @@ pub async fn pgsql_fetch_page(
     limit: usize,
     app_state: State<'_, AppState>,
 ) -> Result<Response> {
-    let result =
-        fetch_virtual_page(&app_state.virtual_cache, query_id, col_count, offset, limit).await?;
-    let json = sonic_rs::to_string(&result).map_err(|e| AppError::QueryFailed(e.to_string()))?;
-    Ok(Response::new(json))
+    let page_index = if limit == 0 { 0 } else { offset / limit };
+
+    match fetch_virtual_page(&app_state.virtual_cache, query_id, col_count, offset, limit).await {
+        Ok(packed) => {
+            if let Err(e) = snapshot_store_page(&app_state, query_id, page_index, &packed).await {
+                tracing::warn!("Failed to persist fetched page for {}: {:?}", query_id, e);
+            }
+            let json =
+                sonic_rs::to_string(&packed).map_err(|e| AppError::QueryFailed(e.to_string()))?;
+            return Ok(Response::new(json));
+        }
+        Err(err) => {
+            tracing::debug!(
+                "Virtual cache miss for query {}, trying snapshot fallback: {:?}",
+                query_id,
+                err
+            );
+        }
+    }
+
+    if let Some(packed) = snapshot_load_page(&app_state, query_id, page_index).await? {
+        let json =
+            sonic_rs::to_string(&packed).map_err(|e| AppError::QueryFailed(e.to_string()))?;
+        return Ok(Response::new(json));
+    }
+
+    if restore_virtual_from_snapshot(&app_state, query_id).await? {
+        let packed =
+            fetch_virtual_page(&app_state.virtual_cache, query_id, col_count, offset, limit)
+                .await?;
+        if let Err(e) = snapshot_store_page(&app_state, query_id, page_index, &packed).await {
+            tracing::warn!(
+                "Failed to persist restored page for {} (page {}): {:?}",
+                query_id,
+                page_index,
+                e
+            );
+        }
+        let json =
+            sonic_rs::to_string(&packed).map_err(|e| AppError::QueryFailed(e.to_string()))?;
+        return Ok(Response::new(json));
+    }
+
+    Err(AppError::QueryFailed(format!(
+        "Virtual query {} not found in memory and no snapshot available",
+        query_id
+    ))
+    .into())
 }
 
 #[tauri::command(rename_all = "snake_case")]
 pub async fn pgsql_close_virtual(query_id: &str, app_state: State<'_, AppState>) -> Result<()> {
-    close_virtual(&app_state.virtual_cache, query_id)
-        .await
-        .map_err(Into::into)
+    close_virtual(&app_state.virtual_cache, query_id).await?;
+    if let Err(e) = snapshot_cleanup_query(&app_state, query_id).await {
+        tracing::warn!(
+            "Failed to cleanup virtual snapshot for {}: {:?}",
+            query_id,
+            e
+        );
+    }
+    Ok(())
 }

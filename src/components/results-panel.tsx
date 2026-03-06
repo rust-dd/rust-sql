@@ -94,7 +94,8 @@ export function ResultsPanel() {
   const queuedPageSet = useRef(new Set<number>());
   const activeFetches = useRef(0);
   const latestRequestedPage = useRef(0);
-  const gridRef = useRef<{ invalidate: () => void }>(null);
+  const gridRef = useRef<{ invalidatePage: (pageIndex: number) => void }>(null);
+  const virtualViewportRows = useRef(new Map<string, number>());
 
   useEffect(() => {
     loadingPages.current.clear();
@@ -102,6 +103,15 @@ export function ResultsPanel() {
     queuedPageSet.current.clear();
     activeFetches.current = 0;
   }, [vq?.queryId, activeTab?.projectId]);
+
+  const handleViewportRowChange = useCallback((rowIndex: number) => {
+    if (!vq?.queryId) return;
+    virtualViewportRows.current.set(vq.queryId, rowIndex);
+  }, [vq?.queryId]);
+
+  const restoreRowIndex = vq?.queryId
+    ? (virtualViewportRows.current.get(vq.queryId) ?? 0)
+    : 0;
 
   const fetchPage = useCallback(async (pageIndex: number) => {
     if (!vq || !activeTab?.projectId) return;
@@ -119,10 +129,15 @@ export function ResultsPanel() {
     if (selectedTab?.virtualQuery?.queryId !== vq.queryId) return;
 
     const rows = packed ? packed.split(ROW_SEP).map((r) => r.split(CELL_SEP)) : [];
+    const expectedRows = Math.max(0, Math.min(vq.pageSize, vq.totalRows - offset));
+    if (expectedRows > 0 && rows.length === 0) {
+      // Keep page as "missing" so viewport observer can retry instead of caching a permanent empty page.
+      return;
+    }
     virtualCache.setPage(vq.queryId, pageIndex, rows);
     // Evict around the user's latest viewport, not the page that happened to resolve last.
     virtualCache.evictDistant(vq.queryId, latestRequestedPage.current, CACHE_WINDOW_PAGES);
-    gridRef.current?.invalidate();
+    gridRef.current?.invalidatePage(pageIndex);
   }, [vq, activeTab?.projectId]);
 
   const pumpQueue = useCallback(() => {
@@ -175,12 +190,13 @@ export function ResultsPanel() {
 
   useEffect(() => {
     if (!vq) return;
-    const startPage = 1;
-    const endPage = Math.min(startPage + 3, Math.ceil(vq.totalRows / vq.pageSize) - 1);
+    const anchorPage = Math.max(0, Math.floor(restoreRowIndex / vq.pageSize));
+    const startPage = Math.max(0, anchorPage - 1);
+    const endPage = Math.min(anchorPage + 3, Math.ceil(vq.totalRows / vq.pageSize) - 1);
     for (let p = startPage; p <= endPage; p++) {
       handlePageNeeded(p);
     }
-  }, [vq?.queryId, vq?.totalRows, vq?.pageSize, handlePageNeeded]);
+  }, [vq?.queryId, vq?.totalRows, vq?.pageSize, restoreRowIndex, handlePageNeeded]);
 
   const filteredRows = useMemo(() => {
     if (isEditing) return result?.rows ?? [];
@@ -508,6 +524,7 @@ export function ResultsPanel() {
       )}
       {viewMode === "grid" ? (
         <ResultsGrid
+          key={activeTab?.id ?? "results-grid"}
           columns={result.columns}
           rows={filteredRows}
           isEditing={isEditing}
@@ -520,6 +537,9 @@ export function ResultsPanel() {
           onFKNavigate={handleFKNavigate}
           virtualQuery={vq}
           onPageNeeded={vq ? handlePageNeeded : undefined}
+          onViewportRowChange={vq ? handleViewportRowChange : undefined}
+          restoreRowIndex={vq ? restoreRowIndex : undefined}
+          viewportKey={vq?.queryId}
           gridRef={gridRef}
         />
       ) : (

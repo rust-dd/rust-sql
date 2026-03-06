@@ -9,10 +9,10 @@ mod utils;
 
 const LOCAL_DB_NAME: &str = "rsql.db";
 
-use std::{collections::BTreeMap, sync::Arc};
 use deadpool_postgres::Pool;
-use tauri::menu::{AboutMetadata, MenuBuilder, SubmenuBuilder};
+use std::{collections::BTreeMap, sync::Arc};
 use tauri::Manager;
+use tauri::menu::{AboutMetadata, MenuBuilder, SubmenuBuilder};
 use tokio::sync::Mutex;
 use tokio_postgres::CancelToken;
 use tracing::Level;
@@ -96,6 +96,43 @@ fn main() {
                 )
                 .await
                 .expect("Failed to create workspaces table");
+
+                conn.execute(
+                    "CREATE TABLE IF NOT EXISTS virtual_query_snapshots (
+                        query_id TEXT PRIMARY KEY,
+                        project_id TEXT NOT NULL,
+                        sql TEXT NOT NULL,
+                        columns_packed TEXT NOT NULL DEFAULT '',
+                        total_rows INTEGER NOT NULL DEFAULT 0,
+                        page_size INTEGER NOT NULL DEFAULT 0,
+                        col_count INTEGER NOT NULL DEFAULT 0,
+                        created_at INTEGER NOT NULL
+                    )",
+                    (),
+                )
+                .await
+                .expect("Failed to create virtual_query_snapshots table");
+
+                conn.execute(
+                    "CREATE TABLE IF NOT EXISTS virtual_query_pages (
+                        query_id TEXT NOT NULL,
+                        page_index INTEGER NOT NULL,
+                        packed_page TEXT NOT NULL DEFAULT '',
+                        PRIMARY KEY (query_id, page_index)
+                    )",
+                    (),
+                )
+                .await
+                .expect("Failed to create virtual_query_pages table");
+
+                // Best-effort orphan cleanup in case app exited before tab-close cleanup.
+                conn.execute(
+                    "DELETE FROM virtual_query_pages
+                     WHERE query_id NOT IN (SELECT query_id FROM virtual_query_snapshots)",
+                    (),
+                )
+                .await
+                .ok();
 
                 let state = AppState {
                     clients: Arc::new(Mutex::new(BTreeMap::new())),

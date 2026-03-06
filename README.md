@@ -4,6 +4,14 @@ A high-performance PostgreSQL client built with Tauri v2, React, and Rust. Desig
 
 ![Preview](https://i.ibb.co/S4sPh4TC/rsql.png)
 
+## Important
+App signing is in progress. To allow on macOS, use the following command:
+
+```bash
+xattr -dr com.apple.quarantine /Applications/RSQL.app
+```
+
+
 ## Why It's Fast
 
 ### Zero-Copy Wire Protocol

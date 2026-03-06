@@ -39,7 +39,18 @@ fn main() {
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_process::init())
         .setup(|app| {
+            #[cfg(desktop)]
+            if let Some(pubkey) = option_env!("TAURI_UPDATER_PUBLIC_KEY") {
+                app.handle()
+                    .plugin(tauri_plugin_updater::Builder::new().pubkey(pubkey).build())?;
+            } else {
+                tracing::info!(
+                    "Updater disabled because TAURI_UPDATER_PUBLIC_KEY was not set at build time"
+                );
+            }
+
             let app_handle = app.handle().clone();
 
             tauri::async_runtime::block_on(async move {

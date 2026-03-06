@@ -8,15 +8,17 @@ import { useTabStore, useActiveTab } from "@/stores/tab-store";
 import { useUIStore } from "@/stores/ui-store";
 import { useQueryStore } from "@/stores/query-store";
 import { ProjectConnectionStatus } from "@/types";
-import { AlignLeft, Database, GitBranch, Moon, Play, Save, Sun } from "lucide-react";
+import { AlignLeft, Database, Download, GitBranch, Moon, Play, Save, Sun } from "lucide-react";
 import { format as formatSQL } from "sql-formatter";
 
 export function TopBar({
   onExecute,
   onExplain,
+  onCheckUpdates,
 }: {
   onExecute: () => void;
   onExplain: () => void;
+  onCheckUpdates: () => void;
 }) {
   const theme = useUIStore((s) => s.theme);
   const toggleTheme = useUIStore((s) => s.toggleTheme);
@@ -123,6 +125,15 @@ export function TopBar({
           >
             <AlignLeft className="h-4 w-4" />
             <span className="text-xs">Format</span>
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 gap-2"
+            onClick={onCheckUpdates}
+          >
+            <Download className="h-4 w-4" />
+            <span className="text-xs">Updates</span>
           </Button>
           <Button
             variant="outline"

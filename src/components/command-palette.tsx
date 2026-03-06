@@ -10,18 +10,20 @@ import { format as formatSQL } from "sql-formatter";
 import {
   Table, Eye, FileCode, Layers, Database, Save, FolderOpen, Trash2,
   Plus, Play, GitBranch, AlignLeft, Moon, Sun, Terminal, Activity,
-  Network, XCircle, Pin, PinOff,
+  Network, XCircle, Pin, PinOff, Download,
 } from "lucide-react";
 
 type Page = "root" | "save-workspace" | "load-workspace" | "delete-workspace" | "save-query";
 
 export function CommandPalette({
   open, onClose, onExecute, onExplain,
+  onCheckUpdates,
 }: {
   open: boolean;
   onClose: () => void;
   onExecute: () => void;
   onExplain: () => void;
+  onCheckUpdates: () => void;
 }) {
   const [page, setPage] = useState<Page>("root");
   const [workspaceName, setWorkspaceName] = useState("");
@@ -312,6 +314,11 @@ export function CommandPalette({
                       ? <Moon className="h-4 w-4 text-muted-foreground" />
                       : <Sun className="h-4 w-4 text-muted-foreground" />}
                     <span>{theme === "light" ? "Dark Mode" : "Light Mode"}</span>
+                  </Command.Item>
+                  <Command.Item value="Check For Updates" onSelect={() => { onClose(); onCheckUpdates(); }}>
+                    <Download className="h-4 w-4 text-muted-foreground" />
+                    <span>Check for Updates</span>
+                    <span className="cmdk-meta">App</span>
                   </Command.Item>
                   {pinnedResult ? (
                     <Command.Item value="Clear Pinned Result" onSelect={() => { onClose(); clearPinnedResult(); }}>

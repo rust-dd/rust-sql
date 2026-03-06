@@ -12,6 +12,7 @@ import { TopBar } from "@/components/top-bar";
 import { StatusBar } from "@/components/status-bar";
 import { CommandPalette } from "@/components/command-palette";
 import { DriverFactory } from "@/lib/database-driver";
+import { checkForUpdates, startBackgroundUpdateCheck } from "@/lib/updater";
 import * as virtualCache from "@/lib/virtual-cache";
 import { useProjectStore } from "@/stores/project-store";
 import { useTabStore, useActiveTab } from "@/stores/tab-store";
@@ -78,6 +79,10 @@ export default function App() {
   useEffect(() => {
     void loadProjects();
   }, [loadProjects]);
+
+  useEffect(() => {
+    startBackgroundUpdateCheck();
+  }, []);
 
   const connectProject = useProjectStore((s) => s.connect);
 
@@ -355,6 +360,7 @@ export default function App() {
       <TopBar
         onExecute={() => void runQuery()}
         onExplain={() => void runExplain()}
+        onCheckUpdates={() => void checkForUpdates()}
       />
 
       <div className="flex flex-1 overflow-hidden">
@@ -405,7 +411,13 @@ export default function App() {
         editData={editingConnection}
       />
 
-      <CommandPalette open={commandPaletteOpen} onClose={() => setCommandPaletteOpen(false)} onExecute={() => void runQuery()} onExplain={() => void runExplain()} />
+      <CommandPalette
+        open={commandPaletteOpen}
+        onClose={() => setCommandPaletteOpen(false)}
+        onExecute={() => void runQuery()}
+        onExplain={() => void runExplain()}
+        onCheckUpdates={() => void checkForUpdates()}
+      />
     </div>
   );
 }

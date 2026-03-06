@@ -65,9 +65,15 @@ jobs:
           APPLE_API_KEY_P8: ${{ secrets.APPLE_API_KEY_P8 }}
           WINDOWS_CERTIFICATE: ${{ secrets.WINDOWS_CERTIFICATE }}
           WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
+          TAURI_UPDATER_PUBLIC_KEY: ${{ secrets.TAURI_UPDATER_PUBLIC_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
           TAURI_SIGNING_RPM_KEY: ${{ secrets.TAURI_SIGNING_RPM_KEY }}
           APPIMAGETOOL_SIGN_PASSPHRASE: ${{ secrets.APPIMAGETOOL_SIGN_PASSPHRASE }}
         run: |
+          [ -n "$TAURI_UPDATER_PUBLIC_KEY" ] || { echo "Missing TAURI_UPDATER_PUBLIC_KEY secret."; exit 1; }
+          [ -n "$TAURI_SIGNING_PRIVATE_KEY" ] || { echo "Missing TAURI_SIGNING_PRIVATE_KEY secret."; exit 1; }
+
           case "$PLATFORM" in
             macos-latest)
               [ -n "$APPLE_CERTIFICATE" ] || { echo "Missing APPLE_CERTIFICATE secret."; exit 1; }
@@ -171,6 +177,9 @@ jobs:
           APPLE_API_KEY_PATH: ${{ env.APPLE_API_KEY_PATH }}
           WINDOWS_CERTIFICATE: ${{ secrets.WINDOWS_CERTIFICATE }}
           WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
+          TAURI_UPDATER_PUBLIC_KEY: ${{ secrets.TAURI_UPDATER_PUBLIC_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
           SIGN: ${{ matrix.platform == 'ubuntu-22.04' && '1' || '' }}
           APPIMAGETOOL_FORCE_SIGN: ${{ matrix.platform == 'ubuntu-22.04' && '1' || '' }}
           SIGN_KEY: ${{ secrets.SIGN_KEY }}

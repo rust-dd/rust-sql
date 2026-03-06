@@ -82,3 +82,30 @@ yarn tauri dev
 # Build for production
 yarn tauri build
 ```
+
+## Signed Releases on All OSes
+
+The release workflow (`.github/workflows/release.yml`) is configured to sign platform artifacts on macOS, Windows, and Linux.
+
+macOS (Developer ID + notarization):
+
+- `APPLE_CERTIFICATE` (base64-encoded `.p12` Developer ID Application certificate)
+- `APPLE_CERTIFICATE_PASSWORD`
+- `APPLE_SIGNING_IDENTITY` (for example: `Developer ID Application: Your Name (TEAMID)`)
+- Notarization option A (Apple ID): `APPLE_ID`, `APPLE_PASSWORD` (app-specific password), `APPLE_TEAM_ID`
+- Notarization option B (App Store Connect API): `APPLE_API_KEY`, `APPLE_API_ISSUER`, `APPLE_API_KEY_P8`
+
+Windows (code signing):
+
+- `WINDOWS_CERTIFICATE` (base64-encoded `.pfx`)
+- `WINDOWS_CERTIFICATE_PASSWORD`
+- Optional: `WINDOWS_TIMESTAMP_URL` (defaults to `http://timestamp.digicert.com`)
+
+Linux (AppImage + RPM signing):
+
+- `TAURI_SIGNING_RPM_KEY` (ASCII-armored private GPG key)
+- `TAURI_SIGNING_RPM_KEY_PASSPHRASE` (if your key is passphrase-protected)
+- `APPIMAGETOOL_SIGN_PASSPHRASE`
+- Optional: `SIGN_KEY` (specific GPG key id/fingerprint for AppImage signing)
+
+After secrets are configured, pushing a tag like `v1.0.1` builds signed artifacts for all platforms.

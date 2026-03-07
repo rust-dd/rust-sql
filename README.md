@@ -93,7 +93,7 @@ yarn tauri build
 
 ## Release Workflow
 
-The release workflow (`.github/workflows/release.yml`) builds release artifacts and signs updater metadata when the updater secrets are configured.
+The release workflow (`.github/workflows/release.yml`) builds release artifacts, signs updater metadata, and currently signs Windows and Linux artifacts. macOS signing/notarization is intentionally still pending.
 
 Updater support is now wired into the app runtime as well. The app checks GitHub Releases via `https://github.com/rust-dd/rust-sql/releases/latest/download/latest.json`, and the packaged build enables a manual "Check for Updates" action plus a silent startup check.
 
@@ -103,13 +103,8 @@ Required updater secrets:
 - `TAURI_SIGNING_PRIVATE_KEY` (path or content of the private updater signing key)
 - Optional: `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`
 
-Future platform code signing / notarization secrets:
+Platform code signing / notarization secrets:
 
-- macOS: `APPLE_CERTIFICATE` (base64-encoded `.p12` Developer ID Application certificate)
-- macOS: `APPLE_CERTIFICATE_PASSWORD`
-- macOS: `APPLE_SIGNING_IDENTITY` (for example: `Developer ID Application: Your Name (TEAMID)`)
-- macOS notarization option A: `APPLE_ID`, `APPLE_PASSWORD` (app-specific password), `APPLE_TEAM_ID`
-- macOS notarization option B: `APPLE_API_KEY`, `APPLE_API_ISSUER`, `APPLE_API_KEY_P8`
 - Windows: `WINDOWS_CERTIFICATE` (base64-encoded `.pfx`)
 - Windows: `WINDOWS_CERTIFICATE_PASSWORD`
 - Windows optional: `WINDOWS_TIMESTAMP_URL` (defaults to `http://timestamp.digicert.com`)
@@ -117,13 +112,18 @@ Future platform code signing / notarization secrets:
 - Linux optional: `TAURI_SIGNING_RPM_KEY_PASSPHRASE`
 - Linux/AppImage: `APPIMAGETOOL_SIGN_PASSPHRASE`
 - Linux optional: `SIGN_KEY` (specific GPG key id or fingerprint for AppImage signing)
+- macOS later: `APPLE_CERTIFICATE` (base64-encoded `.p12` Developer ID Application certificate)
+- macOS later: `APPLE_CERTIFICATE_PASSWORD`
+- macOS later: `APPLE_SIGNING_IDENTITY` (for example: `Developer ID Application: Your Name (TEAMID)`)
+- macOS later notarization option A: `APPLE_ID`, `APPLE_PASSWORD` (app-specific password), `APPLE_TEAM_ID`
+- macOS later notarization option B: `APPLE_API_KEY`, `APPLE_API_ISSUER`, `APPLE_API_KEY_P8`
 
 Notes:
 
 - `bundle.createUpdaterArtifacts` is enabled, so release builds will generate signed updater artifacts and `latest.json`.
 - The updater uses the latest published GitHub release. Draft releases are not visible to clients until you publish them.
 - If you build locally without `TAURI_UPDATER_PUBLIC_KEY`, the app still builds, but the updater plugin stays disabled for that build.
-- The current release workflow only requires the updater secrets above. The platform code signing secrets are documented here for the next iteration when signed platform artifacts are re-enabled.
+- The current release workflow requires the updater secrets above, plus the Windows and Linux signing secrets listed here. macOS signing secrets are documented for the later notarized rollout.
 
 For manual runs (`workflow_dispatch`), provide the release tag explicitly, for example `v1.0.1`.
 

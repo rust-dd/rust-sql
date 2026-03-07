@@ -45,7 +45,7 @@ jobs:
         if: matrix.platform == 'ubuntu-22.04'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev libjavascriptcoregtk-4.1-dev
+          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev libjavascriptcoregtk-4.1-dev gnupg rpm
 
       - name: Rust cache
         uses: swatinem/rust-cache@v2
@@ -78,11 +78,27 @@ jobs:
       - name: Validate updater signing secrets
         shell: bash
         env:
+          PLATFORM: ${{ matrix.platform }}
           TAURI_UPDATER_PUBLIC_KEY: ${{ secrets.TAURI_UPDATER_PUBLIC_KEY }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          WINDOWS_CERTIFICATE: ${{ secrets.WINDOWS_CERTIFICATE }}
+          WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
+          TAURI_SIGNING_RPM_KEY: ${{ secrets.TAURI_SIGNING_RPM_KEY }}
+          APPIMAGETOOL_SIGN_PASSPHRASE: ${{ secrets.APPIMAGETOOL_SIGN_PASSPHRASE }}
         run: |
           [ -n "$TAURI_UPDATER_PUBLIC_KEY" ] || { echo "Missing TAURI_UPDATER_PUBLIC_KEY secret."; exit 1; }
           [ -n "$TAURI_SIGNING_PRIVATE_KEY" ] || { echo "Missing TAURI_SIGNING_PRIVATE_KEY secret."; exit 1; }
+
+          case "$PLATFORM" in
+            windows-latest)
+              [ -n "$WINDOWS_CERTIFICATE" ] || { echo "Missing WINDOWS_CERTIFICATE secret."; exit 1; }
+              [ -n "$WINDOWS_CERTIFICATE_PASSWORD" ] || { echo "Missing WINDOWS_CERTIFICATE_PASSWORD secret."; exit 1; }
+              ;;
+            ubuntu-22.04)
+              [ -n "$TAURI_SIGNING_RPM_KEY" ] || { echo "Missing TAURI_SIGNING_RPM_KEY secret."; exit 1; }
+              [ -n "$APPIMAGETOOL_SIGN_PASSPHRASE" ] || { echo "Missing APPIMAGETOOL_SIGN_PASSPHRASE secret."; exit 1; }
+              ;;
+          esac
 
       - name: Inject updater public key into Tauri config
         shell: bash
@@ -91,12 +107,76 @@ jobs:
         run: |
           node -e 'const fs=require("fs"); const path="src-tauri/tauri.conf.json"; const config=JSON.parse(fs.readFileSync(path,"utf8")); config.plugins ??= {}; config.plugins.updater ??= {}; config.plugins.updater.pubkey = process.env.TAURI_UPDATER_PUBLIC_KEY; fs.writeFileSync(path, JSON.stringify(config, null, 2) + "\n");'
 
+      - name: Import Windows signing certificate
+        if: matrix.platform == 'windows-latest'
+        shell: pwsh
+        env:
+          WINDOWS_CERTIFICATE: ${{ secrets.WINDOWS_CERTIFICATE }}
+          WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
+        run: |
+          New-Item -ItemType Directory -Path certificate -Force | Out-Null
+          Set-Content -Path certificate/tempCert.txt -Value $env:WINDOWS_CERTIFICATE -NoNewline
+          certutil -decode certificate/tempCert.txt certificate/certificate.pfx | Out-Null
+          Remove-Item -Path certificate/tempCert.txt
+
+          $certificate = Import-PfxCertificate `
+            -FilePath certificate/certificate.pfx `
+            -CertStoreLocation Cert:\CurrentUser\My `
+            -Password (ConvertTo-SecureString -String $env:WINDOWS_CERTIFICATE_PASSWORD -Force -AsPlainText)
+
+          if (-not $certificate) {
+            Write-Error "Failed to import Windows signing certificate."
+            exit 1
+          }
+
+          "WINDOWS_CERTIFICATE_THUMBPRINT=$($certificate.Thumbprint)" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
+      - name: Configure Windows signing
+        if: matrix.platform == 'windows-latest'
+        shell: pwsh
+        env:
+          WINDOWS_TIMESTAMP_URL: ${{ secrets.WINDOWS_TIMESTAMP_URL }}
+        run: |
+          $configPath = "src-tauri/tauri.conf.json"
+          $config = Get-Content -Path $configPath -Raw | ConvertFrom-Json
+          $timestampUrl = if ($env:WINDOWS_TIMESTAMP_URL) { $env:WINDOWS_TIMESTAMP_URL } else { "http://timestamp.digicert.com" }
+
+          if (-not $env:WINDOWS_CERTIFICATE_THUMBPRINT) {
+            Write-Error "Missing imported Windows certificate thumbprint."
+            exit 1
+          }
+
+          $config.bundle.windows = [PSCustomObject]@{
+            certificateThumbprint = $env:WINDOWS_CERTIFICATE_THUMBPRINT
+            digestAlgorithm = "sha256"
+            timestampUrl = $timestampUrl
+          }
+
+          $config | ConvertTo-Json -Depth 100 | Set-Content -Path $configPath -Encoding utf8NoBOM
+
+      - name: Import Linux signing key (AppImage + RPM)
+        if: matrix.platform == 'ubuntu-22.04'
+        env:
+          TAURI_SIGNING_RPM_KEY: ${{ secrets.TAURI_SIGNING_RPM_KEY }}
+        run: |
+          mkdir -p "$HOME/.gnupg"
+          chmod 700 "$HOME/.gnupg"
+          printf '%s' "${TAURI_SIGNING_RPM_KEY}" | gpg --batch --import
+
       - uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAURI_UPDATER_PUBLIC_KEY: ${{ secrets.TAURI_UPDATER_PUBLIC_KEY }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+          WINDOWS_CERTIFICATE: ${{ secrets.WINDOWS_CERTIFICATE }}
+          WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
+          SIGN: ${{ matrix.platform == 'ubuntu-22.04' && '1' || '' }}
+          APPIMAGETOOL_FORCE_SIGN: ${{ matrix.platform == 'ubuntu-22.04' && '1' || '' }}
+          SIGN_KEY: ${{ secrets.SIGN_KEY }}
+          APPIMAGETOOL_SIGN_PASSPHRASE: ${{ secrets.APPIMAGETOOL_SIGN_PASSPHRASE }}
+          TAURI_SIGNING_RPM_KEY: ${{ secrets.TAURI_SIGNING_RPM_KEY }}
+          TAURI_SIGNING_RPM_KEY_PASSPHRASE: ${{ secrets.TAURI_SIGNING_RPM_KEY_PASSPHRASE }}
         with:
           tagName: ${{ steps.release_meta.outputs.tag }}
           releaseName: "RSQL ${{ steps.release_meta.outputs.tag }}"

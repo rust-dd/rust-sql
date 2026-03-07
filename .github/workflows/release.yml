@@ -4,6 +4,11 @@ on:
     tags:
       - "v*"
   workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag (for example v1.0.1)"
+        required: true
+        type: string
 
 jobs:
   release:
@@ -50,14 +55,53 @@ jobs:
       - name: Install frontend dependencies
         run: yarn install --frozen-lockfile
 
+      - name: Resolve release tag
+        id: release_meta
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            tag="${{ inputs.tag }}"
+          else
+            tag="${{ github.ref_name }}"
+          fi
+
+          case "$tag" in
+            v*) ;;
+            *)
+              echo "Release tag must start with v, got: $tag"
+              exit 1
+              ;;
+          esac
+
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+
+      - name: Validate updater signing secrets
+        shell: bash
+        env:
+          TAURI_UPDATER_PUBLIC_KEY: ${{ secrets.TAURI_UPDATER_PUBLIC_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+        run: |
+          [ -n "$TAURI_UPDATER_PUBLIC_KEY" ] || { echo "Missing TAURI_UPDATER_PUBLIC_KEY secret."; exit 1; }
+          [ -n "$TAURI_SIGNING_PRIVATE_KEY" ] || { echo "Missing TAURI_SIGNING_PRIVATE_KEY secret."; exit 1; }
+
+      - name: Inject updater public key into Tauri config
+        shell: bash
+        env:
+          TAURI_UPDATER_PUBLIC_KEY: ${{ secrets.TAURI_UPDATER_PUBLIC_KEY }}
+        run: |
+          node -e 'const fs=require("fs"); const path="src-tauri/tauri.conf.json"; const config=JSON.parse(fs.readFileSync(path,"utf8")); config.plugins ??= {}; config.plugins.updater ??= {}; config.plugins.updater.pubkey = process.env.TAURI_UPDATER_PUBLIC_KEY; fs.writeFileSync(path, JSON.stringify(config, null, 2) + "\n");'
+
       - uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_UPDATER_PUBLIC_KEY: ${{ secrets.TAURI_UPDATER_PUBLIC_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
-          tagName: ${{ github.ref_name }}
-          releaseName: "RSQL ${{ github.ref_name }}"
+          tagName: ${{ steps.release_meta.outputs.tag }}
+          releaseName: "RSQL ${{ steps.release_meta.outputs.tag }}"
           releaseBody: "See the assets to download and install this version."
           releaseDraft: true
-          prerelease: ${{ contains(github.ref_name, '-rc') }}
+          prerelease: ${{ contains(steps.release_meta.outputs.tag, '-rc') }}
           args: ${{ matrix.args }}
           tauriScript: npx tauri

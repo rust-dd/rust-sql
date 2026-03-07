@@ -174,7 +174,7 @@ fn main() {
                         "Modern SQL client for PostgreSQL.\nBuilt with Tauri, React, and Rust."
                             .into(),
                     ),
-                    website: Some("https://github.com/rust-dd/rsql".into()),
+                    website: Some("https://github.com/rust-dd/rust-sql".into()),
                     website_label: Some("GitHub".into()),
                     ..Default::default()
                 }))

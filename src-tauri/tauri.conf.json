@@ -41,7 +41,7 @@
   "plugins": {
     "updater": {
       "endpoints": [
-        "https://github.com/rust-dd/rsql/releases/latest/download/latest.json"
+        "https://github.com/rust-dd/rust-sql/releases/latest/download/latest.json"
       ],
       "windows": {
         "installMode": "passive"

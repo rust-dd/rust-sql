@@ -146,6 +146,14 @@ jobs:
             exit 1
           }
 
+          if (-not $config.bundle) {
+            $config | Add-Member -NotePropertyName bundle -NotePropertyValue ([PSCustomObject]@{})
+          }
+
+          if (-not $config.bundle.PSObject.Properties["windows"]) {
+            $config.bundle | Add-Member -NotePropertyName windows -NotePropertyValue ([PSCustomObject]@{})
+          }
+
           $config.bundle.windows = [PSCustomObject]@{
             certificateThumbprint = $env:WINDOWS_CERTIFICATE_THUMBPRINT
             digestAlgorithm = "sha256"

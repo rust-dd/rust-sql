@@ -53,7 +53,7 @@ export interface StreamCallbacks {
 }
 
 export interface DatabaseDriver {
-  connect(projectId: string, key: [string, string, string, string, string, string]): Promise<ProjectConnectionStatus>;
+  connect(projectId: string, key: [string, string, string, string, string, string], ssh?: string[]): Promise<ProjectConnectionStatus>;
   cancelQuery?(projectId: string): Promise<boolean>;
   loadSchemas(projectId: string): Promise<string[]>;
   loadTables(projectId: string, schema: string): Promise<WireTableInfo[]>;
@@ -96,6 +96,8 @@ export interface DatabaseDriver {
   loadLocks?(projectId: string): Promise<string[][]>;
   loadIndexUsage?(projectId: string): Promise<string[][]>;
   loadTableBloat?(projectId: string): Promise<string[][]>;
+  loadDatabases?(projectId: string): Promise<string[]>;
+  loadTablespaces?(projectId: string): Promise<[string, string, string][]>;
   loadExtensions?(projectId: string): Promise<string[][]>;
   loadAvailableExtensions?(projectId: string): Promise<string[][]>;
   loadEnumTypes?(projectId: string): Promise<string[][]>;
@@ -149,8 +151,8 @@ function parseTriggerFunctionInfo(wire: WireTriggerFunctionInfo[]): TriggerFunct
 }
 
 class PostgreSQLDriver implements DatabaseDriver {
-  async connect(projectId: string, key: [string, string, string, string, string, string]) {
-    return invoke<ProjectConnectionStatus>("pgsql_connector", { project_id: projectId, key });
+  async connect(projectId: string, key: [string, string, string, string, string, string], ssh?: string[]) {
+    return invoke<ProjectConnectionStatus>("pgsql_connector", { project_id: projectId, key, ssh: ssh ?? null });
   }
   async cancelQuery(projectId: string) {
     return invoke<boolean>("pgsql_cancel_query", { project_id: projectId });
@@ -344,6 +346,12 @@ class PostgreSQLDriver implements DatabaseDriver {
   }
   async loadTableBloat(projectId: string) {
     return invoke<string[][]>("pgsql_load_table_bloat", { project_id: projectId });
+  }
+  async loadDatabases(projectId: string) {
+    return invoke<string[]>("pgsql_load_databases", { project_id: projectId });
+  }
+  async loadTablespaces(projectId: string) {
+    return invoke<[string, string, string][]>("pgsql_load_tablespaces", { project_id: projectId });
   }
   async loadExtensions(projectId: string) {
     return invoke<string[][]>("pgsql_load_extensions", { project_id: projectId });

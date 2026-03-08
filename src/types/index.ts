@@ -6,6 +6,12 @@ export interface ProjectDetails {
   host: string;
   port: string;
   ssl: string;
+  sshEnabled: string;
+  sshHost: string;
+  sshPort: string;
+  sshUser: string;
+  sshPassword: string;
+  sshKeyPath: string;
 }
 
 export type DriverType = "PGSQL";

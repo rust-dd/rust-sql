@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { toast } from "sonner";
 import { DriverFactory } from "@/lib/database-driver";
 import type {
   ProjectMap,
@@ -27,6 +28,7 @@ import {
 interface ProjectState {
   projects: ProjectMap;
   status: Record<string, ProjectConnectionStatus>;
+  connectionErrors: Record<string, string>;
   schemas: Record<string, string[]>;
   tables: Record<string, TableInfo[]>;
   columns: Record<string, string[]>;
@@ -36,6 +38,8 @@ interface ProjectState {
   triggers: Record<string, TriggerDetail[]>;
   rules: Record<string, RuleDetail[]>;
   policies: Record<string, PolicyDetail[]>;
+  serverDatabases: Record<string, string[]>;
+  serverTablespaces: Record<string, [string, string, string][]>;
   views: Record<string, string[]>;
   materializedViews: Record<string, string[]>;
   functions: Record<string, FunctionInfo[]>;
@@ -54,11 +58,13 @@ interface ProjectState {
   deleteProject: (projectId: string) => Promise<void>;
   saveConnection: (name: string, details: ProjectDetails) => Promise<void>;
   updateConnection: (name: string, details: ProjectDetails) => Promise<void>;
+  addDatabaseToServer: (sourceProjectId: string, name: string, database: string) => Promise<void>;
 }
 
 export const useProjectStore = create<ProjectState>((set, get) => ({
   projects: {},
   status: {},
+  connectionErrors: {},
   schemas: {},
   tables: {},
   columns: {},
@@ -68,6 +74,8 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   triggers: {},
   rules: {},
   policies: {},
+  serverDatabases: {},
+  serverTablespaces: {},
   views: {},
   materializedViews: {},
   functions: {},
@@ -87,22 +95,42 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     const d = projects[projectId];
     if (!d) return;
 
-    set((s) => ({ status: { ...s.status, [projectId]: PCS.Connecting } }));
+    set((s) => ({
+      status: { ...s.status, [projectId]: PCS.Connecting },
+      connectionErrors: { ...s.connectionErrors, [projectId]: "" },
+    }));
 
     try {
       const driver = DriverFactory.getDriver(d.driver);
       const key: [string, string, string, string, string, string] = [
         d.username, d.password, d.database, d.host, d.port, d.ssl,
       ];
-      const st = await driver.connect(projectId, key);
+      const ssh = d.sshEnabled === "true"
+        ? [d.sshHost, d.sshPort || "22", d.sshUser, d.sshPassword, d.sshKeyPath]
+        : undefined;
+      const st = await driver.connect(projectId, key, ssh);
       set((s) => ({ status: { ...s.status, [projectId]: st } }));
 
       if (st === PCS.Connected) {
-        const sc = await driver.loadSchemas(projectId);
-        set((s) => ({ schemas: { ...s.schemas, [projectId]: sc } }));
+        const [sc, dbs, tsp] = await Promise.allSettled([
+          driver.loadSchemas(projectId),
+          driver.loadDatabases?.(projectId),
+          driver.loadTablespaces?.(projectId),
+        ]);
+        set((s) => ({
+          schemas: { ...s.schemas, [projectId]: sc.status === "fulfilled" ? sc.value : [] },
+          serverDatabases: { ...s.serverDatabases, [projectId]: dbs.status === "fulfilled" && dbs.value ? dbs.value : [] },
+          serverTablespaces: { ...s.serverTablespaces, [projectId]: tsp.status === "fulfilled" && tsp.value ? tsp.value : [] },
+        }));
       }
-    } catch {
-      set((s) => ({ status: { ...s.status, [projectId]: PCS.Failed } }));
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : typeof err === "string" ? err : "Connection failed";
+      set((s) => ({
+        status: { ...s.status, [projectId]: PCS.Failed },
+        connectionErrors: { ...s.connectionErrors, [projectId]: msg },
+      }));
+      const d = projects[projectId];
+      toast.error(`Connection failed: ${d?.database || projectId}`, { description: msg, duration: 10000 });
     }
   },
 
@@ -248,6 +276,8 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     const arr = [
       details.driver, details.username, details.password,
       details.database, details.host, details.port, details.ssl,
+      details.sshEnabled ?? "false", details.sshHost ?? "", details.sshPort ?? "22",
+      details.sshUser ?? "", details.sshPassword ?? "", details.sshKeyPath ?? "",
     ];
     await insertProject(name, arr);
     await get().loadProjects();
@@ -257,9 +287,19 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     const arr = [
       details.driver, details.username, details.password,
       details.database, details.host, details.port, details.ssl,
+      details.sshEnabled ?? "false", details.sshHost ?? "", details.sshPort ?? "22",
+      details.sshUser ?? "", details.sshPassword ?? "", details.sshKeyPath ?? "",
     ];
     await insertProject(name, arr);
     await get().loadProjects();
+  },
+
+  addDatabaseToServer: async (sourceProjectId: string, name: string, database: string) => {
+    const { projects } = get();
+    const source = projects[sourceProjectId];
+    if (!source) return;
+    const details = { ...source, database };
+    await get().saveConnection(name, details);
   },
 }));
 
@@ -272,5 +312,11 @@ function parseProjectDetails(arr: string[]): ProjectDetails {
     host: arr[4] ?? "",
     port: arr[5] ?? "",
     ssl: arr[6] ?? "false",
+    sshEnabled: arr[7] ?? "false",
+    sshHost: arr[8] ?? "",
+    sshPort: arr[9] ?? "22",
+    sshUser: arr[10] ?? "",
+    sshPassword: arr[11] ?? "",
+    sshKeyPath: arr[12] ?? "",
   };
 }

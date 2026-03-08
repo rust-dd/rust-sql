@@ -24,6 +24,12 @@ export interface ConnectionConfig {
   username: string
   password: string
   ssl: boolean
+  sshEnabled: boolean
+  sshHost: string
+  sshPort: string
+  sshUser: string
+  sshPassword: string
+  sshKeyPath: string
 }
 
 const defaultForm: Omit<ConnectionConfig, "id"> = {
@@ -35,6 +41,12 @@ const defaultForm: Omit<ConnectionConfig, "id"> = {
   username: "",
   password: "",
   ssl: false,
+  sshEnabled: false,
+  sshHost: "",
+  sshPort: "22",
+  sshUser: "",
+  sshPassword: "",
+  sshKeyPath: "",
 }
 
 function parseConnectionString(url: string): Partial<Omit<ConnectionConfig, "id">> | null {
@@ -75,6 +87,12 @@ export function ConnectionModal({ open, onOpenChange, onSave, editData }: Connec
         username: editData.details.username,
         password: editData.details.password,
         ssl: editData.details.ssl === "true",
+        sshEnabled: editData.details.sshEnabled === "true",
+        sshHost: editData.details.sshHost || "",
+        sshPort: editData.details.sshPort || "22",
+        sshUser: editData.details.sshUser || "",
+        sshPassword: editData.details.sshPassword || "",
+        sshKeyPath: editData.details.sshKeyPath || "",
       })
       setConnString("")
       setConnStringError(false)
@@ -249,6 +267,78 @@ export function ConnectionModal({ open, onOpenChange, onSave, editData }: Connec
             <Label htmlFor="ssl" className="font-mono text-xs text-foreground cursor-pointer">
               Use SSL
             </Label>
+          </div>
+
+          <div className="space-y-2 pt-2">
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="sshEnabled"
+                checked={formData.sshEnabled}
+                onChange={(e) => setFormData({ ...formData, sshEnabled: e.target.checked })}
+                className="h-4 w-4 rounded border-border bg-input"
+              />
+              <Label htmlFor="sshEnabled" className="font-mono text-xs text-foreground cursor-pointer">
+                SSH Tunnel
+              </Label>
+            </div>
+            {formData.sshEnabled && (
+              <div className="space-y-3 rounded-lg border border-border/50 p-3 bg-muted/20">
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <Label htmlFor="sshHost" className="font-mono text-[11px] text-muted-foreground">SSH Host</Label>
+                    <Input
+                      id="sshHost"
+                      value={formData.sshHost}
+                      onChange={(e) => setFormData({ ...formData, sshHost: e.target.value })}
+                      placeholder="bastion.example.com"
+                      className="bg-input/80 border-border/50 text-foreground font-mono text-sm rounded-lg h-8"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor="sshPort" className="font-mono text-[11px] text-muted-foreground">SSH Port</Label>
+                    <Input
+                      id="sshPort"
+                      value={formData.sshPort}
+                      onChange={(e) => setFormData({ ...formData, sshPort: e.target.value })}
+                      placeholder="22"
+                      className="bg-input/80 border-border/50 text-foreground font-mono text-sm rounded-lg h-8"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="sshUser" className="font-mono text-[11px] text-muted-foreground">SSH User</Label>
+                  <Input
+                    id="sshUser"
+                    value={formData.sshUser}
+                    onChange={(e) => setFormData({ ...formData, sshUser: e.target.value })}
+                    placeholder="ubuntu"
+                    className="bg-input/80 border-border/50 text-foreground font-mono text-sm rounded-lg h-8"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="sshPassword" className="font-mono text-[11px] text-muted-foreground">SSH Password</Label>
+                  <Input
+                    id="sshPassword"
+                    type="password"
+                    value={formData.sshPassword}
+                    onChange={(e) => setFormData({ ...formData, sshPassword: e.target.value })}
+                    placeholder="••••••••"
+                    className="bg-input/80 border-border/50 text-foreground font-mono text-sm rounded-lg h-8"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="sshKeyPath" className="font-mono text-[11px] text-muted-foreground">Private Key Path</Label>
+                  <Input
+                    id="sshKeyPath"
+                    value={formData.sshKeyPath}
+                    onChange={(e) => setFormData({ ...formData, sshKeyPath: e.target.value })}
+                    placeholder="~/.ssh/id_rsa"
+                    className="bg-input/80 border-border/50 text-foreground font-mono text-sm rounded-lg h-8"
+                  />
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="flex justify-end gap-2 pt-4">

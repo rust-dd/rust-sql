@@ -14,14 +14,14 @@ use crate::drivers::common::{
     IndexDetail, ObjectStats, PgRole, PolicyDetail, RuleDetail, SchemaObject, TableGrant,
     TriggerDetail, close_virtual, discover_notify_channels, execute_query, execute_query_packed,
     execute_query_streamed, execute_virtual, extract_schema_objects, fetch_virtual_page,
-    generate_full_ddl, get_pool, import_csv_to_table, load_active_locks, load_activity,
+    generate_full_ddl, get_pool, import_csv_to_table, load_active_locks, load_activity, load_databases,
     load_available_extensions, load_column_details, load_columns, load_constraints,
     load_database_grants, load_database_stats, load_enum_types, load_extensions, load_fk_details,
     load_foreign_keys, load_function_info, load_functions, load_index_usage, load_indexes,
     load_materialized_views, load_matview_info, load_pg_settings, load_policies, load_roles,
     load_rules, load_schemas, load_table_bloat, load_table_grants, load_table_statistics,
     load_table_stats, load_tables, load_trigger_functions, load_triggers, load_view_info,
-    load_views, parse_csv_preview,
+    load_tablespaces, load_views, parse_csv_preview,
 };
 
 use futures_util::StreamExt;
@@ -38,6 +38,18 @@ const SNAPSHOT_PAGE_WRITE_RETRIES: usize = 3;
 fn is_sqlite_lock_error(message: &str) -> bool {
     let lower = message.to_ascii_lowercase();
     lower.contains("database is locked") || lower.contains("database busy")
+}
+
+/// Walk the full std::error::Error source chain into a single string.
+fn full_error_chain(e: &dyn std::error::Error) -> String {
+    let mut msg = e.to_string();
+    let mut src = e.source();
+    while let Some(cause) = src {
+        msg.push_str(": ");
+        msg.push_str(&cause.to_string());
+        src = cause.source();
+    }
+    msg
 }
 
 fn create_pg_pool(
@@ -369,6 +381,7 @@ async fn restore_virtual_from_snapshot(
 pub async fn pgsql_connector(
     project_id: &str,
     key: Option<[&str; 6]>,
+    ssh: Option<Vec<String>>,
     app: AppHandle,
 ) -> Result<ProjectConnectionStatus> {
     let app_state = app.state::<AppState>();
@@ -416,12 +429,62 @@ pub async fn pgsql_connector(
         }
     };
 
-    let port: u16 = port_str.parse().unwrap_or(5432);
+    // Determine effective host/port, potentially through an SSH tunnel
+    let (effective_host, effective_port_str) = if let Some(ref ssh_params) = ssh {
+        // ssh_params: [ssh_host, ssh_port, ssh_user, ssh_password, ssh_key_path]
+        if ssh_params.len() >= 3 && !ssh_params[0].is_empty() {
+            let ssh_host = &ssh_params[0];
+            let ssh_port: u16 = ssh_params[1].parse().unwrap_or(22);
+            let ssh_user = &ssh_params[2];
+            let ssh_password = ssh_params
+                .get(3)
+                .filter(|s| !s.is_empty())
+                .map(|s| s.as_str());
+            let ssh_key_path = ssh_params
+                .get(4)
+                .filter(|s| !s.is_empty())
+                .map(|s| s.as_str());
+
+            // Stop any existing tunnel for this project
+            app_state
+                .ssh_tunnels
+                .lock()
+                .await
+                .remove(project_id);
+
+            let tunnel = crate::ssh::start_tunnel(
+                ssh_host,
+                ssh_port,
+                ssh_user,
+                ssh_password,
+                ssh_key_path,
+                &host,
+                port_str.parse().unwrap_or(5432),
+            )
+            .await
+            .map_err(|e| AppError::ConnectionFailed(e))?;
+
+            let local_port = tunnel.local_port;
+            app_state
+                .ssh_tunnels
+                .lock()
+                .await
+                .insert(project_id.to_string(), tunnel);
+
+            ("127.0.0.1".to_string(), local_port.to_string())
+        } else {
+            (host.clone(), port_str.clone())
+        }
+    } else {
+        (host.clone(), port_str.clone())
+    };
+
+    let port: u16 = effective_port_str.parse().unwrap_or(5432);
     let mut cfg = Config::new();
     cfg.user(&user)
         .password(&password)
         .dbname(&database)
-        .host(&host)
+        .host(&effective_host)
         .port(port);
 
     // Create two pools: one for user queries, one for metadata.
@@ -429,14 +492,14 @@ pub async fn pgsql_connector(
         Ok(p) => Arc::new(p),
         Err(e) => {
             tracing::error!("Query pool creation failed: {:?}", e);
-            return Ok(ProjectConnectionStatus::Failed);
+            return Err(AppError::ConnectionFailed(full_error_chain(&e)).into());
         }
     };
     let meta_pool = match create_pg_pool(&cfg, use_ssl, 8) {
         Ok(p) => Arc::new(p),
         Err(e) => {
             tracing::error!("Meta pool creation failed: {:?}", e);
-            return Ok(ProjectConnectionStatus::Failed);
+            return Err(AppError::ConnectionFailed(full_error_chain(&e)).into());
         }
     };
 
@@ -445,12 +508,12 @@ pub async fn pgsql_connector(
         Ok(c) => c,
         Err(e) => {
             tracing::error!("Query pool initial connection failed: {:?}", e);
-            return Ok(ProjectConnectionStatus::Failed);
+            return Err(AppError::ConnectionFailed(full_error_chain(&e)).into());
         }
     };
     if let Err(e) = meta_pool.get().await {
         tracing::error!("Meta pool initial connection failed: {:?}", e);
-        return Ok(ProjectConnectionStatus::Failed);
+        return Err(AppError::ConnectionFailed(full_error_chain(&e)).into());
     }
 
     {
@@ -471,6 +534,31 @@ pub async fn pgsql_connector(
     }
 
     Ok(ProjectConnectionStatus::Connected)
+}
+
+#[tauri::command(rename_all = "snake_case")]
+pub async fn pgsql_load_databases(project_id: &str, app: AppHandle) -> Result<Vec<String>> {
+    let app_state = app.state::<AppState>();
+    let pool = {
+        let pools = app_state.meta_clients.lock().await;
+        get_pool(&pools, project_id)?
+    };
+
+    load_databases(&pool).await.map_err(Into::into)
+}
+
+#[tauri::command(rename_all = "snake_case")]
+pub async fn pgsql_load_tablespaces(
+    project_id: &str,
+    app: AppHandle,
+) -> Result<Vec<(String, String, String)>> {
+    let app_state = app.state::<AppState>();
+    let pool = {
+        let pools = app_state.meta_clients.lock().await;
+        get_pool(&pools, project_id)?
+    };
+
+    load_tablespaces(&pool).await.map_err(Into::into)
 }
 
 #[tauri::command(rename_all = "snake_case")]

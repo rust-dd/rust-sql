@@ -4,6 +4,7 @@
 mod common;
 mod dbs;
 mod drivers;
+mod ssh;
 mod terminal;
 mod utils;
 
@@ -26,6 +27,7 @@ pub struct AppState {
     pub resource_monitor: Arc<Mutex<utils::ResourceMonitor>>,
     pub virtual_cache: Arc<Mutex<drivers::common::VirtualCache>>,
     pub notify_handles: Arc<Mutex<BTreeMap<String, tokio::task::JoinHandle<()>>>>,
+    pub ssh_tunnels: Arc<Mutex<BTreeMap<String, ssh::SshTunnel>>>,
 }
 
 fn main() {
@@ -146,6 +148,26 @@ fn main() {
                 .await
                 .ok();
 
+                // SSH tunnel columns migration
+                for col in [
+                    "ssh_enabled",
+                    "ssh_host",
+                    "ssh_port",
+                    "ssh_user",
+                    "ssh_password",
+                    "ssh_key_path",
+                ] {
+                    conn.execute(
+                        &format!(
+                            "ALTER TABLE projects ADD COLUMN {} TEXT NOT NULL DEFAULT ''",
+                            col
+                        ),
+                        (),
+                    )
+                    .await
+                    .ok(); // Ignore "column already exists" errors
+                }
+
                 let state = AppState {
                     clients: Arc::new(Mutex::new(BTreeMap::new())),
                     meta_clients: Arc::new(Mutex::new(BTreeMap::new())),
@@ -155,6 +177,7 @@ fn main() {
                     resource_monitor: Arc::new(Mutex::new(utils::ResourceMonitor::new())),
                     virtual_cache: Arc::new(Mutex::new(BTreeMap::new())),
                     notify_handles: Arc::new(Mutex::new(BTreeMap::new())),
+                    ssh_tunnels: Arc::new(Mutex::new(BTreeMap::new())),
                 };
                 app_handle.manage(state);
 
@@ -237,6 +260,8 @@ fn main() {
             dbs::workspace::workspace_load_all,
             dbs::workspace::workspace_delete,
             drivers::pgsql::pgsql_connector,
+            drivers::pgsql::pgsql_load_databases,
+            drivers::pgsql::pgsql_load_tablespaces,
             drivers::pgsql::pgsql_load_schemas,
             drivers::pgsql::pgsql_load_tables,
             drivers::pgsql::pgsql_load_columns,

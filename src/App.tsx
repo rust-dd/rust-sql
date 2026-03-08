@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { Toaster } from "sonner";
 import { ConnectionModal } from "@/components/connection-modal";
 import { ResizeHandle } from "@/components/resize-handle";
 import { ServerSidebar } from "@/components/server-sidebar";
@@ -357,7 +358,7 @@ export default function App() {
   }, [cancelQuery, closeTab, runExplain]);
 
   const handleSaveConnection = useCallback(
-    async (connection: { name: string; driver: string; username: string; password: string; database: string; host: string; port: string; ssl: boolean }) => {
+    async (connection: { name: string; driver: string; username: string; password: string; database: string; host: string; port: string; ssl: boolean; sshEnabled?: boolean; sshHost?: string; sshPort?: string; sshUser?: string; sshPassword?: string; sshKeyPath?: string }) => {
       const details = {
         driver: connection.driver as "PGSQL",
         username: connection.username,
@@ -366,6 +367,12 @@ export default function App() {
         host: connection.host,
         port: connection.port,
         ssl: connection.ssl ? "true" : "false",
+        sshEnabled: connection.sshEnabled ? "true" : "false",
+        sshHost: connection.sshHost ?? "",
+        sshPort: connection.sshPort ?? "22",
+        sshUser: connection.sshUser ?? "",
+        sshPassword: connection.sshPassword ?? "",
+        sshKeyPath: connection.sshKeyPath ?? "",
       };
       if (editingConnection) {
         await updateConnection(connection.name, details);
@@ -558,6 +565,7 @@ export default function App() {
         onExplain={() => void runExplain()}
         onCheckUpdates={() => void checkForUpdates()}
       />
+      <Toaster theme="dark" position="bottom-right" richColors />
     </div>
   );
 }

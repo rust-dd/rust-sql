@@ -1,0 +1,17 @@
+{
+  "name": "RSQL",
+  "short_name": "RSQL",
+  "description": "Fast PostgreSQL client with schema navigation, EXPLAIN tools, and a browser sandbox.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#09090b",
+  "theme_color": "#09090b",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

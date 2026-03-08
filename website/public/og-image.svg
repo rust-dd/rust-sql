@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-labelledby="title desc">
+  <title id="title">RSQL</title>
+  <desc id="desc">Fast PostgreSQL client built with Rust and Tauri.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#09090b" />
+      <stop offset="100%" stop-color="#161620" />
+    </linearGradient>
+    <linearGradient id="accent" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#7c5bf0" />
+      <stop offset="100%" stop-color="#a855f7" />
+    </linearGradient>
+    <filter id="blur">
+      <feGaussianBlur stdDeviation="60" />
+    </filter>
+  </defs>
+
+  <rect width="1200" height="630" fill="url(#bg)" />
+  <circle cx="250" cy="110" r="180" fill="#7c5bf0" opacity="0.18" filter="url(#blur)" />
+  <circle cx="1010" cy="150" r="160" fill="#22c55e" opacity="0.12" filter="url(#blur)" />
+  <circle cx="950" cy="520" r="220" fill="#7c5bf0" opacity="0.12" filter="url(#blur)" />
+
+  <rect x="70" y="70" width="1060" height="490" rx="36" fill="rgba(16,16,23,0.72)" stroke="rgba(255,255,255,0.08)" />
+  <rect x="120" y="124" width="960" height="52" rx="20" fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.08)" />
+  <circle cx="156" cy="150" r="8" fill="#ef4444" opacity="0.85" />
+  <circle cx="182" cy="150" r="8" fill="#f59e0b" opacity="0.85" />
+  <circle cx="208" cy="150" r="8" fill="#22c55e" opacity="0.85" />
+
+  <text x="120" y="270" fill="#f7f7fb" font-family="Avenir Next, Helvetica Neue, Segoe UI, sans-serif" font-size="92" font-weight="700" letter-spacing="-4">
+    RSQL
+  </text>
+  <text x="120" y="346" fill="#f7f7fb" font-family="Avenir Next, Helvetica Neue, Segoe UI, sans-serif" font-size="56" font-weight="600" letter-spacing="-2">
+    Fast PostgreSQL client
+  </text>
+  <text x="120" y="402" fill="#a4a5b3" font-family="Avenir Next, Helvetica Neue, Segoe UI, sans-serif" font-size="30">
+    Query. Explain. Inspect schema. Handle large results.
+  </text>
+
+  <rect x="120" y="452" width="168" height="44" rx="22" fill="url(#accent)" />
+  <text x="204" y="481" text-anchor="middle" fill="#ffffff" font-family="Avenir Next, Helvetica Neue, Segoe UI, sans-serif" font-size="21" font-weight="700">
+    rust-dd.com
+  </text>
+
+  <rect x="734" y="236" width="290" height="212" rx="22" fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.08)" />
+  <text x="768" y="284" fill="#a4a5b3" font-family="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="18" letter-spacing="3">
+    SANDBOX
+  </text>
+  <text x="768" y="334" fill="#f7f7fb" font-family="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="22">
+    SELECT * FROM employees
+  </text>
+  <text x="768" y="370" fill="#f7f7fb" font-family="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="22">
+    ORDER BY salary DESC
+  </text>
+  <text x="768" y="406" fill="#7c5bf0" font-family="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="22">
+    LIMIT 100;
+  </text>
+  <text x="768" y="446" fill="#a4a5b3" font-family="Avenir Next, Helvetica Neue, Segoe UI, sans-serif" font-size="20">
+    Browser sandbox included
+  </text>
+</svg>

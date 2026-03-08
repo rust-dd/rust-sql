@@ -10,22 +10,26 @@ use crate::AppState;
 use crate::common::enums::{AppError, ProjectConnectionStatus};
 use crate::common::pgsql::{PgsqlLoadColumns, PgsqlLoadSchemas, PgsqlLoadTables};
 use crate::drivers::common::{
-    ColumnDetail, ConstraintDetail, DbStat, FKDetail, ForeignKeyInfo, FunctionInfo, IndexDetail,
-    ObjectStats, PolicyDetail, RuleDetail, TriggerDetail, close_virtual, execute_query,
-    execute_query_packed, execute_query_streamed, execute_virtual, fetch_virtual_page,
-    generate_full_ddl, get_pool, load_activity, load_column_details, load_columns,
-    load_constraints, load_database_stats, load_fk_details, load_foreign_keys, load_function_info,
-    load_functions, load_indexes, load_materialized_views, load_matview_info, load_policies,
-    load_rules, load_schemas, load_table_statistics, load_table_stats, load_tables,
-    load_trigger_functions, load_triggers, load_view_info, load_views,
+    ColumnDetail, ConstraintDetail, DbGrant, DbStat, FKDetail, ForeignKeyInfo, FunctionInfo,
+    IndexDetail, ObjectStats, PgRole, PolicyDetail, RuleDetail, SchemaObject, TableGrant,
+    TriggerDetail, close_virtual, execute_query, execute_query_packed, execute_query_streamed,
+    execute_virtual, extract_schema_objects, fetch_virtual_page, generate_full_ddl, get_pool,
+    import_csv_to_table, load_activity, load_column_details, load_columns, load_constraints,
+    load_database_grants, load_database_stats, load_fk_details, load_foreign_keys,
+    load_function_info, load_functions, load_indexes, load_materialized_views, load_matview_info,
+    load_policies, load_roles, load_rules, load_schemas, load_table_grants, load_table_statistics,
+    load_table_stats, load_tables, load_trigger_functions, load_triggers, load_view_info,
+    load_views, parse_csv_preview, discover_notify_channels,
+    load_active_locks, load_index_usage, load_table_bloat,
 };
 
 use native_tls::TlsConnector;
 use postgres_native_tls::MakeTlsConnector;
+use futures_util::StreamExt;
 use tauri::ipc::Response;
-use tauri::{AppHandle, Manager, Result, State};
+use tauri::{AppHandle, Emitter, Manager, Result, State};
 use tokio::time::{Duration, sleep};
-use tokio_postgres::{CancelToken, Config, NoTls};
+use tokio_postgres::{AsyncMessage, CancelToken, Config, NoTls};
 
 const CELL_SEP: char = '\x1F';
 const SNAPSHOT_PAGE_WRITE_RETRIES: usize = 3;
@@ -970,4 +974,288 @@ pub async fn pgsql_generate_ddl(
     generate_full_ddl(&client, schema, name, object_type)
         .await
         .map_err(Into::into)
+}
+
+#[tauri::command(rename_all = "snake_case")]
+pub async fn pgsql_csv_preview(file_path: &str) -> Result<(Vec<String>, Vec<Vec<String>>)> {
+    parse_csv_preview(file_path, 5).await.map_err(Into::into)
+}
+
+#[tauri::command(rename_all = "snake_case")]
+pub async fn pgsql_csv_import(
+    project_id: &str,
+    file_path: &str,
+    schema: &str,
+    table: &str,
+    column_mapping: Vec<(usize, String)>,
+    app_state: State<'_, AppState>,
+) -> Result<usize> {
+    let client = acquire_client(&app_state.clients, project_id).await?;
+    import_csv_to_table(&client, file_path, schema, table, &column_mapping)
+        .await
+        .map_err(Into::into)
+}
+
+// ── LISTEN/NOTIFY commands ───────────────────────────────────────────
+
+#[tauri::command(rename_all = "snake_case")]
+pub async fn pgsql_listen_start(
+    project_id: &str,
+    channel: &str,
+    app: AppHandle,
+) -> Result<bool> {
+    let app_handle = app.clone();
+    let app_state = app_handle.state::<AppState>();
+    let listen_key = format!("{}:{}", project_id, channel);
+
+    {
+        let handles = app_state.notify_handles.lock().await;
+        if handles.contains_key(&listen_key) {
+            return Ok(true); // Already listening
+        }
+    }
+
+    // Get connection config from local db
+    let (cfg, use_ssl) = {
+        let conn = app_state
+            .local_db
+            .connect()
+            .map_err(|e| AppError::DatabaseError(e.to_string()))?;
+        let mut rows = conn
+            .query(
+                "SELECT username, password, database, host, port, ssl FROM projects WHERE id = ?1",
+                libsql::params![project_id],
+            )
+            .await
+            .map_err(|e| AppError::DatabaseError(e.to_string()))?;
+
+        let row = rows
+            .next()
+            .await
+            .map_err(|e| AppError::DatabaseError(e.to_string()))?
+            .ok_or_else(|| AppError::ProjectNotFound(project_id.to_string()))?;
+
+        let mut cfg = Config::new();
+        cfg.user(&row.get::<String>(0).unwrap_or_default())
+            .password(&row.get::<String>(1).unwrap_or_default())
+            .dbname(&row.get::<String>(2).unwrap_or_default())
+            .host(&row.get::<String>(3).unwrap_or_default())
+            .port(
+                row.get::<String>(4)
+                    .unwrap_or_default()
+                    .parse()
+                    .unwrap_or(5432),
+            );
+        let ssl = row
+            .get::<String>(5)
+            .map(|s| s == "true")
+            .unwrap_or(false);
+        (cfg, ssl)
+    };
+
+    let channel_owned = channel.to_string();
+    let event_name = format!("pg-notify-{}", project_id);
+
+    let handle = tokio::spawn(async move {
+        // Helper: drive a connection, forwarding notifications as Tauri events
+        async fn listen_loop<S, T>(
+            client: tokio_postgres::Client,
+            mut connection: tokio_postgres::Connection<S, T>,
+            channel: &str,
+            event_name: &str,
+            app: &AppHandle,
+        ) where
+            S: tokio::io::AsyncRead + tokio::io::AsyncWrite + Unpin,
+            T: tokio::io::AsyncRead + tokio::io::AsyncWrite + Unpin,
+        {
+            let listen_sql = format!("LISTEN \"{}\"", channel.replace('"', "\"\""));
+            if let Err(e) = client.batch_execute(&listen_sql).await {
+                tracing::error!("LISTEN command failed: {:?}", e);
+                return;
+            }
+            tracing::info!("LISTEN started on channel: {}", channel);
+
+            let mut stream =
+                futures_util::stream::poll_fn(move |cx| connection.poll_message(cx));
+
+            while let Some(msg) = stream.next().await {
+                match msg {
+                    Ok(AsyncMessage::Notification(n)) => {
+                        let payload = serde_json::json!({
+                            "channel": n.channel(),
+                            "payload": n.payload(),
+                        });
+                        let _ = app.emit(event_name, payload);
+                    }
+                    Ok(_) => {}
+                    Err(e) => {
+                        tracing::error!("LISTEN stream error: {:?}", e);
+                        break;
+                    }
+                }
+            }
+            tracing::info!("LISTEN ended on channel: {}", channel);
+            drop(client);
+        }
+
+        if use_ssl {
+            let tls_connector = match TlsConnector::builder().build() {
+                Ok(c) => c,
+                Err(e) => { tracing::error!("LISTEN TLS error: {:?}", e); return; }
+            };
+            let tls = MakeTlsConnector::new(tls_connector);
+            match cfg.connect(tls).await {
+                Ok((client, connection)) => {
+                    listen_loop(client, connection, &channel_owned, &event_name, &app).await;
+                }
+                Err(e) => tracing::error!("LISTEN connect error: {:?}", e),
+            }
+        } else {
+            match cfg.connect(NoTls).await {
+                Ok((client, connection)) => {
+                    listen_loop(client, connection, &channel_owned, &event_name, &app).await;
+                }
+                Err(e) => tracing::error!("LISTEN connect error: {:?}", e),
+            }
+        }
+    });
+
+    {
+        let mut handles = app_state.notify_handles.lock().await;
+        handles.insert(listen_key, handle);
+    }
+
+    Ok(true)
+}
+
+#[tauri::command(rename_all = "snake_case")]
+pub async fn pgsql_listen_stop(
+    project_id: &str,
+    channel: &str,
+    app: AppHandle,
+) -> Result<bool> {
+    let app_state = app.state::<AppState>();
+    let listen_key = format!("{}:{}", project_id, channel);
+
+    let mut handles = app_state.notify_handles.lock().await;
+    if let Some(handle) = handles.remove(&listen_key) {
+        handle.abort();
+    }
+
+    Ok(true)
+}
+
+#[tauri::command(rename_all = "snake_case")]
+pub async fn pgsql_notify_send(
+    project_id: &str,
+    channel: &str,
+    payload: &str,
+    app_state: State<'_, AppState>,
+) -> Result<bool> {
+    let client = acquire_client(&app_state.clients, project_id).await?;
+    let sql = format!(
+        "SELECT pg_notify('{}', '{}')",
+        channel.replace('\'', "''"),
+        payload.replace('\'', "''"),
+    );
+    client
+        .batch_execute(&sql)
+        .await
+        .map_err(|e| AppError::QueryFailed(e.to_string()))?;
+    Ok(true)
+}
+
+#[tauri::command(rename_all = "snake_case")]
+pub async fn pgsql_discover_channels(
+    project_id: &str,
+    app_state: State<'_, AppState>,
+) -> Result<Vec<String>> {
+    let client = acquire_client(&app_state.meta_clients, project_id).await?;
+    discover_notify_channels(&client)
+        .await
+        .map_err(Into::into)
+}
+
+// ── Role / permission commands ───────────────────────────────────────
+
+#[tauri::command(rename_all = "snake_case")]
+pub async fn pgsql_load_roles(
+    project_id: &str,
+    app_state: State<'_, AppState>,
+) -> Result<Vec<PgRole>> {
+    let client = acquire_client(&app_state.meta_clients, project_id).await?;
+    load_roles(&client).await.map_err(Into::into)
+}
+
+#[tauri::command(rename_all = "snake_case")]
+pub async fn pgsql_load_table_grants(
+    project_id: &str,
+    role_name: &str,
+    app_state: State<'_, AppState>,
+) -> Result<Vec<TableGrant>> {
+    let client = acquire_client(&app_state.meta_clients, project_id).await?;
+    load_table_grants(&client, role_name)
+        .await
+        .map_err(Into::into)
+}
+
+#[tauri::command(rename_all = "snake_case")]
+pub async fn pgsql_load_database_grants(
+    project_id: &str,
+    role_name: &str,
+    app_state: State<'_, AppState>,
+) -> Result<Vec<DbGrant>> {
+    let client = acquire_client(&app_state.meta_clients, project_id).await?;
+    load_database_grants(&client, role_name)
+        .await
+        .map_err(Into::into)
+}
+
+// ── Schema diff commands ─────────────────────────────────────────────
+
+#[tauri::command(rename_all = "snake_case")]
+pub async fn pgsql_extract_schema_objects(
+    project_id: &str,
+    schema: &str,
+    app_state: State<'_, AppState>,
+) -> Result<Vec<SchemaObject>> {
+    let client = acquire_client(&app_state.meta_clients, project_id).await?;
+    extract_schema_objects(&client, schema)
+        .await
+        .map_err(Into::into)
+}
+
+// ── Performance monitor: Locks, Index Usage, Table Bloat ─────────────
+
+#[tauri::command(rename_all = "snake_case")]
+pub async fn pgsql_load_locks(
+    project_id: &str,
+    app_state: State<'_, AppState>,
+) -> Result<Response> {
+    let client = acquire_client(&app_state.meta_clients, project_id).await?;
+    let result = load_active_locks(&client).await?;
+    let json = sonic_rs::to_string(&result).map_err(|e| AppError::QueryFailed(e.to_string()))?;
+    Ok(Response::new(json))
+}
+
+#[tauri::command(rename_all = "snake_case")]
+pub async fn pgsql_load_index_usage(
+    project_id: &str,
+    app_state: State<'_, AppState>,
+) -> Result<Response> {
+    let client = acquire_client(&app_state.meta_clients, project_id).await?;
+    let result = load_index_usage(&client).await?;
+    let json = sonic_rs::to_string(&result).map_err(|e| AppError::QueryFailed(e.to_string()))?;
+    Ok(Response::new(json))
+}
+
+#[tauri::command(rename_all = "snake_case")]
+pub async fn pgsql_load_table_bloat(
+    project_id: &str,
+    app_state: State<'_, AppState>,
+) -> Result<Response> {
+    let client = acquire_client(&app_state.meta_clients, project_id).await?;
+    let result = load_table_bloat(&client).await?;
+    let json = sonic_rs::to_string(&result).map_err(|e| AppError::QueryFailed(e.to_string()))?;
+    Ok(Response::new(json))
 }

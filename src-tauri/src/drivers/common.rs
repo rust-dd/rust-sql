@@ -1,7 +1,7 @@
+use deadpool_postgres::Pool;
 use rayon::prelude::*;
 use std::sync::Arc;
 use std::time::Instant;
-use deadpool_postgres::Pool;
 use tokio::time as tokio_time;
 use tokio_postgres::{Client, SimpleQueryMessage};
 
@@ -198,9 +198,7 @@ pub async fn execute_query_streamed(
                 let messages = match client.simple_query(&fetch_sql).await {
                     Ok(msgs) => msgs,
                     Err(e) => {
-                        let _ = client
-                            .batch_execute("CLOSE _rsql_cur; ROLLBACK")
-                            .await;
+                        let _ = client.batch_execute("CLOSE _rsql_cur; ROLLBACK").await;
                         return Err(AppError::QueryFailed(e.to_string()));
                     }
                 };
@@ -936,7 +934,17 @@ pub type ForeignKeyInfo = (String, String, String, String);
 pub type ObjectStats = Vec<(String, String)>;
 
 /// FK detail: (constraint_name, source_schema, source_table, source_column, target_schema, target_table, target_column, on_update, on_delete)
-pub type FKDetail = (String, String, String, String, String, String, String, String, String);
+pub type FKDetail = (
+    String,
+    String,
+    String,
+    String,
+    String,
+    String,
+    String,
+    String,
+    String,
+);
 
 /// Load live statistics for a table.
 pub async fn load_table_statistics(
@@ -970,16 +978,29 @@ pub async fn load_table_statistics(
         .map_err(|e| AppError::QueryFailed(e.to_string()))?;
 
     let keys = [
-        "row_estimate", "table_size", "index_size", "total_size",
-        "last_vacuum", "last_analyze", "last_autovacuum", "last_autoanalyze",
-        "dead_tuples", "live_tuples", "seq_scan", "idx_scan",
+        "row_estimate",
+        "table_size",
+        "index_size",
+        "total_size",
+        "last_vacuum",
+        "last_analyze",
+        "last_autovacuum",
+        "last_autoanalyze",
+        "dead_tuples",
+        "live_tuples",
+        "seq_scan",
+        "idx_scan",
     ];
 
     if let Some(row) = rows.first() {
-        Ok(keys.iter().enumerate().map(|(i, k)| {
-            let val: Option<String> = row.try_get(i).ok();
-            (k.to_string(), val.unwrap_or_else(|| "-".into()))
-        }).collect())
+        Ok(keys
+            .iter()
+            .enumerate()
+            .map(|(i, k)| {
+                let val: Option<String> = row.try_get(i).ok();
+                (k.to_string(), val.unwrap_or_else(|| "-".into()))
+            })
+            .collect())
     } else {
         Ok(Vec::new())
     }
@@ -1031,9 +1052,22 @@ pub async fn load_fk_details(
         .await
         .map_err(|e| AppError::QueryFailed(e.to_string()))?;
 
-    Ok(rows.iter().map(|r| {
-        (r.get(0), r.get(1), r.get(2), r.get(3), r.get(4), r.get(5), r.get(6), r.get(7), r.get(8))
-    }).collect())
+    Ok(rows
+        .iter()
+        .map(|r| {
+            (
+                r.get(0),
+                r.get(1),
+                r.get(2),
+                r.get(3),
+                r.get(4),
+                r.get(5),
+                r.get(6),
+                r.get(7),
+                r.get(8),
+            )
+        })
+        .collect())
 }
 
 /// Load view metadata.
@@ -1132,15 +1166,26 @@ pub async fn load_function_info(
         .map_err(|e| AppError::QueryFailed(e.to_string()))?;
 
     let keys = [
-        "language", "volatility", "is_strict", "security_definer",
-        "estimated_cost", "estimated_rows", "return_type", "arguments", "source",
+        "language",
+        "volatility",
+        "is_strict",
+        "security_definer",
+        "estimated_cost",
+        "estimated_rows",
+        "return_type",
+        "arguments",
+        "source",
     ];
 
     if let Some(row) = rows.first() {
-        Ok(keys.iter().enumerate().map(|(i, k)| {
-            let val: Option<String> = row.try_get(i).ok();
-            (k.to_string(), val.unwrap_or_default())
-        }).collect())
+        Ok(keys
+            .iter()
+            .enumerate()
+            .map(|(i, k)| {
+                let val: Option<String> = row.try_get(i).ok();
+                (k.to_string(), val.unwrap_or_default())
+            })
+            .collect())
     } else {
         Ok(Vec::new())
     }
@@ -1158,7 +1203,10 @@ pub async fn generate_full_ddl(
         "view" => generate_view_ddl(client, schema, name).await,
         "matview" => generate_matview_ddl(client, schema, name).await,
         "function" | "trigger-function" => generate_function_ddl(client, schema, name).await,
-        _ => Err(AppError::QueryFailed(format!("Unknown object type: {}", object_type))),
+        _ => Err(AppError::QueryFailed(format!(
+            "Unknown object type: {}",
+            object_type
+        ))),
     }
 }
 
@@ -1186,7 +1234,9 @@ async fn generate_table_ddl(
 SELECT string_agg(col_def, E',\n' ORDER BY ordinal_position) FROM col_ddl"#
     );
 
-    let col_result = client.simple_query(&sql).await
+    let col_result = client
+        .simple_query(&sql)
+        .await
         .map_err(|e| AppError::QueryFailed(e.to_string()))?;
     let mut col_defs = String::new();
     for msg in &col_result {
@@ -1221,7 +1271,9 @@ SELECT string_agg(col_def, E',\n' ORDER BY ordinal_position) FROM col_ddl"#
            WHERE n.nspname = '{schema}' AND c.relname = '{table}'
            ORDER BY CASE con.contype WHEN 'p' THEN 0 WHEN 'u' THEN 1 WHEN 'f' THEN 2 ELSE 3 END"#
     );
-    let con_result = client.simple_query(&con_sql).await
+    let con_result = client
+        .simple_query(&con_sql)
+        .await
         .map_err(|e| AppError::QueryFailed(e.to_string()))?;
     for line in collect_lines(&con_result) {
         ddl.push('\n');
@@ -1239,7 +1291,9 @@ SELECT string_agg(col_def, E',\n' ORDER BY ordinal_position) FROM col_ddl"#
              AND NOT i.indisprimary
              AND NOT EXISTS (SELECT 1 FROM pg_constraint c WHERE c.conindid = i.indexrelid)"#
     );
-    let idx_result = client.simple_query(&idx_sql).await
+    let idx_result = client
+        .simple_query(&idx_sql)
+        .await
         .map_err(|e| AppError::QueryFailed(e.to_string()))?;
     for line in collect_lines(&idx_result) {
         ddl.push('\n');
@@ -1256,7 +1310,9 @@ SELECT string_agg(col_def, E',\n' ORDER BY ordinal_position) FROM col_ddl"#
            WHERE n.nspname = '{schema}' AND c.relname = '{table}'
              AND NOT t.tgisinternal"#
     );
-    let trig_result = client.simple_query(&trig_sql).await
+    let trig_result = client
+        .simple_query(&trig_sql)
+        .await
         .map_err(|e| AppError::QueryFailed(e.to_string()))?;
     for line in collect_lines(&trig_result) {
         ddl.push('\n');
@@ -1271,7 +1327,9 @@ SELECT string_agg(col_def, E',\n' ORDER BY ordinal_position) FROM col_ddl"#
            JOIN pg_namespace n ON n.oid = c.relnamespace
            WHERE n.nspname = '{schema}' AND c.relname = '{table}'"#
     );
-    let rls_result = client.simple_query(&rls_sql).await
+    let rls_result = client
+        .simple_query(&rls_sql)
+        .await
         .map_err(|e| AppError::QueryFailed(e.to_string()))?;
     for line in collect_lines(&rls_result) {
         ddl.push('\n');
@@ -1292,7 +1350,9 @@ SELECT string_agg(col_def, E',\n' ORDER BY ordinal_position) FROM col_ddl"#
            JOIN pg_namespace n ON n.oid = c.relnamespace
            WHERE n.nspname = '{schema}' AND c.relname = '{table}'"#
     );
-    let pol_result = client.simple_query(&pol_sql).await
+    let pol_result = client
+        .simple_query(&pol_sql)
+        .await
         .map_err(|e| AppError::QueryFailed(e.to_string()))?;
     for line in collect_lines(&pol_result) {
         ddl.push('\n');
@@ -1308,7 +1368,9 @@ SELECT string_agg(col_def, E',\n' ORDER BY ordinal_position) FROM col_ddl"#
            JOIN pg_namespace n ON n.oid = c.relnamespace
            WHERE n.nspname = '{schema}' AND c.relname = '{table}' AND d.objsubid = 0"#
     );
-    let cmt_result = client.simple_query(&cmt_sql).await
+    let cmt_result = client
+        .simple_query(&cmt_sql)
+        .await
         .map_err(|e| AppError::QueryFailed(e.to_string()))?;
     for line in collect_lines(&cmt_result) {
         ddl.push('\n');
@@ -1326,7 +1388,9 @@ SELECT string_agg(col_def, E',\n' ORDER BY ordinal_position) FROM col_ddl"#
            WHERE n.nspname = '{schema}' AND c.relname = '{table}' AND d.objsubid > 0
            ORDER BY d.objsubid"#
     );
-    let col_cmt_result = client.simple_query(&col_cmt_sql).await
+    let col_cmt_result = client
+        .simple_query(&col_cmt_sql)
+        .await
         .map_err(|e| AppError::QueryFailed(e.to_string()))?;
     for line in collect_lines(&col_cmt_result) {
         ddl.push_str(&line);
@@ -1336,15 +1400,13 @@ SELECT string_agg(col_def, E',\n' ORDER BY ordinal_position) FROM col_ddl"#
     Ok(ddl.trim_end().to_string())
 }
 
-async fn generate_view_ddl(
-    client: &Client,
-    schema: &str,
-    view: &str,
-) -> Result<String, AppError> {
+async fn generate_view_ddl(client: &Client, schema: &str, view: &str) -> Result<String, AppError> {
     let sql = format!(
         r#"SELECT 'CREATE OR REPLACE VIEW "{schema}"."{view}" AS' || E'\n' || pg_get_viewdef('"{schema}"."{view}"'::regclass, true) || ';'"#
     );
-    let result = client.simple_query(&sql).await
+    let result = client
+        .simple_query(&sql)
+        .await
         .map_err(|e| AppError::QueryFailed(e.to_string()))?;
     for msg in &result {
         if let SimpleQueryMessage::Row(row) = msg {
@@ -1364,7 +1426,9 @@ async fn generate_matview_ddl(
            FROM pg_matviews
            WHERE schemaname = '{schema}' AND matviewname = '{matview}'"#
     );
-    let result = client.simple_query(&sql).await
+    let result = client
+        .simple_query(&sql)
+        .await
         .map_err(|e| AppError::QueryFailed(e.to_string()))?;
 
     let mut ddl = String::new();
@@ -1382,7 +1446,9 @@ async fn generate_matview_ddl(
            JOIN pg_namespace n ON n.oid = tbl.relnamespace
            WHERE n.nspname = '{schema}' AND tbl.relname = '{matview}'"#
     );
-    let idx_result = client.simple_query(&idx_sql).await
+    let idx_result = client
+        .simple_query(&idx_sql)
+        .await
         .map_err(|e| AppError::QueryFailed(e.to_string()))?;
     for msg in &idx_result {
         if let SimpleQueryMessage::Row(row) = msg {
@@ -1408,7 +1474,9 @@ async fn generate_function_ddl(
            WHERE n.nspname = '{schema}' AND p.proname = '{func_name}'
            LIMIT 1"#
     );
-    let result = client.simple_query(&sql).await
+    let result = client
+        .simple_query(&sql)
+        .await
         .map_err(|e| AppError::QueryFailed(e.to_string()))?;
     for msg in &result {
         if let SimpleQueryMessage::Row(row) = msg {
@@ -1455,4 +1523,481 @@ pub async fn load_foreign_keys(
             (src_table, src_col, tgt_table, tgt_col)
         })
         .collect())
+}
+
+pub async fn parse_csv_preview(
+    file_path: &str,
+    max_rows: usize,
+) -> Result<(Vec<String>, Vec<Vec<String>>), AppError> {
+    let mut rdr = csv::ReaderBuilder::new()
+        .has_headers(true)
+        .from_path(file_path)
+        .map_err(|e| AppError::QueryFailed(format!("Failed to read CSV: {}", e)))?;
+
+    let headers: Vec<String> = rdr
+        .headers()
+        .map_err(|e| AppError::QueryFailed(format!("Failed to parse CSV headers: {}", e)))?
+        .iter()
+        .map(|h| h.to_string())
+        .collect();
+
+    let mut rows = Vec::new();
+    for result in rdr.records().take(max_rows) {
+        let record =
+            result.map_err(|e| AppError::QueryFailed(format!("CSV parse error: {}", e)))?;
+        rows.push(record.iter().map(|f| f.to_string()).collect());
+    }
+
+    Ok((headers, rows))
+}
+
+pub async fn import_csv_to_table(
+    client: &deadpool_postgres::Client,
+    file_path: &str,
+    schema: &str,
+    table: &str,
+    column_mapping: &[(usize, String)],
+) -> Result<usize, AppError> {
+    let mut rdr = csv::ReaderBuilder::new()
+        .has_headers(true)
+        .from_path(file_path)
+        .map_err(|e| AppError::QueryFailed(format!("Failed to read CSV: {}", e)))?;
+
+    if column_mapping.is_empty() {
+        return Err(AppError::QueryFailed(
+            "No column mapping provided".to_string(),
+        ));
+    }
+
+    let col_names: Vec<String> = column_mapping
+        .iter()
+        .map(|(_, name)| format!("\"{}\"", name))
+        .collect();
+    let placeholders: Vec<String> = (1..=column_mapping.len())
+        .map(|i| format!("${}", i))
+        .collect();
+
+    let insert_sql = format!(
+        "INSERT INTO \"{}\".\"{}\" ({}) VALUES ({})",
+        schema,
+        table,
+        col_names.join(", "),
+        placeholders.join(", "),
+    );
+
+    let statement = client
+        .prepare(&insert_sql)
+        .await
+        .map_err(|e| AppError::QueryFailed(format!("Failed to prepare statement: {}", e)))?;
+
+    client
+        .execute("BEGIN", &[])
+        .await
+        .map_err(|e| AppError::QueryFailed(e.to_string()))?;
+
+    let mut imported = 0usize;
+    for result in rdr.records() {
+        let record = result.map_err(|e| {
+            AppError::QueryFailed(format!("CSV parse error at row {}: {}", imported + 1, e))
+        })?;
+
+        let values: Vec<String> = column_mapping
+            .iter()
+            .map(|(idx, _)| record.get(*idx).unwrap_or("").to_string())
+            .collect();
+
+        let params: Vec<&(dyn tokio_postgres::types::ToSql + Sync)> = values
+            .iter()
+            .map(|v| v as &(dyn tokio_postgres::types::ToSql + Sync))
+            .collect();
+
+        match client.execute(&statement, &params).await {
+            Ok(_) => imported += 1,
+            Err(e) => {
+                client.execute("ROLLBACK", &[]).await.ok();
+                return Err(AppError::QueryFailed(format!(
+                    "Import failed at row {}: {}",
+                    imported + 1,
+                    e
+                )));
+            }
+        }
+    }
+
+    client
+        .execute("COMMIT", &[])
+        .await
+        .map_err(|e| AppError::QueryFailed(format!("Failed to commit: {}", e)))?;
+
+    Ok(imported)
+}
+
+// ── Role / Permission types and queries ──────────────────────────────
+
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct PgRole {
+    pub name: String,
+    pub superuser: bool,
+    pub create_db: bool,
+    pub create_role: bool,
+    pub login: bool,
+    pub replication: bool,
+    pub bypass_rls: bool,
+    pub conn_limit: i32,
+    pub valid_until: String,
+    pub member_of: Vec<String>,
+}
+
+pub async fn load_roles(
+    client: &deadpool_postgres::Client,
+) -> Result<Vec<PgRole>, AppError> {
+    let rows = client
+        .query(
+            "SELECT r.rolname, r.rolsuper, r.rolcreatedb, r.rolcreaterole,
+                    r.rolcanlogin, r.rolreplication, r.rolbypassrls, r.rolconnlimit,
+                    COALESCE(r.rolvaliduntil::text, ''),
+                    COALESCE(array_agg(m.rolname) FILTER (WHERE m.rolname IS NOT NULL), '{}')::text[]
+             FROM pg_roles r
+             LEFT JOIN pg_auth_members am ON am.member = r.oid
+             LEFT JOIN pg_roles m ON m.oid = am.roleid
+             GROUP BY r.oid, r.rolname, r.rolsuper, r.rolcreatedb, r.rolcreaterole,
+                      r.rolcanlogin, r.rolreplication, r.rolbypassrls, r.rolconnlimit, r.rolvaliduntil
+             ORDER BY r.rolname",
+            &[],
+        )
+        .await
+        .map_err(|e| AppError::QueryFailed(e.to_string()))?;
+
+    let mut roles = Vec::new();
+    for row in rows {
+        roles.push(PgRole {
+            name: row.get::<_, String>(0),
+            superuser: row.get::<_, bool>(1),
+            create_db: row.get::<_, bool>(2),
+            create_role: row.get::<_, bool>(3),
+            login: row.get::<_, bool>(4),
+            replication: row.get::<_, bool>(5),
+            bypass_rls: row.get::<_, bool>(6),
+            conn_limit: row.get::<_, i32>(7),
+            valid_until: row.get::<_, String>(8),
+            member_of: row.get::<_, Vec<String>>(9),
+        });
+    }
+
+    Ok(roles)
+}
+
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct TableGrant {
+    pub schema: String,
+    pub table: String,
+    pub grantee: String,
+    pub privileges: Vec<String>,
+}
+
+pub async fn load_table_grants(
+    client: &deadpool_postgres::Client,
+    role_name: &str,
+) -> Result<Vec<TableGrant>, AppError> {
+    let rows = client
+        .query(
+            "SELECT table_schema, table_name, grantee,
+                    array_agg(privilege_type ORDER BY privilege_type)::text[]
+             FROM information_schema.table_privileges
+             WHERE grantee = $1
+             GROUP BY table_schema, table_name, grantee
+             ORDER BY table_schema, table_name",
+            &[&role_name],
+        )
+        .await
+        .map_err(|e| AppError::QueryFailed(e.to_string()))?;
+
+    let mut grants = Vec::new();
+    for row in rows {
+        grants.push(TableGrant {
+            schema: row.get(0),
+            table: row.get(1),
+            grantee: row.get(2),
+            privileges: row.get::<_, Vec<String>>(3),
+        });
+    }
+
+    Ok(grants)
+}
+
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct DbGrant {
+    pub database: String,
+    pub privilege: String,
+}
+
+pub async fn load_database_grants(
+    client: &deadpool_postgres::Client,
+    role_name: &str,
+) -> Result<Vec<DbGrant>, AppError> {
+    let rows = client
+        .query(
+            "SELECT datname, privilege_type
+             FROM pg_database
+             CROSS JOIN LATERAL (
+               SELECT privilege_type
+               FROM (VALUES ('CONNECT'), ('CREATE'), ('TEMPORARY')) AS privs(privilege_type)
+               WHERE has_database_privilege($1, datname, privilege_type)
+             ) t
+             WHERE NOT datistemplate
+             ORDER BY datname, privilege_type",
+            &[&role_name],
+        )
+        .await
+        .map_err(|e| AppError::QueryFailed(e.to_string()))?;
+
+    let mut grants = Vec::new();
+    for row in rows {
+        grants.push(DbGrant {
+            database: row.get(0),
+            privilege: row.get(1),
+        });
+    }
+
+    Ok(grants)
+}
+
+// ── Schema diff ──────────────────────────────────────────────────────
+
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct SchemaObject {
+    pub object_type: String,
+    pub name: String,
+    pub definition: String,
+}
+
+pub async fn extract_schema_objects(
+    client: &deadpool_postgres::Client,
+    schema: &str,
+) -> Result<Vec<SchemaObject>, AppError> {
+    let mut objects = Vec::new();
+
+    // Tables with columns
+    let rows = client
+        .query(
+            "SELECT c.relname,
+                    string_agg(
+                        a.attname || ' ' || pg_catalog.format_type(a.atttypid, a.atttypmod) ||
+                        CASE WHEN a.attnotnull THEN ' NOT NULL' ELSE '' END ||
+                        COALESCE(' DEFAULT ' || pg_get_expr(d.adbin, d.adrelid), ''),
+                        ', ' ORDER BY a.attnum
+                    )
+             FROM pg_class c
+             JOIN pg_namespace n ON n.oid = c.relnamespace
+             JOIN pg_attribute a ON a.attrelid = c.oid AND a.attnum > 0 AND NOT a.attisdropped
+             LEFT JOIN pg_attrdef d ON d.adrelid = c.oid AND d.adnum = a.attnum
+             WHERE n.nspname = $1 AND c.relkind = 'r'
+             GROUP BY c.relname ORDER BY c.relname",
+            &[&schema],
+        )
+        .await
+        .map_err(|e| AppError::QueryFailed(e.to_string()))?;
+
+    for row in &rows {
+        objects.push(SchemaObject {
+            object_type: "table".to_string(),
+            name: row.get(0),
+            definition: row.get::<_, Option<String>>(1).unwrap_or_default(),
+        });
+    }
+
+    // Views
+    let rows = client
+        .query(
+            "SELECT viewname, definition FROM pg_views WHERE schemaname = $1 ORDER BY viewname",
+            &[&schema],
+        )
+        .await
+        .map_err(|e| AppError::QueryFailed(e.to_string()))?;
+
+    for row in &rows {
+        objects.push(SchemaObject {
+            object_type: "view".to_string(),
+            name: row.get(0),
+            definition: row.get::<_, Option<String>>(1).unwrap_or_default(),
+        });
+    }
+
+    // Materialized views
+    let rows = client
+        .query(
+            "SELECT matviewname, definition FROM pg_matviews WHERE schemaname = $1 ORDER BY matviewname",
+            &[&schema],
+        )
+        .await
+        .map_err(|e| AppError::QueryFailed(e.to_string()))?;
+
+    for row in &rows {
+        objects.push(SchemaObject {
+            object_type: "matview".to_string(),
+            name: row.get(0),
+            definition: row.get::<_, Option<String>>(1).unwrap_or_default(),
+        });
+    }
+
+    // Functions
+    let rows = client
+        .query(
+            "SELECT p.proname || '(' || pg_get_function_identity_arguments(p.oid) || ')',
+                    COALESCE(pg_get_functiondef(p.oid), '')
+             FROM pg_proc p
+             JOIN pg_namespace n ON n.oid = p.pronamespace
+             WHERE n.nspname = $1 ORDER BY p.proname",
+            &[&schema],
+        )
+        .await
+        .map_err(|e| AppError::QueryFailed(e.to_string()))?;
+
+    for row in &rows {
+        objects.push(SchemaObject {
+            object_type: "function".to_string(),
+            name: row.get(0),
+            definition: row.get::<_, Option<String>>(1).unwrap_or_default(),
+        });
+    }
+
+    // Indexes
+    let rows = client
+        .query(
+            "SELECT indexname, indexdef FROM pg_indexes WHERE schemaname = $1 ORDER BY indexname",
+            &[&schema],
+        )
+        .await
+        .map_err(|e| AppError::QueryFailed(e.to_string()))?;
+
+    for row in &rows {
+        objects.push(SchemaObject {
+            object_type: "index".to_string(),
+            name: row.get(0),
+            definition: row.get::<_, Option<String>>(1).unwrap_or_default(),
+        });
+    }
+
+    Ok(objects)
+}
+
+// ── LISTEN/NOTIFY channel discovery ──────────────────────────────────
+
+pub async fn discover_notify_channels(
+    client: &deadpool_postgres::Client,
+) -> Result<Vec<String>, AppError> {
+    // Extract channel names from:
+    // 1. pg_notify() calls in trigger function bodies
+    // 2. NOTIFY statements in trigger function bodies
+    // 3. Currently active listeners from pg_stat_activity
+    let rows = client
+        .query(
+            r#"SELECT DISTINCT channel FROM (
+                SELECT (regexp_matches(prosrc, 'pg_notify\s*\(\s*''([^'']+)''', 'gi'))[1] AS channel
+                FROM pg_proc p
+                JOIN pg_namespace n ON n.oid = p.pronamespace
+                WHERE n.nspname NOT IN ('pg_catalog', 'information_schema')
+              UNION
+                SELECT (regexp_matches(prosrc, '\mNOTIFY\s+([a-zA-Z_][a-zA-Z0-9_]*)', 'gi'))[1] AS channel
+                FROM pg_proc p
+                JOIN pg_namespace n ON n.oid = p.pronamespace
+                WHERE n.nspname NOT IN ('pg_catalog', 'information_schema')
+            ) sub
+            WHERE channel IS NOT NULL
+            ORDER BY channel"#,
+            &[],
+        )
+        .await
+        .map_err(|e| AppError::QueryFailed(e.to_string()))?;
+
+    Ok(rows.iter().map(|r| r.get::<_, String>(0)).collect())
+}
+
+// ── Performance monitor: Locks, Index Usage, Table Bloat ─────────────
+
+pub async fn load_active_locks(
+    client: &deadpool_postgres::Client,
+) -> Result<Vec<Vec<String>>, AppError> {
+    let rows = client.query(
+        "SELECT
+            l.pid::text,
+            COALESCE(a.usename, '') AS user,
+            COALESCE(l.mode, '') AS mode,
+            COALESCE(l.locktype, '') AS locktype,
+            CASE WHEN l.granted THEN 'granted' ELSE 'waiting' END AS status,
+            COALESCE(c.relname, '') AS relation,
+            COALESCE(n.nspname, '') AS schema,
+            COALESCE(left(a.query, 200), '') AS query,
+            COALESCE(extract(epoch from now() - a.query_start)::text, '0') AS duration,
+            COALESCE(a.wait_event_type || ':' || a.wait_event, '') AS wait_event
+         FROM pg_locks l
+         JOIN pg_stat_activity a ON a.pid = l.pid
+         LEFT JOIN pg_class c ON c.oid = l.relation
+         LEFT JOIN pg_namespace n ON n.oid = c.relnamespace
+         WHERE a.pid != pg_backend_pid()
+         ORDER BY NOT l.granted, l.pid",
+        &[],
+    ).await.map_err(|e| AppError::QueryFailed(e.to_string()))?;
+
+    Ok(rows.iter().map(|r| {
+        (0..10).map(|i| r.get::<_, String>(i)).collect()
+    }).collect())
+}
+
+pub async fn load_index_usage(
+    client: &deadpool_postgres::Client,
+) -> Result<Vec<Vec<String>>, AppError> {
+    let rows = client.query(
+        "SELECT
+            s.schemaname,
+            s.relname AS table,
+            s.indexrelname AS index,
+            pg_size_pretty(pg_relation_size(i.indexrelid)) AS size,
+            COALESCE(s.idx_scan, 0)::text AS scans,
+            COALESCE(s.idx_tup_read, 0)::text AS tuples_read,
+            COALESCE(s.idx_tup_fetch, 0)::text AS tuples_fetched,
+            CASE
+                WHEN s.idx_scan = 0 THEN 'unused'
+                WHEN s.idx_scan < 10 THEN 'rarely_used'
+                ELSE 'active'
+            END AS status,
+            COALESCE(pg_get_indexdef(i.indexrelid), '') AS definition
+         FROM pg_stat_user_indexes s
+         JOIN pg_index i ON i.indexrelid = s.indexrelid
+         WHERE NOT i.indisprimary
+         ORDER BY s.idx_scan ASC, pg_relation_size(i.indexrelid) DESC",
+        &[],
+    ).await.map_err(|e| AppError::QueryFailed(e.to_string()))?;
+
+    Ok(rows.iter().map(|r| {
+        (0..9).map(|i| r.get::<_, String>(i)).collect()
+    }).collect())
+}
+
+pub async fn load_table_bloat(
+    client: &deadpool_postgres::Client,
+) -> Result<Vec<Vec<String>>, AppError> {
+    let rows = client.query(
+        "SELECT
+            schemaname,
+            relname AS table,
+            n_live_tup::text AS live_tuples,
+            n_dead_tup::text AS dead_tuples,
+            CASE WHEN n_live_tup > 0
+                THEN round(100.0 * n_dead_tup / (n_live_tup + n_dead_tup), 1)::text
+                ELSE '0'
+            END AS bloat_pct,
+            pg_size_pretty(pg_total_relation_size(relid)) AS total_size,
+            COALESCE(last_vacuum::text, 'never') AS last_vacuum,
+            COALESCE(last_autovacuum::text, 'never') AS last_autovacuum,
+            COALESCE(last_analyze::text, 'never') AS last_analyze,
+            COALESCE(last_autoanalyze::text, 'never') AS last_autoanalyze
+         FROM pg_stat_user_tables
+         ORDER BY n_dead_tup DESC",
+        &[],
+    ).await.map_err(|e| AppError::QueryFailed(e.to_string()))?;
+
+    Ok(rows.iter().map(|r| {
+        (0..10).map(|i| r.get::<_, String>(i)).collect()
+    }).collect())
 }

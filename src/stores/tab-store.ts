@@ -15,6 +15,9 @@ interface TabState {
   openMonitorTab: (projectId: string) => void;
   openERDTab: (projectId: string, schema: string) => void;
   openTerminalTab: () => void;
+  openNotifyTab: (projectId: string) => void;
+  openRolesTab: (projectId: string) => void;
+  openSchemaDiffTab: (projectId: string) => void;
   closeTab: (index: number) => void;
   closeAllTabs: () => void;
   closeOtherTabs: (index: number) => void;
@@ -26,6 +29,10 @@ interface TabState {
   setProjectId: (index: number, projectId: string) => void;
   setExplainResult: (index: number, plan: ExplainPlan | undefined) => void;
   setVirtualQuery: (index: number, vq: VirtualQuery | undefined) => void;
+  toggleSplit: (index: number) => void;
+  updateSplitContent: (index: number, value: string) => void;
+  setSplitResult: (index: number, result: QueryResult) => void;
+  setSplitExecuting: (index: number, executing: boolean) => void;
 }
 
 export const useTabStore = create<TabState>()(
@@ -105,6 +112,33 @@ export const useTabStore = create<TabState>()(
             tabs: [...s.tabs, newTab],
             selectedTabIndex: s.tabs.length,
           };
+        });
+      },
+
+      openNotifyTab: (projectId: string) => {
+        set((s) => {
+          const existing = s.tabs.findIndex((t) => t.type === "notify" && t.projectId === projectId);
+          if (existing >= 0) return { selectedTabIndex: existing };
+          const newTab: Tab = { id: genTabId(), type: "notify", projectId, title: "LISTEN/NOTIFY", editorValue: "", isExecuting: false };
+          return { tabs: [...s.tabs, newTab], selectedTabIndex: s.tabs.length };
+        });
+      },
+
+      openRolesTab: (projectId: string) => {
+        set((s) => {
+          const existing = s.tabs.findIndex((t) => t.type === "roles" && t.projectId === projectId);
+          if (existing >= 0) return { selectedTabIndex: existing };
+          const newTab: Tab = { id: genTabId(), type: "roles", projectId, title: "Roles", editorValue: "", isExecuting: false };
+          return { tabs: [...s.tabs, newTab], selectedTabIndex: s.tabs.length };
+        });
+      },
+
+      openSchemaDiffTab: (projectId: string) => {
+        set((s) => {
+          const existing = s.tabs.findIndex((t) => t.type === "schema-diff" && t.projectId === projectId);
+          if (existing >= 0) return { selectedTabIndex: existing };
+          const newTab: Tab = { id: genTabId(), type: "schema-diff", projectId, title: "Schema Diff", editorValue: "", isExecuting: false };
+          return { tabs: [...s.tabs, newTab], selectedTabIndex: s.tabs.length };
         });
       },
 
@@ -195,12 +229,46 @@ export const useTabStore = create<TabState>()(
           return { tabs };
         });
       },
+
+      toggleSplit: (index: number) => {
+        set((s) => {
+          const tabs = s.tabs.slice();
+          const tab = tabs[index];
+          if (!tab || tab.type !== "query") return s;
+          tabs[index] = { ...tab, isSplit: !tab.isSplit, splitEditorValue: tab.splitEditorValue ?? "" };
+          return { tabs };
+        });
+      },
+
+      updateSplitContent: (index: number, value: string) => {
+        set((s) => {
+          const tabs = s.tabs.slice();
+          tabs[index] = { ...tabs[index], splitEditorValue: value };
+          return { tabs };
+        });
+      },
+
+      setSplitResult: (index: number, result: QueryResult) => {
+        set((s) => {
+          const tabs = s.tabs.slice();
+          tabs[index] = { ...tabs[index], splitResult: result, isSplitExecuting: false };
+          return { tabs };
+        });
+      },
+
+      setSplitExecuting: (index: number, executing: boolean) => {
+        set((s) => {
+          const tabs = s.tabs.slice();
+          tabs[index] = { ...tabs[index], isSplitExecuting: executing };
+          return { tabs };
+        });
+      },
     }),
     {
       name: "rsql-tabs",
       partialize: (state) => ({
         tabs: state.tabs
-          .filter((tab) => tab.type !== "terminal") // Terminal tabs can't be restored
+          .filter((tab) => tab.type !== "terminal" && tab.type !== "notify") // Terminal/notify tabs can't be restored
           .map((tab) => ({
             id: tab.id,
             type: tab.type,
@@ -209,6 +277,8 @@ export const useTabStore = create<TabState>()(
             title: tab.title,
             editorValue: tab.editorValue,
             isExecuting: false,
+            isSplit: tab.isSplit,
+            splitEditorValue: tab.splitEditorValue,
           })),
         selectedTabIndex: state.tabs.filter((t) => t.type !== "terminal").length === 0 ? -1 : Math.min(state.selectedTabIndex, state.tabs.filter((t) => t.type !== "terminal").length - 1),
       }),

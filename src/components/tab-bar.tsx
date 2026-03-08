@@ -6,7 +6,7 @@ import { useTabStore } from "@/stores/tab-store";
 import { useProjectStore } from "@/stores/project-store";
 import { DriverFactory } from "@/lib/database-driver";
 import * as virtualCache from "@/lib/virtual-cache";
-import { Activity, Copy, Database, Plus, Terminal, Trash2, X, XCircle } from "lucide-react";
+import { Activity, Bell, Columns3, Copy, Database, Plus, Shield, Terminal, Trash2, X, XCircle } from "lucide-react";
 
 export function TabBar() {
   const tabs = useTabStore((s) => s.tabs);
@@ -85,6 +85,12 @@ export function TabBar() {
                   <Terminal className={cn("h-3 w-3", isActive ? "text-primary" : "text-muted-foreground")} />
                 ) : tab.type === "monitor" ? (
                   <Activity className={cn("h-3 w-3", isActive ? "text-primary" : "text-muted-foreground")} />
+                ) : tab.type === "notify" ? (
+                  <Bell className={cn("h-3 w-3", isActive ? "text-primary" : "text-muted-foreground")} />
+                ) : tab.type === "roles" ? (
+                  <Shield className={cn("h-3 w-3", isActive ? "text-primary" : "text-muted-foreground")} />
+                ) : tab.type === "schema-diff" ? (
+                  <Columns3 className={cn("h-3 w-3", isActive ? "text-primary" : "text-muted-foreground")} />
                 ) : projectDb ? (
                   <Database className={cn("h-3 w-3", isActive ? "text-primary/70" : "text-muted-foreground/60")} />
                 ) : null}

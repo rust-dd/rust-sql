@@ -10,10 +10,13 @@ import {
   Database,
   HardDrive,
   Loader2,
+  Lock,
   Pause,
   Play,
   RefreshCw,
+  Search,
   Table,
+  Trash2,
   Users,
   Zap,
 } from "lucide-react";
@@ -49,7 +52,39 @@ interface TableStatRow {
   lastAnalyze: string;
 }
 
-type MonitorTab = "overview" | "activity" | "tables" | "history";
+interface LockRow {
+  pid: string;
+  lockType: string;
+  database: string;
+  relation: string;
+  mode: string;
+  granted: string;
+  waitStart: string;
+  query: string;
+}
+
+interface IndexUsageRow {
+  schema: string;
+  table: string;
+  index: string;
+  size: string;
+  scans: string;
+  tuplesRead: string;
+  tuplesFetched: string;
+}
+
+interface BloatRow {
+  schema: string;
+  table: string;
+  tableSize: string;
+  deadTuples: string;
+  liveTuples: string;
+  bloatRatio: string;
+  lastVacuum: string;
+  lastAutovacuum: string;
+}
+
+type MonitorTab = "overview" | "activity" | "tables" | "history" | "locks" | "index-usage" | "bloat";
 
 export function PerformanceMonitor({ projectId }: { projectId: string }) {
   const projects = useProjectStore((s) => s.projects);
@@ -60,6 +95,9 @@ export function PerformanceMonitor({ projectId }: { projectId: string }) {
   const [dbStats, setDbStats] = useState<[string, string][]>([]);
   const [activity, setActivity] = useState<ActivityRow[]>([]);
   const [tableStats, setTableStats] = useState<TableStatRow[]>([]);
+  const [locks, setLocks] = useState<LockRow[]>([]);
+  const [indexUsage, setIndexUsage] = useState<IndexUsageRow[]>([]);
+  const [bloat, setBloat] = useState<BloatRow[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [autoRefresh, setAutoRefresh] = useState(false);
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
@@ -70,10 +108,13 @@ export function PerformanceMonitor({ projectId }: { projectId: string }) {
     setIsLoading(true);
     try {
       const driver = DriverFactory.getDriver(details.driver);
-      const [stats, act, tStats] = await Promise.allSettled([
+      const [stats, act, tStats, lk, iu, bl] = await Promise.allSettled([
         driver.loadDatabaseStats(projectId),
         driver.loadActivity(projectId),
         driver.loadTableStats(projectId),
+        driver.loadLocks?.(projectId),
+        driver.loadIndexUsage?.(projectId),
+        driver.loadTableBloat?.(projectId),
       ]);
 
       if (stats.status === "fulfilled") setDbStats(stats.value);
@@ -113,6 +154,47 @@ export function PerformanceMonitor({ projectId }: { projectId: string }) {
           }))
         );
       }
+      if (lk.status === "fulfilled" && lk.value) {
+        setLocks(
+          lk.value.map((r) => ({
+            pid: r[0],
+            lockType: r[1],
+            database: r[2],
+            relation: r[3],
+            mode: r[4],
+            granted: r[5],
+            waitStart: r[6],
+            query: r[7],
+          }))
+        );
+      }
+      if (iu.status === "fulfilled" && iu.value) {
+        setIndexUsage(
+          iu.value.map((r) => ({
+            schema: r[0],
+            table: r[1],
+            index: r[2],
+            size: r[3],
+            scans: r[4],
+            tuplesRead: r[5],
+            tuplesFetched: r[6],
+          }))
+        );
+      }
+      if (bl.status === "fulfilled" && bl.value) {
+        setBloat(
+          bl.value.map((r) => ({
+            schema: r[0],
+            table: r[1],
+            tableSize: r[2],
+            deadTuples: r[3],
+            liveTuples: r[4],
+            bloatRatio: r[5],
+            lastVacuum: r[6],
+            lastAutovacuum: r[7],
+          }))
+        );
+      }
       setLastRefresh(new Date());
     } catch (e) {
       console.error("Performance monitor refresh failed:", e);
@@ -148,6 +230,9 @@ export function PerformanceMonitor({ projectId }: { projectId: string }) {
     { id: "overview", label: "Overview", icon: <BarChart3 className="h-3.5 w-3.5" /> },
     { id: "activity", label: "Activity", icon: <Activity className="h-3.5 w-3.5" /> },
     { id: "tables", label: "Table Stats", icon: <Table className="h-3.5 w-3.5" /> },
+    { id: "locks", label: "Locks", icon: <Lock className="h-3.5 w-3.5" /> },
+    { id: "index-usage", label: "Index Usage", icon: <Search className="h-3.5 w-3.5" /> },
+    { id: "bloat", label: "Bloat", icon: <Trash2 className="h-3.5 w-3.5" /> },
     { id: "history", label: "Query History", icon: <Clock className="h-3.5 w-3.5" /> },
   ];
 
@@ -349,6 +434,162 @@ export function PerformanceMonitor({ projectId }: { projectId: string }) {
               </table>
             </div>
           </div>
+          </div>
+        )}
+
+        {tab === "locks" && (
+          <div className="rounded-md border">
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b bg-muted/50">
+                    {["PID", "Lock Type", "Database", "Relation", "Mode", "Granted", "Wait Start", "Query"].map((h) => (
+                      <th key={h} className="px-2 py-1.5 text-left font-mono text-[10px] font-semibold text-muted-foreground whitespace-nowrap">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y">
+                  {locks.map((row, i) => (
+                    <tr key={i} className="hover:bg-muted/30">
+                      <td className="px-2 py-1 font-mono text-[11px]">{row.pid}</td>
+                      <td className="px-2 py-1 font-mono text-[11px]">{row.lockType}</td>
+                      <td className="px-2 py-1 font-mono text-[11px]">{row.database}</td>
+                      <td className="px-2 py-1 font-mono text-[11px] font-medium">{row.relation}</td>
+                      <td className="px-2 py-1">
+                        <span className={cn(
+                          "inline-block rounded px-1.5 py-0.5 font-mono text-[10px]",
+                          row.mode.includes("Exclusive") && "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400",
+                          row.mode.includes("Share") && "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400",
+                          row.mode === "AccessShareLock" && "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
+                        )}>
+                          {row.mode}
+                        </span>
+                      </td>
+                      <td className="px-2 py-1">
+                        <span className={cn(
+                          "inline-block rounded px-1.5 py-0.5 font-mono text-[10px]",
+                          row.granted === "true" ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400",
+                        )}>
+                          {row.granted === "true" ? "Yes" : "Waiting"}
+                        </span>
+                      </td>
+                      <td className="px-2 py-1 font-mono text-[10px] text-muted-foreground whitespace-nowrap">{row.waitStart || "-"}</td>
+                      <td className="max-w-[300px] truncate px-2 py-1 font-mono text-[10px] text-muted-foreground" title={row.query}>{row.query}</td>
+                    </tr>
+                  ))}
+                  {locks.length === 0 && (
+                    <tr>
+                      <td colSpan={8} className="py-6 text-center font-mono text-xs text-muted-foreground">No active locks</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {tab === "index-usage" && (
+          <div className="space-y-2">
+            <p className="font-mono text-[10px] text-muted-foreground px-1">
+              Index usage statistics. Indexes with 0 scans may be candidates for removal.
+            </p>
+            <div className="rounded-md border">
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b bg-muted/50">
+                      {["Schema", "Table", "Index", "Size", "Scans", "Tuples Read", "Tuples Fetched"].map((h) => (
+                        <th key={h} className="px-2 py-1.5 text-left font-mono text-[10px] font-semibold text-muted-foreground whitespace-nowrap">{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y">
+                    {indexUsage.map((row, i) => {
+                      const scans = parseInt(row.scans);
+                      return (
+                        <tr key={i} className="hover:bg-muted/30">
+                          <td className="px-2 py-1 font-mono text-[11px] text-muted-foreground">{row.schema}</td>
+                          <td className="px-2 py-1 font-mono text-[11px]">{row.table}</td>
+                          <td className="px-2 py-1 font-mono text-[11px] font-medium">{row.index}</td>
+                          <td className="px-2 py-1 font-mono text-[11px]">{row.size}</td>
+                          <td className={cn("px-2 py-1 font-mono text-[11px]", scans === 0 && "text-destructive font-medium")}>
+                            {scans.toLocaleString()}
+                            {scans === 0 && <span className="ml-1 text-[9px]">unused</span>}
+                          </td>
+                          <td className="px-2 py-1 font-mono text-[11px]">{parseInt(row.tuplesRead).toLocaleString()}</td>
+                          <td className="px-2 py-1 font-mono text-[11px]">{parseInt(row.tuplesFetched).toLocaleString()}</td>
+                        </tr>
+                      );
+                    })}
+                    {indexUsage.length === 0 && (
+                      <tr>
+                        <td colSpan={7} className="py-6 text-center font-mono text-xs text-muted-foreground">No index data available</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {tab === "bloat" && (
+          <div className="space-y-2">
+            <p className="font-mono text-[10px] text-muted-foreground px-1">
+              Tables with high dead tuple ratios may benefit from VACUUM. Source: pg_stat_user_tables
+            </p>
+            <div className="rounded-md border">
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b bg-muted/50">
+                      {["Schema", "Table", "Table Size", "Live Tuples", "Dead Tuples", "Bloat Ratio", "Last Vacuum", "Last Autovacuum"].map((h) => (
+                        <th key={h} className="px-2 py-1.5 text-left font-mono text-[10px] font-semibold text-muted-foreground whitespace-nowrap">{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y">
+                    {bloat.map((row, i) => {
+                      const ratio = parseFloat(row.bloatRatio);
+                      return (
+                        <tr key={i} className="hover:bg-muted/30">
+                          <td className="px-2 py-1 font-mono text-[11px] text-muted-foreground">{row.schema}</td>
+                          <td className="px-2 py-1 font-mono text-[11px] font-medium">{row.table}</td>
+                          <td className="px-2 py-1 font-mono text-[11px]">{row.tableSize}</td>
+                          <td className="px-2 py-1 font-mono text-[11px]">{parseInt(row.liveTuples).toLocaleString()}</td>
+                          <td className={cn("px-2 py-1 font-mono text-[11px]", ratio > 10 && "text-destructive font-medium")}>
+                            {parseInt(row.deadTuples).toLocaleString()}
+                          </td>
+                          <td className="px-2 py-1">
+                            <div className="flex items-center gap-1.5">
+                              <div className="h-1.5 w-16 rounded-full bg-muted overflow-hidden">
+                                <div
+                                  className={cn(
+                                    "h-full rounded-full transition-all",
+                                    ratio > 20 ? "bg-destructive" : ratio > 10 ? "bg-yellow-500" : "bg-green-500",
+                                  )}
+                                  style={{ width: `${Math.min(ratio, 100)}%` }}
+                                />
+                              </div>
+                              <span className={cn("font-mono text-[11px]", ratio > 20 && "text-destructive font-medium")}>
+                                {ratio.toFixed(1)}%
+                              </span>
+                            </div>
+                          </td>
+                          <td className="px-2 py-1 font-mono text-[10px] text-muted-foreground whitespace-nowrap">{row.lastVacuum === "never" ? "never" : new Date(row.lastVacuum).toLocaleDateString()}</td>
+                          <td className="px-2 py-1 font-mono text-[10px] text-muted-foreground whitespace-nowrap">{row.lastAutovacuum === "never" ? "never" : new Date(row.lastAutovacuum).toLocaleDateString()}</td>
+                        </tr>
+                      );
+                    })}
+                    {bloat.length === 0 && (
+                      <tr>
+                        <td colSpan={8} className="py-6 text-center font-mono text-xs text-muted-foreground">No bloat data available</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
           </div>
         )}
 

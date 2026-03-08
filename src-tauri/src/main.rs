@@ -25,6 +25,7 @@ pub struct AppState {
     pub local_db: libsql::Database,
     pub resource_monitor: Arc<Mutex<utils::ResourceMonitor>>,
     pub virtual_cache: Arc<Mutex<drivers::common::VirtualCache>>,
+    pub notify_handles: Arc<Mutex<BTreeMap<String, tokio::task::JoinHandle<()>>>>,
 }
 
 fn main() {
@@ -153,6 +154,7 @@ fn main() {
                     local_db: db,
                     resource_monitor: Arc::new(Mutex::new(utils::ResourceMonitor::new())),
                     virtual_cache: Arc::new(Mutex::new(BTreeMap::new())),
+                    notify_handles: Arc::new(Mutex::new(BTreeMap::new())),
                 };
                 app_handle.manage(state);
 
@@ -265,6 +267,19 @@ fn main() {
             drivers::pgsql::pgsql_matview_info,
             drivers::pgsql::pgsql_function_info,
             drivers::pgsql::pgsql_generate_ddl,
+            drivers::pgsql::pgsql_csv_preview,
+            drivers::pgsql::pgsql_csv_import,
+            drivers::pgsql::pgsql_listen_start,
+            drivers::pgsql::pgsql_listen_stop,
+            drivers::pgsql::pgsql_notify_send,
+            drivers::pgsql::pgsql_discover_channels,
+            drivers::pgsql::pgsql_load_roles,
+            drivers::pgsql::pgsql_load_table_grants,
+            drivers::pgsql::pgsql_load_database_grants,
+            drivers::pgsql::pgsql_extract_schema_objects,
+            drivers::pgsql::pgsql_load_locks,
+            drivers::pgsql::pgsql_load_index_usage,
+            drivers::pgsql::pgsql_load_table_bloat,
             terminal::terminal_spawn,
             terminal::terminal_write,
             terminal::terminal_resize,

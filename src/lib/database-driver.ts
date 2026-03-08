@@ -4,6 +4,7 @@ import { ProjectConnectionStatus } from "@/types";
 import type {
   DriverType, ColumnDetail, IndexDetail, ConstraintDetail,
   TriggerDetail, RuleDetail, PolicyDetail, FunctionInfo, TriggerFunctionInfo,
+  PgRole, TableGrant, DbGrant, SchemaObject,
 } from "@/types";
 
 // Wire types from Rust (tuples)
@@ -82,6 +83,19 @@ export interface DatabaseDriver {
   loadMatviewInfo?(projectId: string, schema: string, matview: string): Promise<[string, string][]>;
   loadFunctionInfo?(projectId: string, schema: string, funcName: string): Promise<[string, string][]>;
   generateDDL?(projectId: string, schema: string, name: string, objectType: string): Promise<string>;
+  csvPreview?(filePath: string): Promise<[string[], string[][]]>;
+  csvImport?(projectId: string, filePath: string, schema: string, table: string, columnMapping: [number, string][]): Promise<number>;
+  listenStart?(projectId: string, channel: string): Promise<boolean>;
+  listenStop?(projectId: string, channel: string): Promise<boolean>;
+  notifySend?(projectId: string, channel: string, payload: string): Promise<boolean>;
+  discoverChannels?(projectId: string): Promise<string[]>;
+  loadRoles?(projectId: string): Promise<PgRole[]>;
+  loadTableGrants?(projectId: string, roleName: string): Promise<TableGrant[]>;
+  loadDatabaseGrants?(projectId: string, roleName: string): Promise<DbGrant[]>;
+  extractSchemaObjects?(projectId: string, schema: string): Promise<SchemaObject[]>;
+  loadLocks?(projectId: string): Promise<string[][]>;
+  loadIndexUsage?(projectId: string): Promise<string[][]>;
+  loadTableBloat?(projectId: string): Promise<string[][]>;
 }
 
 function parseColumnDetails(wire: WireColumnDetail[]): ColumnDetail[] {
@@ -287,6 +301,45 @@ class PostgreSQLDriver implements DatabaseDriver {
   }
   async generateDDL(projectId: string, schema: string, name: string, objectType: string) {
     return invoke<string>("pgsql_generate_ddl", { project_id: projectId, schema, name, object_type: objectType });
+  }
+  async csvPreview(filePath: string) {
+    return invoke<[string[], string[][]]>("pgsql_csv_preview", { file_path: filePath });
+  }
+  async csvImport(projectId: string, filePath: string, schema: string, table: string, columnMapping: [number, string][]) {
+    return invoke<number>("pgsql_csv_import", { project_id: projectId, file_path: filePath, schema, table, column_mapping: columnMapping });
+  }
+  async listenStart(projectId: string, channel: string) {
+    return invoke<boolean>("pgsql_listen_start", { project_id: projectId, channel });
+  }
+  async listenStop(projectId: string, channel: string) {
+    return invoke<boolean>("pgsql_listen_stop", { project_id: projectId, channel });
+  }
+  async notifySend(projectId: string, channel: string, payload: string) {
+    return invoke<boolean>("pgsql_notify_send", { project_id: projectId, channel, payload });
+  }
+  async discoverChannels(projectId: string) {
+    return invoke<string[]>("pgsql_discover_channels", { project_id: projectId });
+  }
+  async loadRoles(projectId: string) {
+    return invoke<PgRole[]>("pgsql_load_roles", { project_id: projectId });
+  }
+  async loadTableGrants(projectId: string, roleName: string) {
+    return invoke<TableGrant[]>("pgsql_load_table_grants", { project_id: projectId, role_name: roleName });
+  }
+  async loadDatabaseGrants(projectId: string, roleName: string) {
+    return invoke<DbGrant[]>("pgsql_load_database_grants", { project_id: projectId, role_name: roleName });
+  }
+  async extractSchemaObjects(projectId: string, schema: string) {
+    return invoke<SchemaObject[]>("pgsql_extract_schema_objects", { project_id: projectId, schema });
+  }
+  async loadLocks(projectId: string) {
+    return invoke<string[][]>("pgsql_load_locks", { project_id: projectId });
+  }
+  async loadIndexUsage(projectId: string) {
+    return invoke<string[][]>("pgsql_load_index_usage", { project_id: projectId });
+  }
+  async loadTableBloat(projectId: string) {
+    return invoke<string[][]>("pgsql_load_table_bloat", { project_id: projectId });
   }
 }
 

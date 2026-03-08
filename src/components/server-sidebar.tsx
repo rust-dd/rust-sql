@@ -2,6 +2,7 @@ import React from "react";
 import { Button } from "@/components/ui/button";
 import { ContextMenu, useContextMenu } from "@/components/ui/context-menu";
 import { ObjectPropertiesModal } from "@/components/object-properties-modal";
+import { CSVImportModal } from "@/components/csv-import-modal";
 import { cn } from "@/lib/utils";
 import { useProjectStore } from "@/stores/project-store";
 import { useUIStore } from "@/stores/ui-store";
@@ -19,6 +20,7 @@ import {
   Eye,
   FileCode,
   FileText,
+  FileUp,
   FolderOpen,
   Key,
   Layers,
@@ -90,6 +92,7 @@ export function ServerSidebar({
   const triggerFunctions = useProjectStore((s) => s.triggerFunctions);
   const connect = useProjectStore((s) => s.connect);
   const loadTables = useProjectStore((s) => s.loadTables);
+  const loadColumns = useProjectStore((s) => s.loadColumns);
   const loadTableMetadata = useProjectStore((s) => s.loadTableMetadata);
   const loadSchemaObjects = useProjectStore((s) => s.loadSchemaObjects);
   const deleteProject = useProjectStore((s) => s.deleteProject);
@@ -97,6 +100,9 @@ export function ServerSidebar({
   const openTab = useTabStore((s) => s.openTab);
   const openMonitorTab = useTabStore((s) => s.openMonitorTab);
   const openERDTab = useTabStore((s) => s.openERDTab);
+  const openNotifyTab = useTabStore((s) => s.openNotifyTab);
+  const openRolesTab = useTabStore((s) => s.openRolesTab);
+  const openSchemaDiffTab = useTabStore((s) => s.openSchemaDiffTab);
   const savedQueries = useQueryStore((s) => s.queries);
   const loadQueries = useQueryStore((s) => s.loadQueries);
   const queriesLoaded = useQueryStore((s) => s.loaded);
@@ -115,6 +121,9 @@ export function ServerSidebar({
   const openProperties = (objectType: "table" | "view" | "matview" | "function" | "trigger-function", projectId: string, schema: string, name: string) => {
     setPropsModal({ open: true, objectType, projectId, schema, name });
   };
+
+  // CSV Import modal state
+  const [csvImportTarget, setCsvImportTarget] = React.useState<{projectId: string; schema: string; table: string; columns: string[]} | null>(null);
 
   React.useEffect(() => {
     if (!queriesLoaded) void loadQueries();
@@ -222,7 +231,10 @@ export function ServerSidebar({
                 onContextMenu={(e) => showMenu(e, [
                   { header: "Actions" },
                   { label: "New Query", icon: <Plus className="h-3 w-3" />, onClick: () => openTab(pid) },
-                  ...(isConnected ? [{ label: "Performance Monitor", icon: <Activity className="h-3 w-3" />, onClick: () => openMonitorTab(pid) }] : []),
+                  { label: "Performance Monitor", icon: <Activity className="h-3 w-3" />, onClick: () => openMonitorTab(pid), disabled: !isConnected },
+                  { label: "LISTEN/NOTIFY", icon: <Zap className="h-3 w-3" />, onClick: () => openNotifyTab(pid), disabled: !isConnected },
+                  { label: "Roles & Permissions", icon: <Shield className="h-3 w-3" />, onClick: () => openRolesTab(pid), disabled: !isConnected },
+                  { label: "Schema Diff", icon: <Columns3 className="h-3 w-3" />, onClick: () => openSchemaDiffTab(pid), disabled: !isConnected },
                   { label: isConnected ? "Reconnect" : "Connect", icon: <RefreshCw className="h-3 w-3" />, onClick: () => void onConnect(pid) },
                   ...(onEditConnection ? [{ label: "Edit Connection", icon: <Edit3 className="h-3 w-3" />, onClick: () => onEditConnection(pid) }] : []),
                   { separator: true as const },
@@ -320,6 +332,12 @@ export function ServerSidebar({
                                       { header: "Query" },
                                       { label: "SELECT TOP 100", icon: <Table className="h-3 w-3" />, onClick: () => onOpenTableQuery(pid, schema, ti.name) },
                                       { label: "SELECT COUNT(*)", icon: <Table className="h-3 w-3" />, onClick: () => openTab(pid, `SELECT COUNT(*) FROM "${schema}"."${ti.name}";`) },
+                                      { separator: true as const },
+                                      { label: "Import CSV", icon: <FileUp className="h-3 w-3" />, onClick: () => {
+                                        void loadColumns(pid, schema, ti.name).then((cols) => {
+                                          setCsvImportTarget({ projectId: pid, schema, table: ti.name, columns: cols });
+                                        });
+                                      }},
                                       { separator: true as const },
                                       { label: "Properties", icon: <Settings2 className="h-3 w-3" />, onClick: () => openProperties("table", pid, schema, ti.name) },
                                       { label: "Show CREATE TABLE", icon: <FileCode className="h-3 w-3" />, onClick: () => openTab(pid, ddlTableQuery(schema, ti.name)) },
@@ -634,6 +652,16 @@ export function ServerSidebar({
         schema={propsModal.schema}
         name={propsModal.name}
       />
+      {csvImportTarget && (
+        <CSVImportModal
+          open={!!csvImportTarget}
+          onOpenChange={(open) => { if (!open) setCsvImportTarget(null); }}
+          projectId={csvImportTarget.projectId}
+          schema={csvImportTarget.schema}
+          table={csvImportTarget.table}
+          tableColumns={csvImportTarget.columns}
+        />
+      )}
     </div>
   );
 }

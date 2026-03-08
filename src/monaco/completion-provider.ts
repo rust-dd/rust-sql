@@ -166,7 +166,7 @@ export function registerContextAwareCompletions(monaco: typeof Monaco) {
       const state = useProjectStore.getState();
       const d = projectId ? state.projects[projectId] : undefined;
 
-      // === Context-aware completions (require active connection) ===
+      // Context-aware completions (require active connection)
       if (projectId && d) {
         const aliasMap = extractAliasMap(context);
         const tableCtx = /([A-Za-z0-9_"]+)\s*\.\s*([A-Za-z0-9_"]*)$/i.exec(

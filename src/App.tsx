@@ -7,6 +7,9 @@ import { ResultsPanel } from "@/components/results-panel";
 import { PerformanceMonitor } from "@/components/performance-monitor";
 import { ERDDiagram } from "@/components/erd-diagram";
 import { TerminalPanel } from "@/components/terminal-panel";
+import { NotifyPanel } from "@/components/notify-panel";
+import { RolesPanel } from "@/components/roles-panel";
+import { SchemaDiffPanel } from "@/components/schema-diff-panel";
 import { TabBar } from "@/components/tab-bar";
 import { TopBar } from "@/components/top-bar";
 import { EditorToolbar } from "@/components/editor-toolbar";
@@ -19,6 +22,7 @@ import { useProjectStore } from "@/stores/project-store";
 import { useTabStore, useActiveTab } from "@/stores/tab-store";
 import { useUIStore } from "@/stores/ui-store";
 import { useHistoryStore } from "@/stores/history-store";
+import { ResultsGrid } from "@/components/results-grid";
 import type { ProjectDetails } from "@/types";
 import "@/monaco/setup";
 
@@ -71,6 +75,8 @@ export default function App() {
   const closeTab = useTabStore((s) => s.closeTab);
   const setExplainResult = useTabStore((s) => s.setExplainResult);
   const setVirtualQuery = useTabStore((s) => s.setVirtualQuery);
+  const setSplitResult = useTabStore((s) => s.setSplitResult);
+  const setSplitExecuting = useTabStore((s) => s.setSplitExecuting);
   const addHistoryEntry = useHistoryStore((s) => s.addEntry);
 
   // Edit connection state
@@ -279,6 +285,37 @@ export default function App() {
     }
   }, []);
 
+  const runSplitQuery = useCallback(async () => {
+    const { tabs, selectedTabIndex: idx } = useTabStore.getState();
+    const tab = tabs[idx];
+    if (!tab?.projectId || !tab.splitEditorValue?.trim()) return;
+
+    const d = useProjectStore.getState().projects[tab.projectId];
+    if (!d) return;
+
+    const connStatus = useProjectStore.getState().status[tab.projectId];
+    if (connStatus !== "Connected") {
+      await connectProject(tab.projectId);
+      const newStatus = useProjectStore.getState().status[tab.projectId];
+      if (newStatus !== "Connected") return;
+    }
+
+    setSplitExecuting(idx, true);
+    try {
+      const driver = DriverFactory.getDriver(d.driver);
+      const [cols, rows, time] = await driver.runQuery(tab.projectId, tab.splitEditorValue);
+      setSplitResult(idx, { columns: cols, rows, time });
+    } catch (err: any) {
+      const errorMsg = err?.message ?? String(err);
+      const cancelled = isQueryCancelledError(errorMsg);
+      setSplitResult(idx, {
+        columns: [cancelled ? "Info" : "Error"],
+        rows: [[cancelled ? "Query cancelled" : errorMsg]],
+        time: 0,
+      });
+    }
+  }, [setSplitExecuting, setSplitResult, connectProject]);
+
   // Keyboard shortcuts
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -396,6 +433,77 @@ export default function App() {
             <div className="flex-1 min-h-0 overflow-hidden">
               <TerminalPanel terminalId={activeTab.id} />
             </div>
+          ) : activeTab?.type === "notify" && activeTab.projectId ? (
+            <div className="flex-1 min-h-0 overflow-hidden">
+              <NotifyPanel projectId={activeTab.projectId} />
+            </div>
+          ) : activeTab?.type === "roles" && activeTab.projectId ? (
+            <div className="flex-1 min-h-0 overflow-hidden">
+              <RolesPanel projectId={activeTab.projectId} />
+            </div>
+          ) : activeTab?.type === "schema-diff" && activeTab.projectId ? (
+            <div className="flex-1 min-h-0 overflow-hidden">
+              <SchemaDiffPanel projectId={activeTab.projectId} />
+            </div>
+          ) : activeTab?.isSplit ? (
+            <>
+              <EditorToolbar
+                onExecute={() => void runQuery()}
+                onExplain={() => void runExplain()}
+              />
+              <div className="flex flex-1 min-h-0 overflow-hidden">
+                {/* Left pane */}
+                <div className="flex flex-1 flex-col overflow-hidden border-r border-border/30">
+                  <div style={{ height: `${editorHeight}%` }} className="flex flex-col overflow-hidden">
+                    <QueryEditor
+                      value={activeTab.editorValue}
+                      onChange={(v) => updateContent(selectedTabIndex, v)}
+                      onExecute={() => void runQuery()}
+                      onExplain={() => void runExplain()}
+                    />
+                  </div>
+                  <ResizeHandle direction="vertical" onResize={setEditorHeight} />
+                  <div className="flex-1 min-h-0">
+                    <ResultsPanel />
+                  </div>
+                </div>
+                {/* Right pane */}
+                <div className="flex flex-1 flex-col overflow-hidden">
+                  <div style={{ height: `${editorHeight}%` }} className="flex flex-col overflow-hidden">
+                    <QueryEditor
+                      value={activeTab.splitEditorValue ?? ""}
+                      onChange={(v) => useTabStore.getState().updateSplitContent(selectedTabIndex, v)}
+                      onExecute={() => void runSplitQuery()}
+                    />
+                  </div>
+                  <ResizeHandle direction="vertical" onResize={setEditorHeight} />
+                  <div className="flex-1 min-h-0 flex flex-col">
+                    {activeTab.isSplitExecuting ? (
+                      <div className="flex-1 flex items-center justify-center text-muted-foreground">
+                        <span className="animate-spin mr-2">⏳</span> Running...
+                      </div>
+                    ) : activeTab.splitResult ? (
+                      <div className="flex-1 flex flex-col overflow-hidden">
+                        <div className="flex items-center gap-2 px-3 py-1 border-b border-border/30 text-xs font-mono text-muted-foreground">
+                          <span>{activeTab.splitResult.rows.length} rows</span>
+                          {activeTab.splitResult.time > 0 && <span>· {activeTab.splitResult.time.toFixed(1)}ms</span>}
+                        </div>
+                        <div className="flex-1 min-h-0">
+                          <ResultsGrid
+                            columns={activeTab.splitResult.columns}
+                            rows={activeTab.splitResult.rows}
+                          />
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex-1 flex items-center justify-center text-muted-foreground/40 text-sm font-mono">
+                        Run a query to see results
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </>
           ) : (
             <>
               <EditorToolbar

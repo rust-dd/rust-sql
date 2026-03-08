@@ -12,7 +12,7 @@ export type DriverType = "PGSQL";
 
 export type ProjectMap = Record<string, ProjectDetails>;
 
-export type TabType = "query" | "monitor" | "erd" | "terminal";
+export type TabType = "query" | "monitor" | "erd" | "terminal" | "notify" | "roles" | "schema-diff";
 
 export interface Tab {
   id: string;
@@ -25,6 +25,10 @@ export interface Tab {
   result?: QueryResult;
   explainResult?: ExplainPlan;
   virtualQuery?: VirtualQuery;
+  isSplit?: boolean;
+  splitEditorValue?: string;
+  splitResult?: QueryResult;
+  isSplitExecuting?: boolean;
 }
 
 export interface ExplainNode {
@@ -127,6 +131,37 @@ export interface FunctionInfo {
 export interface TriggerFunctionInfo {
   name: string;
   arguments: string;
+}
+
+export interface PgRole {
+  name: string;
+  superuser: boolean;
+  create_db: boolean;
+  create_role: boolean;
+  login: boolean;
+  replication: boolean;
+  bypass_rls: boolean;
+  conn_limit: number;
+  valid_until: string;
+  member_of: string[];
+}
+
+export interface TableGrant {
+  schema: string;
+  table: string;
+  grantee: string;
+  privileges: string[];
+}
+
+export interface DbGrant {
+  database: string;
+  privilege: string;
+}
+
+export interface SchemaObject {
+  object_type: string;
+  name: string;
+  definition: string;
 }
 
 export enum ProjectConnectionStatus {

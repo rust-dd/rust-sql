@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { useProjectStore } from "@/stores/project-store";
 import { useTabStore, useActiveTab } from "@/stores/tab-store";
 import { useQueryStore } from "@/stores/query-store";
-import { AlignLeft, GitBranch, Loader2, Play, Save } from "lucide-react";
+import { AlignLeft, Columns2, GitBranch, Loader2, Play, Save } from "lucide-react";
 import { format as formatSQL } from "sql-formatter";
 
 export function EditorToolbar({
@@ -18,6 +18,7 @@ export function EditorToolbar({
   const activeTab = useActiveTab();
   const selectedTabIndex = useTabStore((s) => s.selectedTabIndex);
   const updateContent = useTabStore((s) => s.updateContent);
+  const toggleSplit = useTabStore((s) => s.toggleSplit);
   const projects = useProjectStore((s) => s.projects);
   const saveQueryAction = useQueryStore((s) => s.saveQuery);
   const activeProject = activeTab?.projectId;
@@ -78,6 +79,16 @@ export function EditorToolbar({
         >
           <AlignLeft className="h-3.5 w-3.5" />
           Format
+        </Button>
+        <Button
+          variant={activeTab?.isSplit ? "outline" : "ghost"}
+          size="sm"
+          className="h-7 gap-1.5 text-xs px-2"
+          onClick={() => toggleSplit(selectedTabIndex)}
+          title="Toggle split editor"
+        >
+          <Columns2 className="h-3.5 w-3.5" />
+          Split
         </Button>
 
         <div className="h-4 w-px bg-border/40 mx-1" />

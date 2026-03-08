@@ -1,6 +1,7 @@
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { ContextMenu, useContextMenu } from "@/components/ui/context-menu";
+import { ObjectPropertiesModal } from "@/components/object-properties-modal";
 import { cn } from "@/lib/utils";
 import { useProjectStore } from "@/stores/project-store";
 import { useUIStore } from "@/stores/ui-store";
@@ -28,6 +29,7 @@ import {
   RefreshCw,
   ScrollText,
   Server,
+  Settings2,
   Shield,
   Table,
   Trash2,
@@ -101,12 +103,26 @@ export function ServerSidebar({
   const removeQuery = useQueryStore((s) => s.removeQuery);
   const { menu, showMenu, closeMenu } = useContextMenu();
 
+  // Object properties modal state
+  const [propsModal, setPropsModal] = React.useState<{
+    open: boolean;
+    objectType: "table" | "view" | "matview" | "function" | "trigger-function";
+    projectId: string;
+    schema: string;
+    name: string;
+  }>({ open: false, objectType: "table", projectId: "", schema: "", name: "" });
+
+  const openProperties = (objectType: "table" | "view" | "matview" | "function" | "trigger-function", projectId: string, schema: string, name: string) => {
+    setPropsModal({ open: true, objectType, projectId, schema, name });
+  };
+
   React.useEffect(() => {
     if (!queriesLoaded) void loadQueries();
   }, [queriesLoaded, loadQueries]);
 
   const [expanded, setExpanded] = React.useState<Record<string, boolean>>({});
   const [loading, setLoading] = React.useState<Record<string, boolean>>({});
+  const [selectedItem, setSelectedItem] = React.useState<string | null>(null);
 
   const toggle = (key: string) => setExpanded((p) => ({ ...p, [key]: !p[key] }));
   const isOpen = (key: string, defaultOpen = false) => expanded[key] ?? defaultOpen;
@@ -163,7 +179,7 @@ export function ServerSidebar({
   const copy = (text: string) => navigator.clipboard.writeText(text);
 
   return (
-    <div className="flex h-full flex-col border-r border-sidebar-border bg-sidebar">
+    <div className="flex h-full flex-col border-r border-sidebar-border bg-sidebar select-none">
       <div className="flex h-12 items-center justify-between border-b border-sidebar-border px-3">
         <span className="tracking-widest uppercase text-[10px] font-semibold text-sidebar-foreground">CONNECTIONS</span>
         <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setConnectionModalOpen(true)}>
@@ -204,6 +220,7 @@ export function ServerSidebar({
                 expanded={isOpen(pKey, isConnected)}
                 onClick={() => toggle(pKey)}
                 onContextMenu={(e) => showMenu(e, [
+                  { header: "Actions" },
                   { label: "New Query", icon: <Plus className="h-3 w-3" />, onClick: () => openTab(pid) },
                   ...(isConnected ? [{ label: "Performance Monitor", icon: <Activity className="h-3 w-3" />, onClick: () => openMonitorTab(pid) }] : []),
                   { label: isConnected ? "Reconnect" : "Connect", icon: <RefreshCw className="h-3 w-3" />, onClick: () => void onConnect(pid) },
@@ -296,15 +313,19 @@ export function ServerSidebar({
                                     label={ti.name}
                                     expanded={isTableOpen}
                                     loading={loading[tKey]}
-                                    onClick={() => void onExpandTable(pid, schema, ti.name)}
+                                    selected={selectedItem === tKey}
+                                    onClick={() => { setSelectedItem(tKey); void onExpandTable(pid, schema, ti.name); }}
                                     onDoubleClick={() => onOpenTableQuery(pid, schema, ti.name)}
-                                    onContextMenu={(e) => showMenu(e, [
+                                    onContextMenu={(e) => { setSelectedItem(tKey); showMenu(e, [
+                                      { header: "Query" },
                                       { label: "SELECT TOP 100", icon: <Table className="h-3 w-3" />, onClick: () => onOpenTableQuery(pid, schema, ti.name) },
                                       { label: "SELECT COUNT(*)", icon: <Table className="h-3 w-3" />, onClick: () => openTab(pid, `SELECT COUNT(*) FROM "${schema}"."${ti.name}";`) },
+                                      { separator: true as const },
+                                      { label: "Properties", icon: <Settings2 className="h-3 w-3" />, onClick: () => openProperties("table", pid, schema, ti.name) },
                                       { label: "Show CREATE TABLE", icon: <FileCode className="h-3 w-3" />, onClick: () => openTab(pid, ddlTableQuery(schema, ti.name)) },
                                       { separator: true as const },
-                                      { label: "Copy Name", icon: <Copy className="h-3 w-3" />, onClick: () => copy(`"${schema}"."${ti.name}"`) },
-                                    ])}
+                                      { label: "Copy Name", icon: <Copy className="h-3 w-3" />, onClick: () => copy(`"${schema}"."${ti.name}"`), shortcut: navigator.platform.includes("Mac") ? "\u2318C" : "Ctrl+C" },
+                                    ]); }}
                                     trailing={<span className="rounded-full bg-accent/60 px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground shrink-0">{ti.size}</span>}
                                   />
                                   {isTableOpen && cols && (
@@ -425,18 +446,25 @@ export function ServerSidebar({
                                 <SectionHeader indent={I.schemaObj} label={`Views (${schemaViews.length})`}
                                   icon={<Eye className="h-3 w-3" />} sectionKey={`${sKey}::views`}
                                   expanded={isOpen(`${sKey}::views`)} onClick={() => toggle(`${sKey}::views`)} />
-                                {isOpen(`${sKey}::views`) && schemaViews.map((v) => (
+                                {isOpen(`${sKey}::views`) && schemaViews.map((v) => {
+                                  const vKey = `view::${pid}::${schema}::${v}`;
+                                  return (
                                   <TreeRow key={v} indent={I.table}
                                     icon={<Eye className="h-3.5 w-3.5 text-muted-foreground" />}
                                     label={v}
-                                    onClick={() => onOpenTableQuery(pid, schema, v)}
-                                    onContextMenu={(e) => showMenu(e, [
+                                    selected={selectedItem === vKey}
+                                    onClick={() => { setSelectedItem(vKey); onOpenTableQuery(pid, schema, v); }}
+                                    onContextMenu={(e) => { setSelectedItem(vKey); showMenu(e, [
                                       { label: "SELECT TOP 100", icon: <Eye className="h-3 w-3" />, onClick: () => onOpenTableQuery(pid, schema, v) },
+                                      { separator: true as const },
+                                      { label: "Properties", icon: <Settings2 className="h-3 w-3" />, onClick: () => openProperties("view", pid, schema, v) },
                                       { label: "Show CREATE VIEW", icon: <FileCode className="h-3 w-3" />, onClick: () => openTab(pid, ddlViewQuery(schema, v)) },
+                                      { separator: true as const },
                                       { label: "Copy Name", icon: <Copy className="h-3 w-3" />, onClick: () => copy(`"${schema}"."${v}"`) },
-                                    ])}
+                                    ]); }}
                                   />
-                                ))}
+                                  );
+                                })}
                               </>
                             )}
 
@@ -446,18 +474,25 @@ export function ServerSidebar({
                                 <SectionHeader indent={I.schemaObj} label={`Materialized Views (${schemaMatViews.length})`}
                                   icon={<Layers className="h-3 w-3" />} sectionKey={`${sKey}::matviews`}
                                   expanded={isOpen(`${sKey}::matviews`)} onClick={() => toggle(`${sKey}::matviews`)} />
-                                {isOpen(`${sKey}::matviews`) && schemaMatViews.map((mv) => (
+                                {isOpen(`${sKey}::matviews`) && schemaMatViews.map((mv) => {
+                                  const mvKey = `matview::${pid}::${schema}::${mv}`;
+                                  return (
                                   <TreeRow key={mv} indent={I.table}
                                     icon={<Layers className="h-3.5 w-3.5 text-muted-foreground" />}
                                     label={mv}
-                                    onClick={() => onOpenTableQuery(pid, schema, mv)}
-                                    onContextMenu={(e) => showMenu(e, [
+                                    selected={selectedItem === mvKey}
+                                    onClick={() => { setSelectedItem(mvKey); onOpenTableQuery(pid, schema, mv); }}
+                                    onContextMenu={(e) => { setSelectedItem(mvKey); showMenu(e, [
                                       { label: "SELECT TOP 100", icon: <Layers className="h-3 w-3" />, onClick: () => onOpenTableQuery(pid, schema, mv) },
                                       { label: "REFRESH", icon: <RefreshCw className="h-3 w-3" />, onClick: () => openTab(pid, `REFRESH MATERIALIZED VIEW "${schema}"."${mv}";`) },
+                                      { separator: true as const },
+                                      { label: "Properties", icon: <Settings2 className="h-3 w-3" />, onClick: () => openProperties("matview", pid, schema, mv) },
+                                      { separator: true as const },
                                       { label: "Copy Name", icon: <Copy className="h-3 w-3" />, onClick: () => copy(`"${schema}"."${mv}"`) },
-                                    ])}
+                                    ]); }}
                                   />
-                                ))}
+                                  );
+                                })}
                               </>
                             )}
 
@@ -467,17 +502,25 @@ export function ServerSidebar({
                                 <SectionHeader indent={I.schemaObj} label={`Functions (${schemaFns.length})`}
                                   icon={<FileCode className="h-3 w-3" />} sectionKey={`${sKey}::fns`}
                                   expanded={isOpen(`${sKey}::fns`)} onClick={() => toggle(`${sKey}::fns`)} />
-                                {isOpen(`${sKey}::fns`) && schemaFns.map((fn, i) => (
-                                  <div key={`${fn.name}-${i}`} className="relative flex items-center gap-1.5 py-0.5 hover:bg-sidebar-accent rounded-sm whitespace-nowrap" style={{ paddingLeft: `${I.table}px` }}
-                                    onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); showMenu(e, [
+                                {isOpen(`${sKey}::fns`) && schemaFns.map((fn, i) => {
+                                  const fnKey = `fn::${pid}::${schema}::${fn.name}::${i}`;
+                                  return (
+                                  <div key={`${fn.name}-${i}`}
+                                    className={cn("relative flex items-center gap-1.5 py-0.5 rounded-sm whitespace-nowrap select-none", selectedItem === fnKey ? "bg-primary/10" : "hover:bg-sidebar-accent")}
+                                    style={{ paddingLeft: `${I.table}px` }}
+                                    onClick={() => setSelectedItem(fnKey)}
+                                    onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); setSelectedItem(fnKey); showMenu(e, [
                                       { label: "Show Definition", icon: <FileCode className="h-3 w-3" />, onClick: () => openTab(pid, ddlFunctionQuery(schema, fn.name)) },
+                                      { label: "Properties", icon: <Settings2 className="h-3 w-3" />, onClick: () => openProperties("function", pid, schema, fn.name) },
+                                      { separator: true as const },
                                       { label: "Copy Name", icon: <Copy className="h-3 w-3" />, onClick: () => copy(fn.name) },
                                     ]); }}>
                                     <FileCode className="h-3 w-3 shrink-0 text-muted-foreground/50" />
                                     <span className="font-mono text-[11px] text-foreground">{fn.name}({fn.arguments ? "..." : ""})</span>
                                     <span className="font-mono text-[10px] text-muted-foreground">{fn.returnType}</span>
                                   </div>
-                                ))}
+                                  );
+                                })}
                               </>
                             )}
 
@@ -487,13 +530,25 @@ export function ServerSidebar({
                                 <SectionHeader indent={I.schemaObj} label={`Trigger Functions (${schemaTrigFns.length})`}
                                   icon={<Zap className="h-3 w-3" />} sectionKey={`${sKey}::trigfns`}
                                   expanded={isOpen(`${sKey}::trigfns`)} onClick={() => toggle(`${sKey}::trigfns`)} />
-                                {isOpen(`${sKey}::trigfns`) && schemaTrigFns.map((fn, i) => (
-                                  <div key={`${fn.name}-${i}`} className="relative flex items-center gap-1.5 py-0.5 hover:bg-sidebar-accent rounded-sm whitespace-nowrap" style={{ paddingLeft: `${I.table}px` }}>
+                                {isOpen(`${sKey}::trigfns`) && schemaTrigFns.map((fn, i) => {
+                                  const tfKey = `trigfn::${pid}::${schema}::${fn.name}::${i}`;
+                                  return (
+                                  <div key={`${fn.name}-${i}`}
+                                    className={cn("relative flex items-center gap-1.5 py-0.5 rounded-sm whitespace-nowrap select-none", selectedItem === tfKey ? "bg-primary/10" : "hover:bg-sidebar-accent")}
+                                    style={{ paddingLeft: `${I.table}px` }}
+                                    onClick={() => setSelectedItem(tfKey)}
+                                    onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); setSelectedItem(tfKey); showMenu(e, [
+                                      { label: "Show Definition", icon: <FileCode className="h-3 w-3" />, onClick: () => openTab(pid, ddlFunctionQuery(schema, fn.name)) },
+                                      { label: "Properties", icon: <Settings2 className="h-3 w-3" />, onClick: () => openProperties("trigger-function", pid, schema, fn.name) },
+                                      { separator: true as const },
+                                      { label: "Copy Name", icon: <Copy className="h-3 w-3" />, onClick: () => copy(fn.name) },
+                                    ]); }}>
                                     <Zap className="h-3 w-3 shrink-0 text-muted-foreground/50" />
                                     <span className="font-mono text-[11px] text-foreground">{fn.name}()</span>
                                     <span className="font-mono text-[10px] text-muted-foreground">trigger</span>
                                   </div>
-                                ))}
+                                  );
+                                })}
                               </>
                             )}
                           </>
@@ -549,13 +604,14 @@ export function ServerSidebar({
                 indent={I.server}
                 icon={<FileText className="h-3.5 w-3.5 text-primary/60" />}
                 label={q.title}
-                onClick={() => openTab(q.projectId, q.sql)}
-                onContextMenu={(e) => showMenu(e, [
+                selected={selectedItem === `query::${q.id}`}
+                onClick={() => { setSelectedItem(`query::${q.id}`); openTab(q.projectId, q.sql); }}
+                onContextMenu={(e) => { setSelectedItem(`query::${q.id}`); showMenu(e, [
                   { label: "Open in Tab", icon: <FileText className="h-3 w-3" />, onClick: () => openTab(q.projectId, q.sql) },
                   { label: "Copy SQL", icon: <Copy className="h-3 w-3" />, onClick: () => copy(q.sql) },
                   { separator: true as const },
                   { label: "Delete", icon: <Trash2 className="h-3 w-3" />, onClick: () => void removeQuery(q.id), destructive: true },
-                ])}
+                ]); }}
                 trailing={
                   <span className="font-mono text-[10px] text-muted-foreground shrink-0">{q.projectId}</span>
                 }
@@ -570,6 +626,14 @@ export function ServerSidebar({
       </div>
 
       {menu && <ContextMenu x={menu.x} y={menu.y} items={menu.items} onClose={closeMenu} />}
+      <ObjectPropertiesModal
+        open={propsModal.open}
+        onOpenChange={(open) => setPropsModal((p) => ({ ...p, open }))}
+        objectType={propsModal.objectType}
+        projectId={propsModal.projectId}
+        schema={propsModal.schema}
+        name={propsModal.name}
+      />
     </div>
   );
 }
@@ -592,7 +656,7 @@ function IndentGuides({ indent }: { indent: number }) {
 
 /** Generic tree row */
 function TreeRow({
-  indent, icon, label, bold, expanded, loading: isLoading, trailing,
+  indent, icon, label, bold, expanded, loading: isLoading, trailing, selected,
   onClick, onDoubleClick, onContextMenu,
 }: {
   indent: number;
@@ -602,6 +666,7 @@ function TreeRow({
   expanded?: boolean;
   loading?: boolean;
   trailing?: React.ReactNode;
+  selected?: boolean;
   onClick?: () => void;
   onDoubleClick?: () => void;
   onContextMenu?: (e: React.MouseEvent) => void;
@@ -611,7 +676,12 @@ function TreeRow({
       onClick={onClick}
       onDoubleClick={onDoubleClick}
       onContextMenu={onContextMenu}
-      className="relative flex w-full items-center gap-1.5 py-1 text-left text-sm hover:bg-white/[0.06] dark:hover:bg-white/[0.06] hover:bg-black/[0.04] transition-colors rounded-sm whitespace-nowrap"
+      className={cn(
+        "relative flex w-full items-center gap-1.5 py-1 text-left text-sm transition-colors rounded-sm whitespace-nowrap",
+        selected
+          ? "bg-primary/10 text-foreground"
+          : "hover:bg-white/[0.06] dark:hover:bg-white/[0.06] hover:bg-black/[0.04]",
+      )}
       style={{ paddingLeft: `${indent}px` }}
     >
       <IndentGuides indent={indent} />

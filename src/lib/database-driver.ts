@@ -76,6 +76,12 @@ export interface DatabaseDriver {
   loadDatabaseStats(projectId: string): Promise<[string, string][]>;
   loadTableStats(projectId: string): Promise<string[][]>;
   loadForeignKeys(projectId: string, schema: string): Promise<ForeignKey[]>;
+  loadTableStatistics?(projectId: string, schema: string, table: string): Promise<[string, string][]>;
+  loadFKDetails?(projectId: string, schema: string, table: string, direction: string): Promise<[string, string, string, string, string, string, string, string, string][]>;
+  loadViewInfo?(projectId: string, schema: string, view: string): Promise<[string, string][]>;
+  loadMatviewInfo?(projectId: string, schema: string, matview: string): Promise<[string, string][]>;
+  loadFunctionInfo?(projectId: string, schema: string, funcName: string): Promise<[string, string][]>;
+  generateDDL?(projectId: string, schema: string, name: string, objectType: string): Promise<string>;
 }
 
 function parseColumnDetails(wire: WireColumnDetail[]): ColumnDetail[] {
@@ -263,6 +269,24 @@ class PostgreSQLDriver implements DatabaseDriver {
     return wire.map(([sourceTable, sourceColumn, targetTable, targetColumn]) => ({
       sourceTable, sourceColumn, targetTable, targetColumn,
     }));
+  }
+  async loadTableStatistics(projectId: string, schema: string, table: string) {
+    return invoke<[string, string][]>("pgsql_table_statistics", { project_id: projectId, schema, table });
+  }
+  async loadFKDetails(projectId: string, schema: string, table: string, direction: string) {
+    return invoke<[string, string, string, string, string, string, string, string, string][]>("pgsql_fk_details", { project_id: projectId, schema, table, direction });
+  }
+  async loadViewInfo(projectId: string, schema: string, view: string) {
+    return invoke<[string, string][]>("pgsql_view_info", { project_id: projectId, schema, view });
+  }
+  async loadMatviewInfo(projectId: string, schema: string, matview: string) {
+    return invoke<[string, string][]>("pgsql_matview_info", { project_id: projectId, schema, matview });
+  }
+  async loadFunctionInfo(projectId: string, schema: string, funcName: string) {
+    return invoke<[string, string][]>("pgsql_function_info", { project_id: projectId, schema, func_name: funcName });
+  }
+  async generateDDL(projectId: string, schema: string, name: string, objectType: string) {
+    return invoke<string>("pgsql_generate_ddl", { project_id: projectId, schema, name, object_type: objectType });
   }
 }
 

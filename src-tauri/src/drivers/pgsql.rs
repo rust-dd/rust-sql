@@ -10,12 +10,14 @@ use crate::AppState;
 use crate::common::enums::{AppError, ProjectConnectionStatus};
 use crate::common::pgsql::{PgsqlLoadColumns, PgsqlLoadSchemas, PgsqlLoadTables};
 use crate::drivers::common::{
-    ColumnDetail, ConstraintDetail, DbStat, ForeignKeyInfo, FunctionInfo, IndexDetail,
-    PolicyDetail, RuleDetail, TriggerDetail, close_virtual, execute_query, execute_query_packed,
-    execute_query_streamed, execute_virtual, fetch_virtual_page, get_pool, load_activity,
-    load_column_details, load_columns, load_constraints, load_database_stats, load_foreign_keys,
-    load_functions, load_indexes, load_materialized_views, load_policies, load_rules, load_schemas,
-    load_table_stats, load_tables, load_trigger_functions, load_triggers, load_views,
+    ColumnDetail, ConstraintDetail, DbStat, FKDetail, ForeignKeyInfo, FunctionInfo, IndexDetail,
+    ObjectStats, PolicyDetail, RuleDetail, TriggerDetail, close_virtual, execute_query,
+    execute_query_packed, execute_query_streamed, execute_virtual, fetch_virtual_page,
+    generate_full_ddl, get_pool, load_activity, load_column_details, load_columns,
+    load_constraints, load_database_stats, load_fk_details, load_foreign_keys, load_function_info,
+    load_functions, load_indexes, load_materialized_views, load_matview_info, load_policies,
+    load_rules, load_schemas, load_table_statistics, load_table_stats, load_tables,
+    load_trigger_functions, load_triggers, load_view_info, load_views,
 };
 
 use native_tls::TlsConnector;
@@ -886,4 +888,86 @@ pub async fn pgsql_close_virtual(query_id: &str, app_state: State<'_, AppState>)
         );
     }
     Ok(())
+}
+
+// ── Object properties commands ───────────────────────────────────────
+
+#[tauri::command(rename_all = "snake_case")]
+pub async fn pgsql_table_statistics(
+    project_id: &str,
+    schema: &str,
+    table: &str,
+    app_state: State<'_, AppState>,
+) -> Result<ObjectStats> {
+    let client = acquire_client(&app_state.meta_clients, project_id).await?;
+    load_table_statistics(&client, schema, table)
+        .await
+        .map_err(Into::into)
+}
+
+#[tauri::command(rename_all = "snake_case")]
+pub async fn pgsql_fk_details(
+    project_id: &str,
+    schema: &str,
+    table: &str,
+    direction: &str,
+    app_state: State<'_, AppState>,
+) -> Result<Vec<FKDetail>> {
+    let client = acquire_client(&app_state.meta_clients, project_id).await?;
+    load_fk_details(&client, schema, table, direction)
+        .await
+        .map_err(Into::into)
+}
+
+#[tauri::command(rename_all = "snake_case")]
+pub async fn pgsql_view_info(
+    project_id: &str,
+    schema: &str,
+    view: &str,
+    app_state: State<'_, AppState>,
+) -> Result<ObjectStats> {
+    let client = acquire_client(&app_state.meta_clients, project_id).await?;
+    load_view_info(&client, schema, view)
+        .await
+        .map_err(Into::into)
+}
+
+#[tauri::command(rename_all = "snake_case")]
+pub async fn pgsql_matview_info(
+    project_id: &str,
+    schema: &str,
+    matview: &str,
+    app_state: State<'_, AppState>,
+) -> Result<ObjectStats> {
+    let client = acquire_client(&app_state.meta_clients, project_id).await?;
+    load_matview_info(&client, schema, matview)
+        .await
+        .map_err(Into::into)
+}
+
+#[tauri::command(rename_all = "snake_case")]
+pub async fn pgsql_function_info(
+    project_id: &str,
+    schema: &str,
+    func_name: &str,
+    app_state: State<'_, AppState>,
+) -> Result<ObjectStats> {
+    let client = acquire_client(&app_state.meta_clients, project_id).await?;
+    load_function_info(&client, schema, func_name)
+        .await
+        .map_err(Into::into)
+}
+
+#[tauri::command(rename_all = "snake_case")]
+pub async fn pgsql_generate_ddl(
+    project_id: &str,
+    schema: &str,
+    name: &str,
+    object_type: &str,
+    app_state: State<'_, AppState>,
+) -> Result<String> {
+    let client = acquire_client(&app_state.meta_clients, project_id).await?;
+    generate_full_ddl(&client, schema, name, object_type)
+        .await
+        .map_err(Into::into)
 }

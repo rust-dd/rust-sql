@@ -9,6 +9,7 @@ import { ERDDiagram } from "@/components/erd-diagram";
 import { TerminalPanel } from "@/components/terminal-panel";
 import { TabBar } from "@/components/tab-bar";
 import { TopBar } from "@/components/top-bar";
+import { EditorToolbar } from "@/components/editor-toolbar";
 import { StatusBar } from "@/components/status-bar";
 import { CommandPalette } from "@/components/command-palette";
 import { DriverFactory } from "@/lib/database-driver";
@@ -284,7 +285,7 @@ export default function App() {
       if ((e.metaKey || e.ctrlKey) && e.key === "w") {
         e.preventDefault();
         const { tabs: t, selectedTabIndex: idx } = useTabStore.getState();
-        if (t.length > 1) {
+        if (t.length > 0) {
           const closingTab = t[idx];
           if (closingTab?.virtualQuery?.queryId && closingTab.projectId) {
             const dd = useProjectStore.getState().projects[closingTab.projectId];
@@ -356,11 +357,10 @@ export default function App() {
   );
 
   return (
-    <div className="flex h-screen flex-col bg-background text-foreground">
+    <div className="flex h-screen flex-col bg-background text-foreground" onContextMenu={(e) => e.preventDefault()}>
       <TopBar
-        onExecute={() => void runQuery()}
-        onExplain={() => void runExplain()}
         onCheckUpdates={() => void checkForUpdates()}
+        onOpenCommandPalette={() => setCommandPaletteOpen(true)}
       />
 
       <div className="flex flex-1 overflow-hidden">
@@ -371,7 +371,20 @@ export default function App() {
 
         <div className="flex flex-1 flex-col overflow-hidden">
           <TabBar />
-          {activeTab?.type === "monitor" && activeTab.projectId ? (
+          {!activeTab ? (
+            <div className="flex-1 flex items-center justify-center">
+              <div className="text-center space-y-4">
+                <div className="text-muted-foreground/40 text-6xl font-mono font-bold select-none">RSQL</div>
+                <p className="text-muted-foreground/60 text-sm">No tabs open</p>
+                <button
+                  onClick={() => useTabStore.getState().openTab()}
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-colors text-sm font-medium"
+                >
+                  <span className="text-lg leading-none">+</span> New Query
+                </button>
+              </div>
+            </div>
+          ) : activeTab?.type === "monitor" && activeTab.projectId ? (
             <div className="flex-1 min-h-0 overflow-hidden">
               <PerformanceMonitor projectId={activeTab.projectId} />
             </div>
@@ -385,6 +398,10 @@ export default function App() {
             </div>
           ) : (
             <>
+              <EditorToolbar
+                onExecute={() => void runQuery()}
+                onExplain={() => void runExplain()}
+              />
               <div style={{ height: `${editorHeight}%` }} className="flex flex-col overflow-hidden">
                 <QueryEditor
                   value={activeTab?.editorValue ?? ""}

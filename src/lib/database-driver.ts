@@ -96,6 +96,10 @@ export interface DatabaseDriver {
   loadLocks?(projectId: string): Promise<string[][]>;
   loadIndexUsage?(projectId: string): Promise<string[][]>;
   loadTableBloat?(projectId: string): Promise<string[][]>;
+  loadExtensions?(projectId: string): Promise<string[][]>;
+  loadAvailableExtensions?(projectId: string): Promise<string[][]>;
+  loadEnumTypes?(projectId: string): Promise<string[][]>;
+  loadPgSettings?(projectId: string): Promise<string[][]>;
 }
 
 function parseColumnDetails(wire: WireColumnDetail[]): ColumnDetail[] {
@@ -340,6 +344,18 @@ class PostgreSQLDriver implements DatabaseDriver {
   }
   async loadTableBloat(projectId: string) {
     return invoke<string[][]>("pgsql_load_table_bloat", { project_id: projectId });
+  }
+  async loadExtensions(projectId: string) {
+    return invoke<string[][]>("pgsql_load_extensions", { project_id: projectId });
+  }
+  async loadAvailableExtensions(projectId: string) {
+    return invoke<string[][]>("pgsql_load_available_extensions", { project_id: projectId });
+  }
+  async loadEnumTypes(projectId: string) {
+    return invoke<string[][]>("pgsql_load_enum_types", { project_id: projectId });
+  }
+  async loadPgSettings(projectId: string) {
+    return invoke<string[][]>("pgsql_load_pg_settings", { project_id: projectId });
   }
 }
 

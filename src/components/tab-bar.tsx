@@ -6,7 +6,7 @@ import { useTabStore } from "@/stores/tab-store";
 import { useProjectStore } from "@/stores/project-store";
 import { DriverFactory } from "@/lib/database-driver";
 import * as virtualCache from "@/lib/virtual-cache";
-import { Activity, Bell, Columns3, Copy, Database, Plus, Shield, Terminal, Trash2, X, XCircle } from "lucide-react";
+import { Activity, Bell, Columns3, Copy, Database, List, Package, Plus, Settings, Shield, Terminal, Trash2, X, XCircle } from "lucide-react";
 
 export function TabBar() {
   const tabs = useTabStore((s) => s.tabs);
@@ -91,6 +91,12 @@ export function TabBar() {
                   <Shield className={cn("h-3 w-3", isActive ? "text-primary" : "text-muted-foreground")} />
                 ) : tab.type === "schema-diff" ? (
                   <Columns3 className={cn("h-3 w-3", isActive ? "text-primary" : "text-muted-foreground")} />
+                ) : tab.type === "extensions" ? (
+                  <Package className={cn("h-3 w-3", isActive ? "text-primary" : "text-muted-foreground")} />
+                ) : tab.type === "enums" ? (
+                  <List className={cn("h-3 w-3", isActive ? "text-primary" : "text-muted-foreground")} />
+                ) : tab.type === "pg-settings" ? (
+                  <Settings className={cn("h-3 w-3", isActive ? "text-primary" : "text-muted-foreground")} />
                 ) : projectDb ? (
                   <Database className={cn("h-3 w-3", isActive ? "text-primary/70" : "text-muted-foreground/60")} />
                 ) : null}

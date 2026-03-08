@@ -928,8 +928,6 @@ pub async fn load_constraints(
 /// FK relation: (source_table, source_column, target_table, target_column)
 pub type ForeignKeyInfo = (String, String, String, String);
 
-// ── Object properties helpers ────────────────────────────────────────
-
 /// Table statistics: Vec of (key, value) pairs
 pub type ObjectStats = Vec<(String, String)>;
 
@@ -1632,8 +1630,6 @@ pub async fn import_csv_to_table(
     Ok(imported)
 }
 
-// ── Role / Permission types and queries ──────────────────────────────
-
 #[derive(Debug, Clone, serde::Serialize)]
 pub struct PgRole {
     pub name: String,
@@ -1648,9 +1644,7 @@ pub struct PgRole {
     pub member_of: Vec<String>,
 }
 
-pub async fn load_roles(
-    client: &deadpool_postgres::Client,
-) -> Result<Vec<PgRole>, AppError> {
+pub async fn load_roles(client: &deadpool_postgres::Client) -> Result<Vec<PgRole>, AppError> {
     let rows = client
         .query(
             "SELECT r.rolname, r.rolsuper, r.rolcreatedb, r.rolcreaterole,
@@ -1761,8 +1755,6 @@ pub async fn load_database_grants(
 
     Ok(grants)
 }
-
-// ── Schema diff ──────────────────────────────────────────────────────
 
 #[derive(Debug, Clone, serde::Serialize)]
 pub struct SchemaObject {
@@ -1881,8 +1873,6 @@ pub async fn extract_schema_objects(
     Ok(objects)
 }
 
-// ── LISTEN/NOTIFY channel discovery ──────────────────────────────────
-
 pub async fn discover_notify_channels(
     client: &deadpool_postgres::Client,
 ) -> Result<Vec<String>, AppError> {
@@ -1913,13 +1903,12 @@ pub async fn discover_notify_channels(
     Ok(rows.iter().map(|r| r.get::<_, String>(0)).collect())
 }
 
-// ── Performance monitor: Locks, Index Usage, Table Bloat ─────────────
-
 pub async fn load_active_locks(
     client: &deadpool_postgres::Client,
 ) -> Result<Vec<Vec<String>>, AppError> {
-    let rows = client.query(
-        "SELECT
+    let rows = client
+        .query(
+            "SELECT
             l.pid::text,
             COALESCE(a.usename, '') AS user,
             COALESCE(l.mode, '') AS mode,
@@ -1936,19 +1925,23 @@ pub async fn load_active_locks(
          LEFT JOIN pg_namespace n ON n.oid = c.relnamespace
          WHERE a.pid != pg_backend_pid()
          ORDER BY NOT l.granted, l.pid",
-        &[],
-    ).await.map_err(|e| AppError::QueryFailed(e.to_string()))?;
+            &[],
+        )
+        .await
+        .map_err(|e| AppError::QueryFailed(e.to_string()))?;
 
-    Ok(rows.iter().map(|r| {
-        (0..10).map(|i| r.get::<_, String>(i)).collect()
-    }).collect())
+    Ok(rows
+        .iter()
+        .map(|r| (0..10).map(|i| r.get::<_, String>(i)).collect())
+        .collect())
 }
 
 pub async fn load_index_usage(
     client: &deadpool_postgres::Client,
 ) -> Result<Vec<Vec<String>>, AppError> {
-    let rows = client.query(
-        "SELECT
+    let rows = client
+        .query(
+            "SELECT
             s.schemaname,
             s.relname AS table,
             s.indexrelname AS index,
@@ -1966,19 +1959,23 @@ pub async fn load_index_usage(
          JOIN pg_index i ON i.indexrelid = s.indexrelid
          WHERE NOT i.indisprimary
          ORDER BY s.idx_scan ASC, pg_relation_size(i.indexrelid) DESC",
-        &[],
-    ).await.map_err(|e| AppError::QueryFailed(e.to_string()))?;
+            &[],
+        )
+        .await
+        .map_err(|e| AppError::QueryFailed(e.to_string()))?;
 
-    Ok(rows.iter().map(|r| {
-        (0..9).map(|i| r.get::<_, String>(i)).collect()
-    }).collect())
+    Ok(rows
+        .iter()
+        .map(|r| (0..9).map(|i| r.get::<_, String>(i)).collect())
+        .collect())
 }
 
 pub async fn load_table_bloat(
     client: &deadpool_postgres::Client,
 ) -> Result<Vec<Vec<String>>, AppError> {
-    let rows = client.query(
-        "SELECT
+    let rows = client
+        .query(
+            "SELECT
             schemaname,
             relname AS table,
             n_live_tup::text AS live_tuples,
@@ -1994,10 +1991,117 @@ pub async fn load_table_bloat(
             COALESCE(last_autoanalyze::text, 'never') AS last_autoanalyze
          FROM pg_stat_user_tables
          ORDER BY n_dead_tup DESC",
-        &[],
-    ).await.map_err(|e| AppError::QueryFailed(e.to_string()))?;
+            &[],
+        )
+        .await
+        .map_err(|e| AppError::QueryFailed(e.to_string()))?;
 
-    Ok(rows.iter().map(|r| {
-        (0..10).map(|i| r.get::<_, String>(i)).collect()
-    }).collect())
+    Ok(rows
+        .iter()
+        .map(|r| (0..10).map(|i| r.get::<_, String>(i)).collect())
+        .collect())
+}
+
+pub async fn load_extensions(
+    client: &deadpool_postgres::Client,
+) -> Result<Vec<Vec<String>>, AppError> {
+    let rows = client
+        .query(
+            "SELECT
+            e.extname AS name,
+            e.extversion AS installed_version,
+            COALESCE(a.default_version, '') AS default_version,
+            COALESCE(a.comment, '') AS comment,
+            n.nspname AS schema
+         FROM pg_extension e
+         JOIN pg_namespace n ON n.oid = e.extnamespace
+         LEFT JOIN pg_available_extensions a ON a.name = e.extname
+         ORDER BY e.extname",
+            &[],
+        )
+        .await
+        .map_err(|e| AppError::QueryFailed(e.to_string()))?;
+
+    Ok(rows
+        .iter()
+        .map(|r| (0..5).map(|i| r.get::<_, String>(i)).collect())
+        .collect())
+}
+
+pub async fn load_available_extensions(
+    client: &deadpool_postgres::Client,
+) -> Result<Vec<Vec<String>>, AppError> {
+    let rows = client
+        .query(
+            "SELECT
+            a.name,
+            COALESCE(a.default_version, '') AS version,
+            COALESCE(a.comment, '') AS comment
+         FROM pg_available_extensions a
+         LEFT JOIN pg_extension e ON e.extname = a.name
+         WHERE e.oid IS NULL
+         ORDER BY a.name",
+            &[],
+        )
+        .await
+        .map_err(|e| AppError::QueryFailed(e.to_string()))?;
+
+    Ok(rows
+        .iter()
+        .map(|r| (0..3).map(|i| r.get::<_, String>(i)).collect())
+        .collect())
+}
+
+pub async fn load_enum_types(
+    client: &deadpool_postgres::Client,
+) -> Result<Vec<Vec<String>>, AppError> {
+    let rows = client
+        .query(
+            "SELECT
+            n.nspname AS schema,
+            t.typname AS name,
+            string_agg(e.enumlabel, ', ' ORDER BY e.enumsortorder) AS labels
+         FROM pg_type t
+         JOIN pg_namespace n ON n.oid = t.typnamespace
+         JOIN pg_enum e ON e.enumtypid = t.oid
+         WHERE n.nspname NOT IN ('pg_catalog', 'information_schema')
+         GROUP BY n.nspname, t.typname
+         ORDER BY n.nspname, t.typname",
+            &[],
+        )
+        .await
+        .map_err(|e| AppError::QueryFailed(e.to_string()))?;
+
+    Ok(rows
+        .iter()
+        .map(|r| (0..3).map(|i| r.get::<_, String>(i)).collect())
+        .collect())
+}
+
+pub async fn load_pg_settings(
+    client: &deadpool_postgres::Client,
+) -> Result<Vec<Vec<String>>, AppError> {
+    let rows = client
+        .query(
+            "SELECT
+            name,
+            COALESCE(setting, '') AS setting,
+            COALESCE(unit, '') AS unit,
+            category,
+            COALESCE(short_desc, '') AS description,
+            context,
+            COALESCE(source, '') AS source,
+            COALESCE(boot_val, '') AS boot_val,
+            COALESCE(reset_val, '') AS reset_val
+         FROM pg_settings
+         ORDER BY category, name",
+            &[],
+        )
+        .await
+        .map_err(|e| AppError::QueryFailed(e.to_string()))?;
+
+    Ok(rows
+        .iter()
+        .map(|r| (0..9).map(|i| r.get::<_, String>(i)).collect())
+        .collect())
 }

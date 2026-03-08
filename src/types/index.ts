@@ -12,7 +12,7 @@ export type DriverType = "PGSQL";
 
 export type ProjectMap = Record<string, ProjectDetails>;
 
-export type TabType = "query" | "monitor" | "erd" | "terminal" | "notify" | "roles" | "schema-diff";
+export type TabType = "query" | "monitor" | "erd" | "terminal" | "notify" | "roles" | "schema-diff" | "extensions" | "enums" | "pg-settings";
 
 export interface Tab {
   id: string;

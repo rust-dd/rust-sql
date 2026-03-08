@@ -10,6 +10,9 @@ import { TerminalPanel } from "@/components/terminal-panel";
 import { NotifyPanel } from "@/components/notify-panel";
 import { RolesPanel } from "@/components/roles-panel";
 import { SchemaDiffPanel } from "@/components/schema-diff-panel";
+import { ExtensionsPanel } from "@/components/extensions-panel";
+import { EnumsPanel } from "@/components/enums-panel";
+import { PgSettingsPanel } from "@/components/pg-settings-panel";
 import { TabBar } from "@/components/tab-bar";
 import { TopBar } from "@/components/top-bar";
 import { EditorToolbar } from "@/components/editor-toolbar";
@@ -444,6 +447,18 @@ export default function App() {
           ) : activeTab?.type === "schema-diff" && activeTab.projectId ? (
             <div className="flex-1 min-h-0 overflow-hidden">
               <SchemaDiffPanel projectId={activeTab.projectId} />
+            </div>
+          ) : activeTab?.type === "extensions" && activeTab.projectId ? (
+            <div className="flex-1 min-h-0 overflow-hidden">
+              <ExtensionsPanel projectId={activeTab.projectId} />
+            </div>
+          ) : activeTab?.type === "enums" && activeTab.projectId ? (
+            <div className="flex-1 min-h-0 overflow-hidden">
+              <EnumsPanel projectId={activeTab.projectId} />
+            </div>
+          ) : activeTab?.type === "pg-settings" && activeTab.projectId ? (
+            <div className="flex-1 min-h-0 overflow-hidden">
+              <PgSettingsPanel projectId={activeTab.projectId} />
             </div>
           ) : activeTab?.isSplit ? (
             <>

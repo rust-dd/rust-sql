@@ -18,6 +18,9 @@ interface TabState {
   openNotifyTab: (projectId: string) => void;
   openRolesTab: (projectId: string) => void;
   openSchemaDiffTab: (projectId: string) => void;
+  openExtensionsTab: (projectId: string) => void;
+  openEnumsTab: (projectId: string) => void;
+  openPgSettingsTab: (projectId: string) => void;
   closeTab: (index: number) => void;
   closeAllTabs: () => void;
   closeOtherTabs: (index: number) => void;
@@ -138,6 +141,33 @@ export const useTabStore = create<TabState>()(
           const existing = s.tabs.findIndex((t) => t.type === "schema-diff" && t.projectId === projectId);
           if (existing >= 0) return { selectedTabIndex: existing };
           const newTab: Tab = { id: genTabId(), type: "schema-diff", projectId, title: "Schema Diff", editorValue: "", isExecuting: false };
+          return { tabs: [...s.tabs, newTab], selectedTabIndex: s.tabs.length };
+        });
+      },
+
+      openExtensionsTab: (projectId: string) => {
+        set((s) => {
+          const existing = s.tabs.findIndex((t) => t.type === "extensions" && t.projectId === projectId);
+          if (existing >= 0) return { selectedTabIndex: existing };
+          const newTab: Tab = { id: genTabId(), type: "extensions", projectId, title: "Extensions", editorValue: "", isExecuting: false };
+          return { tabs: [...s.tabs, newTab], selectedTabIndex: s.tabs.length };
+        });
+      },
+
+      openEnumsTab: (projectId: string) => {
+        set((s) => {
+          const existing = s.tabs.findIndex((t) => t.type === "enums" && t.projectId === projectId);
+          if (existing >= 0) return { selectedTabIndex: existing };
+          const newTab: Tab = { id: genTabId(), type: "enums", projectId, title: "Enum Types", editorValue: "", isExecuting: false };
+          return { tabs: [...s.tabs, newTab], selectedTabIndex: s.tabs.length };
+        });
+      },
+
+      openPgSettingsTab: (projectId: string) => {
+        set((s) => {
+          const existing = s.tabs.findIndex((t) => t.type === "pg-settings" && t.projectId === projectId);
+          if (existing >= 0) return { selectedTabIndex: existing };
+          const newTab: Tab = { id: genTabId(), type: "pg-settings", projectId, title: "PG Settings", editorValue: "", isExecuting: false };
           return { tabs: [...s.tabs, newTab], selectedTabIndex: s.tabs.length };
         });
       },

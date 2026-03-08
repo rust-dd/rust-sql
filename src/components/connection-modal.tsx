@@ -37,8 +37,32 @@ const defaultForm: Omit<ConnectionConfig, "id"> = {
   ssl: false,
 }
 
+function parseConnectionString(url: string): Partial<Omit<ConnectionConfig, "id">> | null {
+  try {
+    // Handle postgresql:// and postgres:// schemes
+    const normalized = url.trim().replace(/^postgres:\/\//, "postgresql://");
+    if (!normalized.startsWith("postgresql://")) return null;
+    const parsed = new URL(normalized);
+    const params = parsed.searchParams;
+    const ssl = params.get("sslmode") === "require" || params.get("sslmode") === "verify-full" || params.get("ssl") === "true";
+    return {
+      driver: "PGSQL",
+      host: parsed.hostname || "localhost",
+      port: parsed.port || "5432",
+      database: parsed.pathname.replace(/^\//, "") || "",
+      username: decodeURIComponent(parsed.username || ""),
+      password: decodeURIComponent(parsed.password || ""),
+      ssl,
+    };
+  } catch {
+    return null;
+  }
+}
+
 export function ConnectionModal({ open, onOpenChange, onSave, editData }: ConnectionModalProps) {
   const [formData, setFormData] = useState<Omit<ConnectionConfig, "id">>(defaultForm)
+  const [connString, setConnString] = useState("")
+  const [connStringError, setConnStringError] = useState(false)
 
   useEffect(() => {
     if (open && editData) {
@@ -52,10 +76,26 @@ export function ConnectionModal({ open, onOpenChange, onSave, editData }: Connec
         password: editData.details.password,
         ssl: editData.details.ssl === "true",
       })
+      setConnString("")
+      setConnStringError(false)
     } else if (open && !editData) {
       setFormData(defaultForm)
+      setConnString("")
+      setConnStringError(false)
     }
   }, [open, editData])
+
+  const handleConnStringPaste = (value: string) => {
+    setConnString(value)
+    setConnStringError(false)
+    if (!value.trim()) return
+    const parsed = parseConnectionString(value)
+    if (parsed) {
+      setFormData((prev) => ({ ...prev, ...parsed, name: prev.name || parsed.database || "" }))
+    } else {
+      setConnStringError(true)
+    }
+  }
 
   const isEditing = !!editData
 
@@ -81,6 +121,28 @@ export function ConnectionModal({ open, onOpenChange, onSave, editData }: Connec
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4 mt-4">
+          {!isEditing && (
+            <div className="space-y-2">
+              <Label htmlFor="connString" className="font-mono text-xs text-foreground">
+                Connection URL
+              </Label>
+              <Input
+                id="connString"
+                value={connString}
+                onChange={(e) => handleConnStringPaste(e.target.value)}
+                placeholder="postgresql://user:password@host:5432/database"
+                className={`bg-input/80 border-border/50 text-foreground font-mono text-sm rounded-lg ${connStringError ? "border-destructive" : ""}`}
+              />
+              {connStringError && (
+                <p className="text-destructive text-[11px] font-mono">Invalid connection URL format</p>
+              )}
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-border/30" /></div>
+                <div className="relative flex justify-center text-[10px]"><span className="bg-card px-2 text-muted-foreground">or fill in manually</span></div>
+              </div>
+            </div>
+          )}
+
           <div className="space-y-2">
             <Label htmlFor="driver" className="font-mono text-xs text-foreground">
               Database Type

@@ -25,12 +25,15 @@ import {
   Key,
   Layers,
   Link2,
+  List,
   Loader2,
   Lock,
+  Package,
   Plus,
   RefreshCw,
   ScrollText,
   Server,
+  Settings,
   Settings2,
   Shield,
   Table,
@@ -103,6 +106,9 @@ export function ServerSidebar({
   const openNotifyTab = useTabStore((s) => s.openNotifyTab);
   const openRolesTab = useTabStore((s) => s.openRolesTab);
   const openSchemaDiffTab = useTabStore((s) => s.openSchemaDiffTab);
+  const openExtensionsTab = useTabStore((s) => s.openExtensionsTab);
+  const openEnumsTab = useTabStore((s) => s.openEnumsTab);
+  const openPgSettingsTab = useTabStore((s) => s.openPgSettingsTab);
   const savedQueries = useQueryStore((s) => s.queries);
   const loadQueries = useQueryStore((s) => s.loadQueries);
   const queriesLoaded = useQueryStore((s) => s.loaded);
@@ -235,6 +241,9 @@ export function ServerSidebar({
                   { label: "LISTEN/NOTIFY", icon: <Zap className="h-3 w-3" />, onClick: () => openNotifyTab(pid), disabled: !isConnected },
                   { label: "Roles & Permissions", icon: <Shield className="h-3 w-3" />, onClick: () => openRolesTab(pid), disabled: !isConnected },
                   { label: "Schema Diff", icon: <Columns3 className="h-3 w-3" />, onClick: () => openSchemaDiffTab(pid), disabled: !isConnected },
+                  { label: "Extensions", icon: <Package className="h-3 w-3" />, onClick: () => openExtensionsTab(pid), disabled: !isConnected },
+                  { label: "Enum Types", icon: <List className="h-3 w-3" />, onClick: () => openEnumsTab(pid), disabled: !isConnected },
+                  { label: "PG Settings", icon: <Settings className="h-3 w-3" />, onClick: () => openPgSettingsTab(pid), disabled: !isConnected },
                   { label: isConnected ? "Reconnect" : "Connect", icon: <RefreshCw className="h-3 w-3" />, onClick: () => void onConnect(pid) },
                   ...(onEditConnection ? [{ label: "Edit Connection", icon: <Edit3 className="h-3 w-3" />, onClick: () => onEditConnection(pid) }] : []),
                   { separator: true as const },

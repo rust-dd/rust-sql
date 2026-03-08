@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>RSQL - Modern PostgreSQL Client</title>
+    <meta name="description" content="A blazing fast PostgreSQL client built with Rust and Tauri. Try it in your browser with WebAssembly." />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <script>
+      (() => {
+        const key = "rsql-website-theme";
+        try {
+          const storedTheme = window.localStorage.getItem(key);
+          const theme = storedTheme === "light" || storedTheme === "dark"
+            ? storedTheme
+            : (window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark");
+          document.documentElement.dataset.theme = theme;
+          document.documentElement.style.colorScheme = theme;
+        } catch {
+          document.documentElement.dataset.theme = "dark";
+          document.documentElement.style.colorScheme = "dark";
+        }
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

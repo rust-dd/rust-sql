@@ -107,110 +107,133 @@ export function Demo() {
 
   return (
     <section className="px-6 py-24 max-w-6xl mx-auto" id="demo">
-      <h2 className="text-3xl md:text-4xl font-bold text-center mb-4">
-        Try it in your browser
-      </h2>
-      <p className="text-center text-muted-foreground mb-10 max-w-xl mx-auto">
-        Full PostgreSQL running in WebAssembly. Write real SQL — no server needed.
-      </p>
+      <div className="border-t border-border/45 pt-10">
+        <div className="mb-8 max-w-3xl">
+          <p className="section-label mb-3">
+            In-browser sandbox
+          </p>
+          <h2 className="font-display text-[2.6rem] leading-[0.96] md:text-[3.9rem]">
+            Touch the flow
+            <br />
+            before you
+            <br />
+            install it.
+          </h2>
+          <p className="mt-4 text-base leading-relaxed text-muted-foreground">
+            Full PostgreSQL running in WebAssembly. Real SQL, seeded data, no setup friction.
+          </p>
 
-      {/* Sample query buttons */}
-      <div className="flex flex-wrap justify-center gap-2 mb-6">
-        {SAMPLE_QUERIES.map((q) => (
-          <button
-            key={q.label}
-            onClick={() => {
-              setSql(q.sql);
-              executeMutation.mutate(q.sql, {
-                onSuccess: (data) => setResult(data),
-              });
-            }}
-            className={`rounded-full border px-3 py-1 text-xs font-mono transition-colors ${
-              sql === q.sql
-                ? "border-primary bg-primary/10 text-primary"
-                : "border-border bg-card/60 text-muted-foreground hover:text-foreground hover:border-muted-foreground/50"
-            }`}
-          >
-            {q.label}
-          </button>
-        ))}
-      </div>
-
-      {/* Demo window */}
-      <div className="glass rounded-xl overflow-hidden shadow-2xl shadow-primary/5 mx-auto max-w-5xl">
-        {/* Title bar */}
-        <div className="flex items-center gap-2 px-4 py-2.5 bg-card/80 border-b border-border/50">
-          <div className="flex gap-1.5">
-            <span className="h-3 w-3 rounded-full bg-red-500/80" />
-            <span className="h-3 w-3 rounded-full bg-yellow-500/80" />
-            <span className="h-3 w-3 rounded-full bg-green-500/80" />
+          <div className="mt-6 flex flex-wrap gap-2">
+            {SAMPLE_QUERIES.map((q) => (
+              <button
+                key={q.label}
+                onClick={() => {
+                  setSql(q.sql);
+                  executeMutation.mutate(q.sql, {
+                    onSuccess: (data) => setResult(data),
+                  });
+                }}
+                className={`rounded-full border px-4 py-2 text-left text-xs font-mono transition-colors ${
+                  sql === q.sql
+                    ? "border-primary bg-primary/10 text-primary"
+                    : "border-border bg-card/60 text-muted-foreground hover:text-foreground hover:border-muted-foreground/50"
+                }`}
+              >
+                {q.label}
+              </button>
+            ))}
           </div>
-          <span className="flex-1 text-center text-xs text-muted-foreground font-mono">
-            RSQL — PostgreSQL (WebAssembly)
-          </span>
-          <button
-            onClick={() => resetMutation.mutate()}
-            className="text-muted-foreground hover:text-foreground transition-colors"
-            title="Reset database"
-          >
-            <RotateCcw className="h-3.5 w-3.5" />
-          </button>
+
+          <div className="mt-6 grid gap-3 border-t border-border/40 pt-4 sm:grid-cols-3">
+            <div>
+              <div className="font-mono text-[10px] uppercase tracking-[0.24em] text-muted-foreground">
+                Engine
+              </div>
+              <div className="mt-2 text-sm text-foreground">PGlite</div>
+            </div>
+            <div>
+              <div className="font-mono text-[10px] uppercase tracking-[0.24em] text-muted-foreground">
+                Dataset
+              </div>
+              <div className="mt-2 text-sm text-foreground">Seeded demo schema</div>
+            </div>
+            <div>
+              <div className="font-mono text-[10px] uppercase tracking-[0.24em] text-muted-foreground">
+                Setup
+              </div>
+              <div className="mt-2 text-sm text-foreground">Zero install</div>
+            </div>
+          </div>
         </div>
 
-        {/* Content area */}
-        <div className="flex h-[480px]">
-          {/* Sidebar */}
-          <DemoSidebar
-            onTableClick={(table) => {
-              const q = `SELECT * FROM ${table} LIMIT 100;`;
-              setSql(q);
-              executeMutation.mutate(q, {
-                onSuccess: (data) => setResult(data),
-              });
-            }}
-          />
-
-          {/* Main area */}
-          <div className="flex-1 flex flex-col min-w-0">
-            {/* Toolbar */}
-            <div className="flex items-center gap-2 px-3 py-1.5 border-b border-border/50 bg-card/40">
-              <button
-                onClick={execute}
-                disabled={executeMutation.isPending}
-                className="gradient-btn inline-flex items-center gap-1.5 rounded-md px-3 py-1 text-xs font-semibold text-white disabled:opacity-50"
-              >
-                {executeMutation.isPending ? (
-                  <Loader2 className="h-3 w-3 animate-spin" />
-                ) : (
-                  <Play className="h-3 w-3" />
-                )}
-                Execute
-              </button>
-              <span className="text-[10px] text-muted-foreground font-mono ml-auto">
-                {result
-                  ? result.error
-                    ? "Error"
-                    : `${result.rowCount} rows in ${result.time.toFixed(1)}ms`
-                  : "⌘+Enter to run"}
-              </span>
+        <div className="section-frame overflow-hidden rounded-[28px]">
+          <div className="flex items-center gap-2 px-4 py-2.5 bg-card/80 border-b border-border/50">
+            <div className="flex gap-1.5">
+              <span className="h-3 w-3 rounded-full bg-red-500/80" />
+              <span className="h-3 w-3 rounded-full bg-yellow-500/80" />
+              <span className="h-3 w-3 rounded-full bg-green-500/80" />
             </div>
+            <span className="flex-1 text-center text-xs text-muted-foreground font-mono">
+              RSQL — browser.sandbox
+            </span>
+            <button
+              onClick={() => resetMutation.mutate()}
+              className="text-muted-foreground hover:text-foreground transition-colors"
+              title="Reset database"
+            >
+              <RotateCcw className="h-3.5 w-3.5" />
+            </button>
+          </div>
 
-            {/* Editor */}
-            <div className="relative flex-none h-[180px] border-b border-border/50">
-              <textarea
-                ref={textareaRef}
-                value={sql}
-                onChange={(e) => setSql(e.target.value)}
-                onKeyDown={handleKeyDown}
-                spellCheck={false}
-                className="w-full h-full resize-none bg-[var(--editor-bg)] text-foreground font-mono text-[13px] leading-6 p-4 focus:outline-none"
-                placeholder="Write your SQL here..."
-              />
-            </div>
+          <div className="flex h-[480px]">
+            <DemoSidebar
+              onTableClick={(table) => {
+                const q = `SELECT * FROM ${table} LIMIT 100;`;
+                setSql(q);
+                executeMutation.mutate(q, {
+                  onSuccess: (data) => setResult(data),
+                });
+              }}
+            />
 
-            {/* Results */}
-            <div className="flex-1 overflow-auto">
-              {result && <DemoResults result={result} />}
+            <div className="flex-1 flex flex-col min-w-0">
+              <div className="flex items-center gap-2 px-3 py-1.5 border-b border-border/50 bg-card/40">
+                <button
+                  onClick={execute}
+                  disabled={executeMutation.isPending}
+                  className="gradient-btn inline-flex items-center gap-1.5 rounded-md px-3 py-1 text-xs font-semibold text-white disabled:opacity-50"
+                >
+                  {executeMutation.isPending ? (
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                  ) : (
+                    <Play className="h-3 w-3" />
+                  )}
+                  Execute
+                </button>
+                <span className="text-[10px] text-muted-foreground font-mono ml-auto">
+                  {result
+                    ? result.error
+                      ? "Error"
+                      : `${result.rowCount} rows in ${result.time.toFixed(1)}ms`
+                    : "⌘+Enter to run"}
+                </span>
+              </div>
+
+              <div className="relative flex-none h-[180px] border-b border-border/50">
+                <textarea
+                  ref={textareaRef}
+                  value={sql}
+                  onChange={(e) => setSql(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  spellCheck={false}
+                  className="w-full h-full resize-none bg-[var(--editor-bg)] text-foreground font-mono text-[13px] leading-6 p-4 focus:outline-none"
+                  placeholder="Write your SQL here..."
+                />
+              </div>
+
+              <div className="flex-1 overflow-auto">
+                {result && <DemoResults result={result} />}
+              </div>
             </div>
           </div>
         </div>
@@ -357,11 +380,11 @@ function DemoResults({ result }: { result: QueryResult }) {
   return (
     <table className="w-full text-left font-mono text-[12px] border-collapse">
       <thead>
-        <tr className="bg-muted/50 sticky top-0">
+        <tr>
           {result.columns.map((col) => (
             <th
               key={col}
-              className="px-3 py-1.5 text-[11px] font-semibold text-muted-foreground border-b border-r border-border/30 whitespace-nowrap"
+              className="sticky top-0 z-10 border-b border-r border-border/30 bg-card px-3 py-1.5 text-[11px] font-semibold whitespace-nowrap text-muted-foreground"
             >
               {col}
             </th>

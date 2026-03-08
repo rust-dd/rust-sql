@@ -4,6 +4,8 @@
 
 :root {
   color-scheme: dark;
+  --font-body: "Avenir Next", "Helvetica Neue", "Segoe UI", sans-serif;
+  --font-display: "Avenir Next", "Helvetica Neue", "Segoe UI", sans-serif;
   --background: #09090b;
   --foreground: #f7f7fb;
   --muted: #1a1a21;
@@ -27,6 +29,9 @@
   --page-glow-secondary: rgba(56, 189, 248, 0.12);
   --grid-line: rgba(255, 255, 255, 0.05);
   --shadow-color: rgba(0, 0, 0, 0.45);
+  --section-bg: rgba(16, 16, 23, 0.6);
+  --section-border: rgba(255, 255, 255, 0.08);
+  --panel-bg: rgba(255, 255, 255, 0.04);
 }
 
 html {
@@ -59,11 +64,14 @@ html {
   --page-glow-secondary: rgba(16, 185, 129, 0.08);
   --grid-line: rgba(24, 24, 28, 0.05);
   --shadow-color: rgba(93, 74, 43, 0.18);
+  --section-bg: rgba(255, 250, 243, 0.7);
+  --section-border: rgba(74, 58, 35, 0.12);
+  --panel-bg: rgba(24, 24, 28, 0.03);
 }
 
 body {
   margin: 0;
-  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: var(--font-body);
   background: var(--background);
   color: var(--foreground);
   -webkit-font-smoothing: antialiased;
@@ -77,8 +85,8 @@ body::before {
   position: fixed;
   inset: 0;
   background:
-    radial-gradient(circle at 18% 0%, var(--page-glow), transparent 32%),
-    radial-gradient(circle at 82% 8%, var(--page-glow-secondary), transparent 28%);
+    radial-gradient(circle at 14% 0%, var(--page-glow), transparent 34%),
+    radial-gradient(circle at 86% 10%, var(--page-glow-secondary), transparent 26%);
   pointer-events: none;
   z-index: -2;
 }
@@ -87,11 +95,11 @@ body::after {
   content: "";
   position: fixed;
   inset: 0;
-  background-image:
-    linear-gradient(var(--grid-line) 1px, transparent 1px),
-    linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
-  background-size: 72px 72px;
-  opacity: 0.5;
+  background-image: linear-gradient(90deg, transparent, var(--grid-line), transparent);
+  background-repeat: no-repeat;
+  background-size: 100% 1px;
+  background-position: center 84px;
+  opacity: 0.8;
   pointer-events: none;
   z-index: -1;
 }
@@ -117,6 +125,31 @@ body::after {
   overflow: hidden;
 }
 
+.font-display {
+  font-family: var(--font-display);
+  letter-spacing: -0.055em;
+}
+
+.section-label {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 11px;
+  letter-spacing: 0.35em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--primary) 82%, var(--foreground) 18%);
+}
+
+.section-frame {
+  background: color-mix(in srgb, var(--section-bg) 94%, transparent);
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--section-border);
+  box-shadow: 0 22px 80px -58px var(--shadow-color);
+}
+
+.soft-panel {
+  background: var(--panel-bg);
+  border: 1px solid color-mix(in srgb, var(--border) 72%, transparent);
+}
+
 .gradient-text {
   background: linear-gradient(135deg, #7c5bf0, #a855f7);
   -webkit-background-clip: text;
@@ -137,6 +170,39 @@ body::after {
   backdrop-filter: blur(12px);
   border: 1px solid var(--glass-border);
   box-shadow: 0 24px 70px -42px var(--shadow-color);
+}
+
+.editorial-line {
+  position: relative;
+}
+
+.editorial-line::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: -1px;
+  width: 100%;
+  height: 1px;
+  background: linear-gradient(90deg, var(--primary), transparent 72%);
+  opacity: 0.45;
+}
+
+.rule {
+  height: 1px;
+  width: 100%;
+  background: linear-gradient(90deg, var(--primary), color-mix(in srgb, var(--border) 75%, transparent) 22%, transparent 100%);
+  opacity: 0.4;
+}
+
+.link-chip {
+  border: 1px solid color-mix(in srgb, var(--border) 78%, transparent);
+  background: color-mix(in srgb, var(--card) 72%, transparent);
+  transition: border-color 0.2s ease, color 0.2s ease, background-color 0.2s ease;
+}
+
+.link-chip:hover {
+  border-color: color-mix(in srgb, var(--primary) 35%, var(--border) 65%);
+  color: var(--foreground);
 }
 
 .surface-hover {

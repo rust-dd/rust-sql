@@ -4150,7 +4150,7 @@ dependencies = [
 
 [[package]]
 name = "rsql"
-version = "1.0.1"
+version = "1.0.2"
 dependencies = [
  "deadpool-postgres",
  "libsql",

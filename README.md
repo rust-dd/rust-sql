@@ -125,6 +125,6 @@ Notes:
 - If you build locally without `TAURI_UPDATER_PUBLIC_KEY`, the app still builds, but the updater plugin stays disabled for that build.
 - The current release workflow requires the updater secrets above, plus the Windows and Linux signing secrets listed here. macOS signing secrets are documented for the later notarized rollout.
 
-For manual runs (`workflow_dispatch`), provide the release tag explicitly, for example `v1.0.1`.
+For manual runs (`workflow_dispatch`), provide the release tag explicitly, for example `v1.x.x`.
 
-After the updater secrets are configured, pushing a tag like `v1.0.1` builds release artifacts and publishes signed updater metadata.
+After the updater secrets are configured, pushing a tag like `v1.x.x` builds release artifacts and publishes signed updater metadata.

@@ -120,6 +120,7 @@ export function ObjectPropertiesModal({
   const [actionResult, setActionResult] = useState<{ type: "success" | "error"; message: string } | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
   const [confirmAction, setConfirmAction] = useState<string | null>(null);
+  const [confirmInput, setConfirmInput] = useState("");
 
   // Cached metadata from store
   const columnDetails = useProjectStore((s) => s.columnDetails);
@@ -367,7 +368,7 @@ export function ObjectPropertiesModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[760px] max-h-[85vh] flex flex-col p-0 gap-0 overflow-hidden">
+      <DialogContent className="sm:max-w-[760px] h-[85vh] flex flex-col p-0 gap-0 overflow-hidden">
         {/* Header with gradient accent */}
         <div className={cn("relative px-5 pt-5 pb-3 bg-gradient-to-b", typeColor[objectType])}>
           <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(255,255,255,0.03),transparent_70%)]" />
@@ -421,7 +422,10 @@ export function ObjectPropertiesModal({
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto min-h-[240px] max-h-[55vh] px-5 pb-5">
+        <div className={cn(
+          "flex-1 min-h-0 px-5 pb-5",
+          activeTab === "ddl" ? "flex flex-col overflow-hidden" : "overflow-y-auto"
+        )}>
           {activeTab === "overview" && (
             <OverviewContent
               objectType={objectType}
@@ -476,7 +480,9 @@ export function ObjectPropertiesModal({
               actionResult={actionResult}
               actionLoading={actionLoading}
               confirmAction={confirmAction}
-              setConfirmAction={setConfirmAction}
+              setConfirmAction={(v) => { setConfirmAction(v); setConfirmInput(""); }}
+              confirmInput={confirmInput}
+              setConfirmInput={setConfirmInput}
               runAction={runAction}
               openTab={openTab}
               projectId={projectId}
@@ -986,11 +992,11 @@ function DDLContent({
   }
 
   return (
-    <div className="pt-3">
+    <div className="pt-3 flex-1 flex flex-col min-h-0">
       {/* Code editor style container */}
-      <div className="rounded-xl border border-border/40 overflow-hidden bg-[hsl(var(--background))]">
+      <div className="rounded-xl border border-border/40 overflow-hidden bg-[hsl(var(--background))] flex-1 flex flex-col min-h-0">
         {/* Title bar */}
-        <div className="flex items-center justify-between px-3 py-1.5 bg-muted/30 border-b border-border/30">
+        <div className="flex items-center justify-between px-3 py-1.5 bg-muted/30 border-b border-border/30 shrink-0">
           <div className="flex items-center gap-2">
             <FileCode className="h-3 w-3 text-muted-foreground/50" />
             <span className="text-[10px] font-mono text-muted-foreground/60">DDL</span>
@@ -1009,7 +1015,7 @@ function DDLContent({
             </Button>
           </div>
         </div>
-        <pre className="p-4 text-[11px] font-mono text-foreground/90 overflow-x-auto whitespace-pre-wrap leading-relaxed max-h-[400px] selection:bg-primary/20">
+        <pre className="p-4 text-[11px] font-mono text-foreground/90 overflow-y-auto whitespace-pre-wrap leading-relaxed selection:bg-primary/20 flex-1 min-h-0">
           {ddl}
         </pre>
       </div>
@@ -1027,6 +1033,8 @@ function ActionsContent({
   actionLoading,
   confirmAction,
   setConfirmAction,
+  confirmInput,
+  setConfirmInput,
   runAction,
   openTab,
   projectId,
@@ -1039,6 +1047,8 @@ function ActionsContent({
   actionLoading: boolean;
   confirmAction: string | null;
   setConfirmAction: (action: string | null) => void;
+  confirmInput: string;
+  setConfirmInput: (value: string) => void;
   runAction: (sql: string, successMsg: string) => Promise<void>;
   openTab: (projectId?: string, sql?: string) => void;
   projectId: string;
@@ -1050,10 +1060,10 @@ function ActionsContent({
 
   if (objectType === "table") {
     actions.push(
-      { label: "ANALYZE", icon: <RefreshCw className="h-4 w-4" />, sql: `ANALYZE ${qualified};`, successMsg: "ANALYZE completed successfully.", description: "Update table statistics for the query planner." },
-      { label: "VACUUM", icon: <RefreshCw className="h-4 w-4" />, sql: `VACUUM ${qualified};`, successMsg: "VACUUM completed successfully.", description: "Reclaim storage occupied by dead tuples." },
+      { label: "ANALYZE", icon: <RefreshCw className="h-4 w-4" />, sql: `ANALYZE ${qualified};`, successMsg: "ANALYZE completed successfully.", confirm: true, description: "Update table statistics for the query planner." },
+      { label: "VACUUM", icon: <RefreshCw className="h-4 w-4" />, sql: `VACUUM ${qualified};`, successMsg: "VACUUM completed successfully.", confirm: true, description: "Reclaim storage occupied by dead tuples." },
       { label: "VACUUM FULL", icon: <RefreshCw className="h-4 w-4" />, sql: `VACUUM FULL ${qualified};`, successMsg: "VACUUM FULL completed.", confirm: true, description: "Rewrite table to reclaim max space. Locks table exclusively." },
-      { label: "REINDEX", icon: <Key className="h-4 w-4" />, sql: `REINDEX TABLE ${qualified};`, successMsg: "REINDEX completed.", description: "Rebuild all indexes on this table." },
+      { label: "REINDEX", icon: <Key className="h-4 w-4" />, sql: `REINDEX TABLE ${qualified};`, successMsg: "REINDEX completed.", confirm: true, description: "Rebuild all indexes on this table." },
       { label: "TRUNCATE", icon: <Trash2 className="h-4 w-4" />, sql: `TRUNCATE TABLE ${qualified};`, successMsg: "Table truncated.", destructive: true, confirm: true, description: "Remove all rows. Cannot be rolled back." },
       { label: "DROP TABLE", icon: <Trash2 className="h-4 w-4" />, sql: `DROP TABLE ${qualified};`, successMsg: "Table dropped.", destructive: true, confirm: true, description: "Permanently delete this table and all its data." },
     );
@@ -1064,8 +1074,8 @@ function ActionsContent({
     );
   } else if (objectType === "matview") {
     actions.push(
-      { label: "REFRESH", icon: <RefreshCw className="h-4 w-4" />, sql: `REFRESH MATERIALIZED VIEW ${qualified};`, successMsg: "Materialized view refreshed.", description: "Refresh data by re-executing the query." },
-      { label: "REFRESH CONCURRENTLY", icon: <RefreshCw className="h-4 w-4" />, sql: `REFRESH MATERIALIZED VIEW CONCURRENTLY ${qualified};`, successMsg: "Concurrent refresh completed.", description: "Refresh without locking reads. Requires a unique index." },
+      { label: "REFRESH", icon: <RefreshCw className="h-4 w-4" />, sql: `REFRESH MATERIALIZED VIEW ${qualified};`, successMsg: "Materialized view refreshed.", confirm: true, description: "Refresh data by re-executing the query." },
+      { label: "REFRESH CONCURRENTLY", icon: <RefreshCw className="h-4 w-4" />, sql: `REFRESH MATERIALIZED VIEW CONCURRENTLY ${qualified};`, successMsg: "Concurrent refresh completed.", confirm: true, description: "Refresh without locking reads. Requires a unique index." },
       { label: "DROP MATERIALIZED VIEW", icon: <Trash2 className="h-4 w-4" />, sql: `DROP MATERIALIZED VIEW ${qualified};`, successMsg: "Materialized view dropped.", destructive: true, confirm: true, description: "Permanently delete this materialized view." },
     );
   } else if (objectType === "function" || objectType === "trigger-function") {
@@ -1113,56 +1123,77 @@ function ActionsContent({
       <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider px-1">Maintenance & Operations</div>
       <div className="space-y-2">
         {actions.map((action) => (
-          <div key={action.label} className="flex items-center gap-3 px-3.5 py-3 rounded-xl border border-border/25 bg-muted/10 hover:border-border/40 hover:bg-muted/20 transition-all">
-            <span className={cn("shrink-0", action.destructive ? "text-destructive" : "text-muted-foreground")}>
-              {action.icon}
-            </span>
-            <div className="flex-1 min-w-0">
-              <div className={cn("text-xs font-mono font-medium", action.destructive && "text-destructive")}>
-                {action.label}
+          <div key={action.label} className={cn(
+            "rounded-xl border bg-muted/10 transition-all",
+            confirmAction === action.label ? "border-border/40 bg-muted/20" : "border-border/25 hover:border-border/40 hover:bg-muted/20"
+          )}>
+            <div className="flex items-center gap-3 px-3.5 py-3">
+              <span className={cn("shrink-0", action.destructive ? "text-destructive" : "text-muted-foreground")}>
+                {action.icon}
+              </span>
+              <div className="flex-1 min-w-0">
+                <div className={cn("text-xs font-mono font-medium", action.destructive && "text-destructive")}>
+                  {action.label}
+                </div>
+                <div className="text-[11px] text-muted-foreground">{action.description}</div>
               </div>
-              <div className="text-[11px] text-muted-foreground">{action.description}</div>
+              {confirmAction !== action.label && (
+                <Button
+                  variant={action.destructive ? "ghost" : "outline"}
+                  size="sm"
+                  className={cn(
+                    "h-7 px-3 text-xs shrink-0",
+                    action.destructive && "text-destructive hover:bg-destructive/10"
+                  )}
+                  disabled={actionLoading}
+                  onClick={() => {
+                    if (action.confirm) {
+                      setConfirmAction(action.label);
+                    } else {
+                      void runAction(action.sql, action.successMsg);
+                    }
+                  }}
+                >
+                  Run
+                </Button>
+              )}
             </div>
-            {confirmAction === action.label ? (
-              <div className="flex items-center gap-1.5 shrink-0">
-                <span className="text-[10px] text-destructive font-medium">Sure?</span>
+            {confirmAction === action.label && (
+              <div className="px-3.5 pb-3 flex items-center gap-2">
+                <div className="flex-1 flex items-center gap-2">
+                  <span className="text-[10px] text-muted-foreground whitespace-nowrap">
+                    Type <span className="font-mono font-semibold text-foreground">{name}</span> to confirm
+                  </span>
+                  <input
+                    type="text"
+                    value={confirmInput}
+                    onChange={(e) => setConfirmInput(e.target.value)}
+                    placeholder={name}
+                    autoFocus
+                    className="flex-1 h-7 px-2 text-xs font-mono bg-background border border-border/40 rounded-md outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/20 placeholder:text-muted-foreground/30"
+                  />
+                </div>
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="h-6 px-2 text-[10px] text-destructive hover:bg-destructive/10"
-                  disabled={actionLoading}
+                  className={cn(
+                    "h-7 px-3 text-[11px] font-medium",
+                    action.destructive ? "text-destructive hover:bg-destructive/10" : "text-foreground hover:bg-muted/50"
+                  )}
+                  disabled={actionLoading || confirmInput !== name}
                   onClick={() => void runAction(action.sql, action.successMsg)}
                 >
-                  {actionLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : "Yes"}
+                  {actionLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : "Confirm"}
                 </Button>
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="h-6 px-2 text-[10px]"
+                  className="h-7 px-2 text-[11px] text-muted-foreground"
                   onClick={() => setConfirmAction(null)}
                 >
-                  No
+                  Cancel
                 </Button>
               </div>
-            ) : (
-              <Button
-                variant={action.destructive ? "ghost" : "outline"}
-                size="sm"
-                className={cn(
-                  "h-7 px-3 text-xs shrink-0",
-                  action.destructive && "text-destructive hover:bg-destructive/10"
-                )}
-                disabled={actionLoading}
-                onClick={() => {
-                  if (action.confirm) {
-                    setConfirmAction(action.label);
-                  } else {
-                    void runAction(action.sql, action.successMsg);
-                  }
-                }}
-              >
-                Run
-              </Button>
             )}
           </div>
         ))}

@@ -14,14 +14,14 @@ use crate::drivers::common::{
     IndexDetail, ObjectStats, PgRole, PolicyDetail, RuleDetail, SchemaObject, TableGrant,
     TriggerDetail, close_virtual, discover_notify_channels, execute_query, execute_query_packed,
     execute_query_streamed, execute_virtual, extract_schema_objects, fetch_virtual_page,
-    generate_full_ddl, get_pool, import_csv_to_table, load_active_locks, load_activity, load_databases,
+    generate_full_ddl, get_pool, import_csv_to_table, load_active_locks, load_activity,
     load_available_extensions, load_column_details, load_columns, load_constraints,
-    load_database_grants, load_database_stats, load_enum_types, load_extensions, load_fk_details,
-    load_foreign_keys, load_function_info, load_functions, load_index_usage, load_indexes,
-    load_materialized_views, load_matview_info, load_pg_settings, load_policies, load_roles,
-    load_rules, load_schemas, load_table_bloat, load_table_grants, load_table_statistics,
-    load_table_stats, load_tables, load_trigger_functions, load_triggers, load_view_info,
-    load_tablespaces, load_views, parse_csv_preview,
+    load_database_grants, load_database_stats, load_databases, load_enum_types, load_extensions,
+    load_fk_details, load_foreign_keys, load_function_info, load_functions, load_index_usage,
+    load_indexes, load_materialized_views, load_matview_info, load_pg_settings, load_policies,
+    load_roles, load_rules, load_schemas, load_table_bloat, load_table_grants,
+    load_table_statistics, load_table_stats, load_tables, load_tablespaces, load_trigger_functions,
+    load_triggers, load_view_info, load_views, parse_csv_preview,
 };
 
 use futures_util::StreamExt;
@@ -446,11 +446,7 @@ pub async fn pgsql_connector(
                 .map(|s| s.as_str());
 
             // Stop any existing tunnel for this project
-            app_state
-                .ssh_tunnels
-                .lock()
-                .await
-                .remove(project_id);
+            app_state.ssh_tunnels.lock().await.remove(project_id);
 
             let tunnel = crate::ssh::start_tunnel(
                 ssh_host,
@@ -1355,6 +1351,60 @@ pub async fn pgsql_load_enum_types(
     let result = load_enum_types(&client).await?;
     let json = sonic_rs::to_string(&result).map_err(|e| AppError::QueryFailed(e.to_string()))?;
     Ok(Response::new(json))
+}
+
+#[tauri::command(rename_all = "snake_case")]
+pub async fn pgsql_table_action(
+    project_id: &str,
+    action: &str,
+    schema: &str,
+    table: &str,
+    object_type: &str,
+    app_state: State<'_, AppState>,
+) -> Result<String> {
+    let client = acquire_client(&app_state.clients, project_id).await?;
+
+    // Quote identifiers safely
+    fn qi(name: &str) -> String {
+        format!("\"{}\"", name.replace('"', "\"\""))
+    }
+
+    let qualified = format!("{}.{}", qi(schema), qi(table));
+
+    let sql = match (object_type, action) {
+        // Table actions
+        ("table", "ANALYZE") => format!("ANALYZE {qualified}"),
+        ("table", "VACUUM") => format!("VACUUM {qualified}"),
+        ("table", "VACUUM FULL") => format!("VACUUM FULL {qualified}"),
+        ("table", "REINDEX") => format!("REINDEX TABLE {qualified}"),
+        ("table", "TRUNCATE") => format!("TRUNCATE TABLE {qualified}"),
+        ("table", "DROP TABLE") => format!("DROP TABLE {qualified}"),
+        // View actions
+        ("view", "DROP VIEW") => format!("DROP VIEW {qualified}"),
+        ("view", "DROP VIEW CASCADE") => format!("DROP VIEW {qualified} CASCADE"),
+        // Materialized view actions
+        ("matview", "REFRESH") => format!("REFRESH MATERIALIZED VIEW {qualified}"),
+        ("matview", "REFRESH CONCURRENTLY") => {
+            format!("REFRESH MATERIALIZED VIEW CONCURRENTLY {qualified}")
+        }
+        ("matview", "DROP MATERIALIZED VIEW") => format!("DROP MATERIALIZED VIEW {qualified}"),
+        // Function actions
+        ("function" | "trigger-function", "DROP FUNCTION") => format!("DROP FUNCTION {qualified}"),
+        ("function" | "trigger-function", "DROP FUNCTION CASCADE") => {
+            format!("DROP FUNCTION {qualified} CASCADE")
+        }
+        _ => {
+            return Err(AppError::QueryFailed(format!(
+                "Unknown action '{}' for object type '{}'",
+                action, object_type
+            ))
+            .into());
+        }
+    };
+
+    execute_query(&client, &sql).await.map_err(|e| e)?;
+
+    Ok(format!("{action} completed successfully."))
 }
 
 #[tauri::command(rename_all = "snake_case")]

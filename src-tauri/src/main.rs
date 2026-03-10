@@ -308,6 +308,7 @@ fn main() {
             drivers::pgsql::pgsql_load_extensions,
             drivers::pgsql::pgsql_load_available_extensions,
             drivers::pgsql::pgsql_load_enum_types,
+            drivers::pgsql::pgsql_table_action,
             drivers::pgsql::pgsql_load_pg_settings,
             terminal::terminal_spawn,
             terminal::terminal_write,

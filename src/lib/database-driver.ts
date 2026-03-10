@@ -102,6 +102,7 @@ export interface DatabaseDriver {
   loadAvailableExtensions?(projectId: string): Promise<string[][]>;
   loadEnumTypes?(projectId: string): Promise<string[][]>;
   loadPgSettings?(projectId: string): Promise<string[][]>;
+  tableAction?(projectId: string, action: string, schema: string, table: string, objectType: string): Promise<string>;
 }
 
 function parseColumnDetails(wire: WireColumnDetail[]): ColumnDetail[] {
@@ -364,6 +365,9 @@ class PostgreSQLDriver implements DatabaseDriver {
   }
   async loadPgSettings(projectId: string) {
     return invoke<string[][]>("pgsql_load_pg_settings", { project_id: projectId });
+  }
+  async tableAction(projectId: string, action: string, schema: string, table: string, objectType: string) {
+    return invoke<string>("pgsql_table_action", { project_id: projectId, action, schema, table, object_type: objectType });
   }
 }
 

@@ -13,8 +13,8 @@
     "windows": [
       {
         "title": "RSQL",
-        "width": 1280,
-        "height": 768,
+        "width": 1440,
+        "height": 900,
         "minWidth": 1280,
         "minHeight": 768
       }

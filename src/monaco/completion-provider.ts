@@ -54,9 +54,7 @@ async function resolveTableRef(
       try {
         const rawRows = await driver.loadTables(projectId, schema);
         t = rawRows.map(([name, size]) => ({ name, size }));
-        useProjectStore.setState((s) => ({
-          tables: { ...s.tables, [key]: t! },
-        }));
+        useProjectStore.setState((s) => { s.tables[key] = t!; });
       } catch {
         continue;
       }
@@ -88,9 +86,7 @@ async function ensureColumns(
 
   try {
     const cols = await driver.loadColumns(projectId, schema, table);
-    useProjectStore.setState((s) => ({
-      columns: { ...s.columns, [colKey]: cols },
-    }));
+    useProjectStore.setState((s) => { s.columns[colKey] = cols; });
     return cols;
   } catch {
     return [];
@@ -112,9 +108,7 @@ async function ensureTables(
   try {
     const rawRows = await driver.loadTables(projectId, schema);
     const t = rawRows.map(([name, size]) => ({ name, size }));
-    useProjectStore.setState((s) => ({
-      tables: { ...s.tables, [key]: t },
-    }));
+    useProjectStore.setState((s) => { s.tables[key] = t; });
     return t;
   } catch {
     return [];

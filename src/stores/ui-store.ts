@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { immer } from "zustand/middleware/immer";
 import type { QueryResult } from "@/types";
 
 interface PinnedResult {
@@ -27,63 +28,69 @@ interface UIState {
   clearPinnedResult: () => void;
 }
 
-export const useUIStore = create<UIState>((set) => ({
-  theme: "light",
-  sidebarWidth: 280,
-  editorHeight: 50,
-  connectionModalOpen: false,
-  viewMode: "grid",
-  selectedRow: 0,
-  pinnedResult: null,
+export const useUIStore = create<UIState>()(
+  immer((set) => ({
+    theme: "light",
+    sidebarWidth: 280,
+    editorHeight: 50,
+    connectionModalOpen: false,
+    viewMode: "grid",
+    selectedRow: 0,
+    pinnedResult: null,
 
-  toggleTheme: () => {
-    set((s) => {
-      const newTheme = s.theme === "light" ? "dark" : "light";
-      if (newTheme === "dark") {
+    toggleTheme: () => {
+      set((s) => {
+        s.theme = s.theme === "light" ? "dark" : "light";
+        if (s.theme === "dark") {
+          document.documentElement.classList.add("dark");
+        } else {
+          document.documentElement.classList.remove("dark");
+        }
+      });
+    },
+
+    setTheme: (theme) => {
+      if (theme === "dark") {
         document.documentElement.classList.add("dark");
       } else {
         document.documentElement.classList.remove("dark");
       }
-      return { theme: newTheme };
-    });
-  },
+      set({ theme });
+    },
 
-  setTheme: (theme) => {
-    if (theme === "dark") {
-      document.documentElement.classList.add("dark");
-    } else {
-      document.documentElement.classList.remove("dark");
-    }
-    set({ theme });
-  },
+    setSidebarWidth: (delta) => {
+      set((s) => {
+        s.sidebarWidth = Math.max(180, Math.min(700, s.sidebarWidth + delta));
+      });
+    },
 
-  setSidebarWidth: (delta: number) => {
-    set((s) => ({
-      sidebarWidth: Math.max(180, Math.min(700, s.sidebarWidth + delta)),
-    }));
-  },
+    setEditorHeight: (delta) => {
+      const containerHeight = window.innerHeight - 48 - 24;
+      const deltaPercent = (delta / containerHeight) * 100;
+      set((s) => {
+        s.editorHeight = Math.max(
+          20,
+          Math.min(80, s.editorHeight + deltaPercent),
+        );
+      });
+    },
 
-  setEditorHeight: (delta: number) => {
-    const containerHeight = window.innerHeight - 48 - 24; // top bar + status bar
-    const deltaPercent = (delta / containerHeight) * 100;
-    set((s) => ({
-      editorHeight: Math.max(20, Math.min(80, s.editorHeight + deltaPercent)),
-    }));
-  },
+    setConnectionModalOpen: (open) => set({ connectionModalOpen: open }),
 
-  setConnectionModalOpen: (open) => set({ connectionModalOpen: open }),
+    setViewMode: (mode) => set({ viewMode: mode }),
 
-  setViewMode: (mode) => set({ viewMode: mode }),
+    setSelectedRow: (row) => {
+      set((s) => {
+        s.selectedRow = typeof row === "function" ? row(s.selectedRow) : row;
+      });
+    },
 
-  setSelectedRow: (row) => {
-    set((s) => ({
-      selectedRow: typeof row === "function" ? row(s.selectedRow) : row,
-    }));
-  },
+    pinResult: (result, label) => {
+      set((s) => {
+        s.pinnedResult = { columns: result.columns, rows: result.rows, label };
+      });
+    },
 
-  pinResult: (result, label) => {
-    set({ pinnedResult: { columns: result.columns, rows: result.rows, label } });
-  },
-
-  clearPinnedResult: () => set({ pinnedResult: null }),
-}));
+    clearPinnedResult: () => set({ pinnedResult: null }),
+  })),
+);

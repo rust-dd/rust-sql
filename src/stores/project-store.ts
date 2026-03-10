@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { immer } from "zustand/middleware/immer";
 import { toast } from "sonner";
 import { DriverFactory } from "@/lib/database-driver";
 import type {
@@ -16,9 +17,7 @@ import type {
   ProjectConnectionStatus,
   DriverType,
 } from "@/types";
-import {
-  ProjectConnectionStatus as PCS,
-} from "@/types";
+import { ProjectConnectionStatus as PCS } from "@/types";
 import {
   getProjects,
   insertProject,
@@ -49,259 +48,357 @@ interface ProjectState {
   connect: (projectId: string) => Promise<void>;
   loadSchemas: (projectId: string) => Promise<void>;
   loadTables: (projectId: string, schema: string) => Promise<void>;
-  loadColumns: (projectId: string, schema: string, table: string) => Promise<string[]>;
-  loadColumnDetails: (projectId: string, schema: string, table: string) => Promise<ColumnDetail[]>;
-  loadIndexes: (projectId: string, schema: string, table: string) => Promise<IndexDetail[]>;
-  loadConstraints: (projectId: string, schema: string, table: string) => Promise<ConstraintDetail[]>;
-  loadTableMetadata: (projectId: string, schema: string, table: string) => Promise<void>;
+  loadColumns: (
+    projectId: string,
+    schema: string,
+    table: string,
+  ) => Promise<string[]>;
+  loadColumnDetails: (
+    projectId: string,
+    schema: string,
+    table: string,
+  ) => Promise<ColumnDetail[]>;
+  loadIndexes: (
+    projectId: string,
+    schema: string,
+    table: string,
+  ) => Promise<IndexDetail[]>;
+  loadConstraints: (
+    projectId: string,
+    schema: string,
+    table: string,
+  ) => Promise<ConstraintDetail[]>;
+  loadTableMetadata: (
+    projectId: string,
+    schema: string,
+    table: string,
+  ) => Promise<void>;
   loadSchemaObjects: (projectId: string, schema: string) => Promise<void>;
   deleteProject: (projectId: string) => Promise<void>;
   saveConnection: (name: string, details: ProjectDetails) => Promise<void>;
   updateConnection: (name: string, details: ProjectDetails) => Promise<void>;
-  addDatabaseToServer: (sourceProjectId: string, name: string, database: string) => Promise<void>;
+  addDatabaseToServer: (
+    sourceProjectId: string,
+    name: string,
+    database: string,
+  ) => Promise<void>;
 }
 
-export const useProjectStore = create<ProjectState>((set, get) => ({
-  projects: {},
-  status: {},
-  connectionErrors: {},
-  schemas: {},
-  tables: {},
-  columns: {},
-  columnDetails: {},
-  indexes: {},
-  constraints: {},
-  triggers: {},
-  rules: {},
-  policies: {},
-  serverDatabases: {},
-  serverTablespaces: {},
-  views: {},
-  materializedViews: {},
-  functions: {},
-  triggerFunctions: {},
+export const useProjectStore = create<ProjectState>()(
+  immer((set, get) => ({
+    projects: {},
+    status: {},
+    connectionErrors: {},
+    schemas: {},
+    tables: {},
+    columns: {},
+    columnDetails: {},
+    indexes: {},
+    constraints: {},
+    triggers: {},
+    rules: {},
+    policies: {},
+    serverDatabases: {},
+    serverTablespaces: {},
+    views: {},
+    materializedViews: {},
+    functions: {},
+    triggerFunctions: {},
 
-  loadProjects: async () => {
-    const raw = await getProjects();
-    const projects: ProjectMap = {};
-    for (const [id, arr] of Object.entries(raw)) {
-      projects[id] = parseProjectDetails(arr);
-    }
-    set({ projects });
-  },
-
-  connect: async (projectId: string) => {
-    const { projects } = get();
-    const d = projects[projectId];
-    if (!d) return;
-
-    set((s) => ({
-      status: { ...s.status, [projectId]: PCS.Connecting },
-      connectionErrors: { ...s.connectionErrors, [projectId]: "" },
-    }));
-
-    try {
-      const driver = DriverFactory.getDriver(d.driver);
-      const key: [string, string, string, string, string, string] = [
-        d.username, d.password, d.database, d.host, d.port, d.ssl,
-      ];
-      const ssh = d.sshEnabled === "true"
-        ? [d.sshHost, d.sshPort || "22", d.sshUser, d.sshPassword, d.sshKeyPath]
-        : undefined;
-      const st = await driver.connect(projectId, key, ssh);
-      set((s) => ({ status: { ...s.status, [projectId]: st } }));
-
-      if (st === PCS.Connected) {
-        const [sc, dbs, tsp] = await Promise.allSettled([
-          driver.loadSchemas(projectId),
-          driver.loadDatabases?.(projectId),
-          driver.loadTablespaces?.(projectId),
-        ]);
-        set((s) => ({
-          schemas: { ...s.schemas, [projectId]: sc.status === "fulfilled" ? sc.value : [] },
-          serverDatabases: { ...s.serverDatabases, [projectId]: dbs.status === "fulfilled" && dbs.value ? dbs.value : [] },
-          serverTablespaces: { ...s.serverTablespaces, [projectId]: tsp.status === "fulfilled" && tsp.value ? tsp.value : [] },
-        }));
+    loadProjects: async () => {
+      const raw = await getProjects();
+      const projects: ProjectMap = {};
+      for (const [id, arr] of Object.entries(raw)) {
+        projects[id] = parseProjectDetails(arr);
       }
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : typeof err === "string" ? err : "Connection failed";
-      set((s) => ({
-        status: { ...s.status, [projectId]: PCS.Failed },
-        connectionErrors: { ...s.connectionErrors, [projectId]: msg },
-      }));
+      set({ projects });
+    },
+
+    connect: async (projectId: string) => {
+      const { projects } = get();
       const d = projects[projectId];
-      toast.error(`Connection failed: ${d?.database || projectId}`, { description: msg, duration: 10000 });
-    }
-  },
+      if (!d) return;
 
-  loadSchemas: async (projectId: string) => {
-    const { projects } = get();
-    const d = projects[projectId];
-    if (!d) return;
-    const driver = DriverFactory.getDriver(d.driver);
-    const sc = await driver.loadSchemas(projectId);
-    set((s) => ({ schemas: { ...s.schemas, [projectId]: sc } }));
-  },
+      set((s) => {
+        s.status[projectId] = PCS.Connecting;
+        s.connectionErrors[projectId] = "";
+      });
 
-  loadTables: async (projectId: string, schema: string) => {
-    const key = `${projectId}::${schema}`;
-    const { tables, projects } = get();
-    if (tables[key]) return;
+      try {
+        const driver = DriverFactory.getDriver(d.driver);
+        const key: [string, string, string, string, string, string] = [
+          d.username,
+          d.password,
+          d.database,
+          d.host,
+          d.port,
+          d.ssl,
+        ];
+        const ssh =
+          d.sshEnabled === "true"
+            ? [
+                d.sshHost,
+                d.sshPort || "22",
+                d.sshUser,
+                d.sshPassword,
+                d.sshKeyPath,
+              ]
+            : undefined;
+        const st = await driver.connect(projectId, key, ssh);
+        set((s) => {
+          s.status[projectId] = st;
+        });
 
-    const d = projects[projectId];
-    if (!d) return;
-    const driver = DriverFactory.getDriver(d.driver);
-    const rawRows = await driver.loadTables(projectId, schema);
-    const rows: TableInfo[] = rawRows.map(([name, size]) => ({ name, size }));
-    set((s) => ({ tables: { ...s.tables, [key]: rows } }));
-  },
+        if (st === PCS.Connected) {
+          const [sc, dbs, tsp] = await Promise.allSettled([
+            driver.loadSchemas(projectId),
+            driver.loadDatabases?.(projectId),
+            driver.loadTablespaces?.(projectId),
+          ]);
+          set((s) => {
+            s.schemas[projectId] = sc.status === "fulfilled" ? sc.value : [];
+            s.serverDatabases[projectId] =
+              dbs.status === "fulfilled" && dbs.value ? dbs.value : [];
+            s.serverTablespaces[projectId] =
+              tsp.status === "fulfilled" && tsp.value ? tsp.value : [];
+          });
+        }
+      } catch (err: unknown) {
+        const msg =
+          err instanceof Error
+            ? err.message
+            : typeof err === "string"
+              ? err
+              : "Connection failed";
+        set((s) => {
+          s.status[projectId] = PCS.Failed;
+          s.connectionErrors[projectId] = msg;
+        });
+        const d = projects[projectId];
+        toast.error(`Connection failed: ${d?.database || projectId}`, {
+          description: msg,
+          duration: 10000,
+        });
+      }
+    },
 
-  loadColumns: async (projectId: string, schema: string, table: string) => {
-    const colKey = `${projectId}::${schema}::${table}`;
-    const { columns, projects } = get();
-    if (columns[colKey]) return columns[colKey];
+    loadSchemas: async (projectId: string) => {
+      const { projects } = get();
+      const d = projects[projectId];
+      if (!d) return;
+      const driver = DriverFactory.getDriver(d.driver);
+      const sc = await driver.loadSchemas(projectId);
+      set((s) => {
+        s.schemas[projectId] = sc;
+      });
+    },
 
-    const d = projects[projectId];
-    if (!d) return [];
-    const driver = DriverFactory.getDriver(d.driver);
-    const cols = await driver.loadColumns(projectId, schema, table);
-    set((s) => ({ columns: { ...s.columns, [colKey]: cols } }));
-    return cols;
-  },
+    loadTables: async (projectId: string, schema: string) => {
+      const key = `${projectId}::${schema}`;
+      const { tables, projects } = get();
+      if (tables[key]) return;
 
-  loadColumnDetails: async (projectId: string, schema: string, table: string) => {
-    const key = `${projectId}::${schema}::${table}`;
-    const { columnDetails, projects } = get();
-    if (columnDetails[key]) return columnDetails[key];
+      const d = projects[projectId];
+      if (!d) return;
+      const driver = DriverFactory.getDriver(d.driver);
+      const rawRows = await driver.loadTables(projectId, schema);
+      const rows: TableInfo[] = rawRows.map(([name, size]) => ({ name, size }));
+      set((s) => {
+        s.tables[key] = rows;
+      });
+    },
 
-    const d = projects[projectId];
-    if (!d) return [];
-    const driver = DriverFactory.getDriver(d.driver);
-    const details = await driver.loadColumnDetails(projectId, schema, table);
-    set((s) => ({ columnDetails: { ...s.columnDetails, [key]: details } }));
-    return details;
-  },
+    loadColumns: async (projectId: string, schema: string, table: string) => {
+      const colKey = `${projectId}::${schema}::${table}`;
+      const { columns, projects } = get();
+      if (columns[colKey]) return columns[colKey];
 
-  loadIndexes: async (projectId: string, schema: string, table: string) => {
-    const key = `${projectId}::${schema}::${table}`;
-    const { indexes, projects } = get();
-    if (indexes[key]) return indexes[key];
+      const d = projects[projectId];
+      if (!d) return [];
+      const driver = DriverFactory.getDriver(d.driver);
+      const cols = await driver.loadColumns(projectId, schema, table);
+      set((s) => {
+        s.columns[colKey] = cols;
+      });
+      return cols;
+    },
 
-    const d = projects[projectId];
-    if (!d) return [];
-    const driver = DriverFactory.getDriver(d.driver);
-    const idx = await driver.loadIndexes(projectId, schema, table);
-    set((s) => ({ indexes: { ...s.indexes, [key]: idx } }));
-    return idx;
-  },
+    loadColumnDetails: async (
+      projectId: string,
+      schema: string,
+      table: string,
+    ) => {
+      const key = `${projectId}::${schema}::${table}`;
+      const { columnDetails, projects } = get();
+      if (columnDetails[key]) return columnDetails[key];
 
-  loadConstraints: async (projectId: string, schema: string, table: string) => {
-    const key = `${projectId}::${schema}::${table}`;
-    const { constraints, projects } = get();
-    if (constraints[key]) return constraints[key];
+      const d = projects[projectId];
+      if (!d) return [];
+      const driver = DriverFactory.getDriver(d.driver);
+      const details = await driver.loadColumnDetails(projectId, schema, table);
+      set((s) => {
+        s.columnDetails[key] = details;
+      });
+      return details;
+    },
 
-    const d = projects[projectId];
-    if (!d) return [];
-    const driver = DriverFactory.getDriver(d.driver);
-    const c = await driver.loadConstraints(projectId, schema, table);
-    set((s) => ({ constraints: { ...s.constraints, [key]: c } }));
-    return c;
-  },
+    loadIndexes: async (projectId: string, schema: string, table: string) => {
+      const key = `${projectId}::${schema}::${table}`;
+      const { indexes, projects } = get();
+      if (indexes[key]) return indexes[key];
 
-  loadTableMetadata: async (projectId: string, schema: string, table: string) => {
-    const key = `${projectId}::${schema}::${table}`;
-    const { columnDetails, projects } = get();
-    if (columnDetails[key]) return;
+      const d = projects[projectId];
+      if (!d) return [];
+      const driver = DriverFactory.getDriver(d.driver);
+      const idx = await driver.loadIndexes(projectId, schema, table);
+      set((s) => {
+        s.indexes[key] = idx;
+      });
+      return idx;
+    },
 
-    const d = projects[projectId];
-    if (!d) return;
-    const driver = DriverFactory.getDriver(d.driver);
+    loadConstraints: async (
+      projectId: string,
+      schema: string,
+      table: string,
+    ) => {
+      const key = `${projectId}::${schema}::${table}`;
+      const { constraints, projects } = get();
+      if (constraints[key]) return constraints[key];
 
-    // Use allSettled so one failure doesn't block the rest
-    const [colsR, idxsR, consR, trigsR, rlsR, polsR] = await Promise.allSettled([
-      driver.loadColumnDetails(projectId, schema, table),
-      driver.loadIndexes(projectId, schema, table),
-      driver.loadConstraints(projectId, schema, table),
-      driver.loadTriggers(projectId, schema, table),
-      driver.loadRules(projectId, schema, table),
-      driver.loadPolicies(projectId, schema, table),
-    ]);
+      const d = projects[projectId];
+      if (!d) return [];
+      const driver = DriverFactory.getDriver(d.driver);
+      const c = await driver.loadConstraints(projectId, schema, table);
+      set((s) => {
+        s.constraints[key] = c;
+      });
+      return c;
+    },
 
-    const val = <T,>(r: PromiseSettledResult<T>, fallback: T): T =>
-      r.status === "fulfilled" ? r.value : fallback;
+    loadTableMetadata: async (
+      projectId: string,
+      schema: string,
+      table: string,
+    ) => {
+      const key = `${projectId}::${schema}::${table}`;
+      const { columnDetails, projects } = get();
+      if (columnDetails[key]) return;
 
-    set((s) => ({
-      columnDetails: { ...s.columnDetails, [key]: val(colsR, []) },
-      indexes: { ...s.indexes, [key]: val(idxsR, []) },
-      constraints: { ...s.constraints, [key]: val(consR, []) },
-      triggers: { ...s.triggers, [key]: val(trigsR, []) },
-      rules: { ...s.rules, [key]: val(rlsR, []) },
-      policies: { ...s.policies, [key]: val(polsR, []) },
-    }));
-  },
+      const d = projects[projectId];
+      if (!d) return;
+      const driver = DriverFactory.getDriver(d.driver);
 
-  loadSchemaObjects: async (projectId: string, schema: string) => {
-    const key = `${projectId}::${schema}`;
-    const { views: existingViews, projects } = get();
-    if (existingViews[key]) return;
+      const [colsR, idxsR, consR, trigsR, rlsR, polsR] =
+        await Promise.allSettled([
+          driver.loadColumnDetails(projectId, schema, table),
+          driver.loadIndexes(projectId, schema, table),
+          driver.loadConstraints(projectId, schema, table),
+          driver.loadTriggers(projectId, schema, table),
+          driver.loadRules(projectId, schema, table),
+          driver.loadPolicies(projectId, schema, table),
+        ]);
 
-    const d = projects[projectId];
-    if (!d) return;
-    const driver = DriverFactory.getDriver(d.driver);
-    const [vR, mvR, fnR, tfnR] = await Promise.allSettled([
-      driver.loadViews(projectId, schema),
-      driver.loadMaterializedViews(projectId, schema),
-      driver.loadFunctions(projectId, schema),
-      driver.loadTriggerFunctions(projectId, schema),
-    ]);
+      const val = <T>(r: PromiseSettledResult<T>, fallback: T): T =>
+        r.status === "fulfilled" ? r.value : fallback;
 
-    const val = <T,>(r: PromiseSettledResult<T>, fallback: T): T =>
-      r.status === "fulfilled" ? r.value : fallback;
+      set((s) => {
+        s.columnDetails[key] = val(colsR, []);
+        s.indexes[key] = val(idxsR, []);
+        s.constraints[key] = val(consR, []);
+        s.triggers[key] = val(trigsR, []);
+        s.rules[key] = val(rlsR, []);
+        s.policies[key] = val(polsR, []);
+      });
+    },
 
-    set((s) => ({
-      views: { ...s.views, [key]: val(vR, []) },
-      materializedViews: { ...s.materializedViews, [key]: val(mvR, []) },
-      functions: { ...s.functions, [key]: val(fnR, []) },
-      triggerFunctions: { ...s.triggerFunctions, [key]: val(tfnR, []) },
-    }));
-  },
+    loadSchemaObjects: async (projectId: string, schema: string) => {
+      const key = `${projectId}::${schema}`;
+      const { views: existingViews, projects } = get();
+      if (existingViews[key]) return;
 
-  deleteProject: async (projectId: string) => {
-    await deleteProjectApi(projectId);
-    await get().loadProjects();
-    set((s) => ({ status: { ...s.status, [projectId]: PCS.Disconnected } }));
-  },
+      const d = projects[projectId];
+      if (!d) return;
+      const driver = DriverFactory.getDriver(d.driver);
+      const [vR, mvR, fnR, tfnR] = await Promise.allSettled([
+        driver.loadViews(projectId, schema),
+        driver.loadMaterializedViews(projectId, schema),
+        driver.loadFunctions(projectId, schema),
+        driver.loadTriggerFunctions(projectId, schema),
+      ]);
 
-  saveConnection: async (name: string, details: ProjectDetails) => {
-    const arr = [
-      details.driver, details.username, details.password,
-      details.database, details.host, details.port, details.ssl,
-      details.sshEnabled ?? "false", details.sshHost ?? "", details.sshPort ?? "22",
-      details.sshUser ?? "", details.sshPassword ?? "", details.sshKeyPath ?? "",
-    ];
-    await insertProject(name, arr);
-    await get().loadProjects();
-  },
+      const val = <T>(r: PromiseSettledResult<T>, fallback: T): T =>
+        r.status === "fulfilled" ? r.value : fallback;
 
-  updateConnection: async (name: string, details: ProjectDetails) => {
-    const arr = [
-      details.driver, details.username, details.password,
-      details.database, details.host, details.port, details.ssl,
-      details.sshEnabled ?? "false", details.sshHost ?? "", details.sshPort ?? "22",
-      details.sshUser ?? "", details.sshPassword ?? "", details.sshKeyPath ?? "",
-    ];
-    await insertProject(name, arr);
-    await get().loadProjects();
-  },
+      set((s) => {
+        s.views[key] = val(vR, []);
+        s.materializedViews[key] = val(mvR, []);
+        s.functions[key] = val(fnR, []);
+        s.triggerFunctions[key] = val(tfnR, []);
+      });
+    },
 
-  addDatabaseToServer: async (sourceProjectId: string, name: string, database: string) => {
-    const { projects } = get();
-    const source = projects[sourceProjectId];
-    if (!source) return;
-    const details = { ...source, database };
-    await get().saveConnection(name, details);
-  },
-}));
+    deleteProject: async (projectId: string) => {
+      await deleteProjectApi(projectId);
+      await get().loadProjects();
+      set((s) => {
+        s.status[projectId] = PCS.Disconnected;
+      });
+    },
+
+    saveConnection: async (name: string, details: ProjectDetails) => {
+      const arr = [
+        details.driver,
+        details.username,
+        details.password,
+        details.database,
+        details.host,
+        details.port,
+        details.ssl,
+        details.sshEnabled ?? "false",
+        details.sshHost ?? "",
+        details.sshPort ?? "22",
+        details.sshUser ?? "",
+        details.sshPassword ?? "",
+        details.sshKeyPath ?? "",
+      ];
+      await insertProject(name, arr);
+      await get().loadProjects();
+    },
+
+    updateConnection: async (name: string, details: ProjectDetails) => {
+      const arr = [
+        details.driver,
+        details.username,
+        details.password,
+        details.database,
+        details.host,
+        details.port,
+        details.ssl,
+        details.sshEnabled ?? "false",
+        details.sshHost ?? "",
+        details.sshPort ?? "22",
+        details.sshUser ?? "",
+        details.sshPassword ?? "",
+        details.sshKeyPath ?? "",
+      ];
+      await insertProject(name, arr);
+      await get().loadProjects();
+    },
+
+    addDatabaseToServer: async (
+      sourceProjectId: string,
+      name: string,
+      database: string,
+    ) => {
+      const { projects } = get();
+      const source = projects[sourceProjectId];
+      if (!source) return;
+      const details = { ...source, database };
+      await get().saveConnection(name, details);
+    },
+  })),
+);
 
 function parseProjectDetails(arr: string[]): ProjectDetails {
   return {

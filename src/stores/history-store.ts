@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { immer } from "zustand/middleware/immer";
 
 export interface HistoryEntry {
   id: string;
@@ -20,17 +21,17 @@ interface HistoryState {
 
 let historyId = 0;
 
-export const useHistoryStore = create<HistoryState>((set) => ({
-  entries: [],
+export const useHistoryStore = create<HistoryState>()(
+  immer((set) => ({
+    entries: [],
 
-  addEntry: (entry) => {
-    set((s) => ({
-      entries: [
-        { ...entry, id: `hist-${++historyId}` },
-        ...s.entries,
-      ].slice(0, 500), // keep last 500
-    }));
-  },
+    addEntry: (entry) => {
+      set((s) => {
+        s.entries.unshift({ ...entry, id: `hist-${++historyId}` });
+        s.entries.length = Math.min(s.entries.length, 500);
+      });
+    },
 
-  clearHistory: () => set({ entries: [] }),
-}));
+    clearHistory: () => set({ entries: [] }),
+  })),
+);

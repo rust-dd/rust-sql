@@ -546,18 +546,10 @@ export function ObjectPropertiesModal({
               onApplied={() => {
                 void fetchLiveData();
                 // Invalidate cached metadata so it re-fetches
-                const store = useProjectStore.getState();
-                const mk = metaKey;
-                const newCols = { ...store.columnDetails };
-                const newIdxs = { ...store.indexes };
-                const newCons = { ...store.constraints };
-                delete newCols[mk];
-                delete newIdxs[mk];
-                delete newCons[mk];
-                useProjectStore.setState({
-                  columnDetails: newCols,
-                  indexes: newIdxs,
-                  constraints: newCons,
+                useProjectStore.setState((s) => {
+                  delete s.columnDetails[metaKey];
+                  delete s.indexes[metaKey];
+                  delete s.constraints[metaKey];
                 });
               }}
               openTab={openTab}

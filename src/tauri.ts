@@ -60,3 +60,36 @@ export async function workspaceLoadAll(): Promise<[string, string][]> {
 export async function workspaceDelete(name: string): Promise<void> {
   await invoke("workspace_delete", { name });
 }
+
+export async function settingsGetAll(): Promise<Record<string, string>> {
+  return await invoke<Record<string, string>>("settings_get_all");
+}
+
+export async function settingsGet(key: string): Promise<string | null> {
+  return await invoke<string | null>("settings_get", { key });
+}
+
+export async function settingsSet(key: string, value: string): Promise<void> {
+  await invoke("settings_set", { key, value });
+}
+
+export async function settingsDelete(key: string): Promise<void> {
+  await invoke("settings_delete", { key });
+}
+
+export interface AIModelInfo {
+  id: string;
+  label: string;
+}
+
+export async function aiFetchClaudeModels(api_key: string): Promise<AIModelInfo[]> {
+  return await invoke<AIModelInfo[]>("ai_fetch_claude_models", { api_key });
+}
+
+export async function aiFetchOpenaiModels(api_key: string): Promise<AIModelInfo[]> {
+  return await invoke<AIModelInfo[]>("ai_fetch_openai_models", { api_key });
+}
+
+export async function pgsqlTestConnection(key: [string, string, string, string, string, string]): Promise<string> {
+  return await invoke<string>("pgsql_test_connection", { key });
+}

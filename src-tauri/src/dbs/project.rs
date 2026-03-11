@@ -6,10 +6,7 @@ use tauri::{Result, State};
 
 #[tauri::command(rename_all = "snake_case")]
 pub async fn project_db_select(app_state: State<'_, AppState>) -> Result<BTreeVecStore> {
-    let conn = app_state
-        .local_db
-        .connect()
-        .map_err(|e| AppError::DatabaseError(e.to_string()))?;
+    let conn = app_state.local_conn.lock().await;
 
     let mut rows = conn
         .query(
@@ -83,10 +80,7 @@ pub async fn project_db_insert(
     project_details: Vec<String>,
     app_state: State<'_, AppState>,
 ) -> Result<()> {
-    let conn = app_state
-        .local_db
-        .connect()
-        .map_err(|e| AppError::DatabaseError(e.to_string()))?;
+    let conn = app_state.local_conn.lock().await;
 
     let driver = project_details.first().cloned().unwrap_or_default();
     let username = project_details.get(1).cloned().unwrap_or_default();
@@ -118,10 +112,7 @@ pub async fn project_db_insert(
 
 #[tauri::command(rename_all = "snake_case")]
 pub async fn project_db_delete(project_id: &str, app_state: State<'_, AppState>) -> Result<()> {
-    let conn = app_state
-        .local_db
-        .connect()
-        .map_err(|e| AppError::DatabaseError(e.to_string()))?;
+    let conn = app_state.local_conn.lock().await;
 
     conn.execute(
         "DELETE FROM projects WHERE id = ?1",

@@ -4,7 +4,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from "./ui/button"
 import { Input } from "./ui/input"
 import { Label } from "./ui/label"
+import { Loader2, CheckCircle2, XCircle } from "lucide-react"
 import { DRIVER_CONFIGS } from "@/lib/database-driver"
+import { pgsqlTestConnection } from "@/tauri"
 import type { DriverType, ProjectDetails } from "@/types"
 
 interface ConnectionModalProps {
@@ -75,6 +77,8 @@ export function ConnectionModal({ open, onOpenChange, onSave, editData }: Connec
   const [formData, setFormData] = useState<Omit<ConnectionConfig, "id">>(defaultForm)
   const [connString, setConnString] = useState("")
   const [connStringError, setConnStringError] = useState(false)
+  const [testing, setTesting] = useState(false)
+  const [testResult, setTestResult] = useState<{ ok: boolean; message: string } | null>(null)
 
   useEffect(() => {
     if (open && editData) {
@@ -96,10 +100,12 @@ export function ConnectionModal({ open, onOpenChange, onSave, editData }: Connec
       })
       setConnString("")
       setConnStringError(false)
+      setTestResult(null)
     } else if (open && !editData) {
       setFormData(defaultForm)
       setConnString("")
       setConnStringError(false)
+      setTestResult(null)
     }
   }, [open, editData])
 
@@ -116,6 +122,28 @@ export function ConnectionModal({ open, onOpenChange, onSave, editData }: Connec
   }
 
   const isEditing = !!editData
+
+  const handleTestConnection = async () => {
+    setTesting(true)
+    setTestResult(null)
+    try {
+      const key: [string, string, string, string, string, string] = [
+        formData.username,
+        formData.password,
+        formData.database,
+        formData.host,
+        formData.port,
+        formData.ssl ? "true" : "false",
+      ]
+      const version = await pgsqlTestConnection(key)
+      setTestResult({ ok: true, message: version })
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err)
+      setTestResult({ ok: false, message: msg })
+    } finally {
+      setTesting(false)
+    }
+  }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -341,13 +369,42 @@ export function ConnectionModal({ open, onOpenChange, onSave, editData }: Connec
             )}
           </div>
 
-          <div className="flex justify-end gap-2 pt-4">
-            <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} className="font-mono text-xs">
-              Cancel
+          {testResult && (
+            <div
+              className={`flex items-start gap-2 rounded-lg border px-3 py-2 text-xs font-mono ${
+                testResult.ok
+                  ? "border-emerald-500/30 bg-emerald-500/5 text-emerald-500"
+                  : "border-destructive/30 bg-destructive/5 text-destructive"
+              }`}
+            >
+              {testResult.ok ? (
+                <CheckCircle2 className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+              ) : (
+                <XCircle className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+              )}
+              <span className="break-all">{testResult.message}</span>
+            </div>
+          )}
+
+          <div className="flex justify-between pt-4">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => void handleTestConnection()}
+              disabled={testing || !formData.host || !formData.database}
+              className="font-mono text-xs"
+            >
+              {testing && <Loader2 className="h-3 w-3 animate-spin mr-1.5" />}
+              Test Connection
             </Button>
-            <Button type="submit" variant="gradient" className="font-mono text-xs">
-              {isEditing ? "Save Changes" : "Connect"}
-            </Button>
+            <div className="flex gap-2">
+              <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} className="font-mono text-xs">
+                Cancel
+              </Button>
+              <Button type="submit" variant="gradient" className="font-mono text-xs">
+                {isEditing ? "Save Changes" : "Connect"}
+              </Button>
+            </div>
           </div>
         </form>
       </DialogContent>

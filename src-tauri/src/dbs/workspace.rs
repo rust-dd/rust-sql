@@ -4,10 +4,7 @@ use tauri::{Result, State};
 
 #[tauri::command(rename_all = "snake_case")]
 pub async fn workspace_save(name: &str, tabs: &str, app_state: State<'_, AppState>) -> Result<()> {
-    let conn = app_state
-        .local_db
-        .connect()
-        .map_err(|e| AppError::DatabaseError(e.to_string()))?;
+    let conn = app_state.local_conn.lock().await;
 
     conn.execute(
         "INSERT OR REPLACE INTO workspaces (name, tabs) VALUES (?1, ?2)",
@@ -21,10 +18,7 @@ pub async fn workspace_save(name: &str, tabs: &str, app_state: State<'_, AppStat
 
 #[tauri::command(rename_all = "snake_case")]
 pub async fn workspace_load_all(app_state: State<'_, AppState>) -> Result<Vec<(String, String)>> {
-    let conn = app_state
-        .local_db
-        .connect()
-        .map_err(|e| AppError::DatabaseError(e.to_string()))?;
+    let conn = app_state.local_conn.lock().await;
 
     let mut rows = conn
         .query("SELECT name, tabs FROM workspaces ORDER BY name", ())
@@ -50,10 +44,7 @@ pub async fn workspace_load_all(app_state: State<'_, AppState>) -> Result<Vec<(S
 
 #[tauri::command(rename_all = "snake_case")]
 pub async fn workspace_delete(name: &str, app_state: State<'_, AppState>) -> Result<()> {
-    let conn = app_state
-        .local_db
-        .connect()
-        .map_err(|e| AppError::DatabaseError(e.to_string()))?;
+    let conn = app_state.local_conn.lock().await;
 
     conn.execute(
         "DELETE FROM workspaces WHERE name = ?1",

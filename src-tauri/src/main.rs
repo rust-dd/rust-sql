@@ -1,6 +1,7 @@
 // Prevents additional console window on Windows in release, DO NOT REMOVE!!
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+mod ai;
 mod common;
 mod dbs;
 mod drivers;
@@ -23,7 +24,7 @@ pub struct AppState {
     pub meta_clients: Arc<Mutex<BTreeMap<String, Arc<Pool>>>>,
     pub cancel_tokens: Arc<Mutex<BTreeMap<String, CancelToken>>>,
     pub client_ssl: Arc<Mutex<BTreeMap<String, bool>>>,
-    pub local_db: libsql::Database,
+    pub local_conn: Arc<Mutex<libsql::Connection>>,
     pub resource_monitor: Arc<Mutex<utils::ResourceMonitor>>,
     pub virtual_cache: Arc<Mutex<drivers::common::VirtualCache>>,
     pub notify_handles: Arc<Mutex<BTreeMap<String, tokio::task::JoinHandle<()>>>>,
@@ -57,24 +58,25 @@ fn main() {
             let app_handle = app.handle().clone();
 
             tauri::async_runtime::block_on(async move {
-                let db_path = if cfg!(debug_assertions) {
-                    LOCAL_DB_NAME.to_string()
-                } else {
-                    let app_dir = app_handle
-                        .path()
-                        .app_data_dir()
-                        .expect("Failed to resolve app data directory");
-                    std::fs::create_dir_all(&app_dir).ok();
-                    app_dir.join(LOCAL_DB_NAME).to_string_lossy().to_string()
-                };
+                let app_dir = app_handle
+                    .path()
+                    .app_data_dir()
+                    .expect("Failed to resolve app data directory");
+                std::fs::create_dir_all(&app_dir).ok();
+                let db_path = app_dir.join(LOCAL_DB_NAME).to_string_lossy().to_string();
 
                 let db = libsql::Builder::new_local(&db_path)
                     .build()
                     .await
                     .expect("Failed to open local database");
 
-                // Create tables
+                // Enable WAL mode for concurrent access
                 let conn = db.connect().expect("Failed to create connection");
+                conn.execute("PRAGMA journal_mode=WAL", ())
+                    .await
+                    .ok();
+
+                // Create tables
                 conn.execute(
                     "CREATE TABLE IF NOT EXISTS projects (
                         id TEXT PRIMARY KEY,
@@ -110,6 +112,16 @@ fn main() {
                 )
                 .await
                 .expect("Failed to create workspaces table");
+
+                conn.execute(
+                    "CREATE TABLE IF NOT EXISTS settings (
+                        key TEXT PRIMARY KEY,
+                        value TEXT NOT NULL DEFAULT ''
+                    )",
+                    (),
+                )
+                .await
+                .expect("Failed to create settings table");
 
                 conn.execute(
                     "CREATE TABLE IF NOT EXISTS virtual_query_snapshots (
@@ -173,7 +185,7 @@ fn main() {
                     meta_clients: Arc::new(Mutex::new(BTreeMap::new())),
                     cancel_tokens: Arc::new(Mutex::new(BTreeMap::new())),
                     client_ssl: Arc::new(Mutex::new(BTreeMap::new())),
-                    local_db: db,
+                    local_conn: Arc::new(Mutex::new(conn)),
                     resource_monitor: Arc::new(Mutex::new(utils::ResourceMonitor::new())),
                     virtual_cache: Arc::new(Mutex::new(BTreeMap::new())),
                     notify_handles: Arc::new(Mutex::new(BTreeMap::new())),
@@ -259,6 +271,11 @@ fn main() {
             dbs::workspace::workspace_save,
             dbs::workspace::workspace_load_all,
             dbs::workspace::workspace_delete,
+            dbs::settings::settings_get_all,
+            dbs::settings::settings_get,
+            dbs::settings::settings_set,
+            dbs::settings::settings_delete,
+            drivers::pgsql::pgsql_test_connection,
             drivers::pgsql::pgsql_connector,
             drivers::pgsql::pgsql_load_databases,
             drivers::pgsql::pgsql_load_tablespaces,
@@ -316,6 +333,8 @@ fn main() {
             terminal::terminal_kill,
             utils::compute_diff,
             utils::system_resource_usage,
+            ai::ai_fetch_claude_models,
+            ai::ai_fetch_openai_models,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

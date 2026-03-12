@@ -2,7 +2,7 @@
 
 A high-performance PostgreSQL client built with Tauri v2, React, and Rust. Designed from the ground up to be fast — even with millions of rows.
 
-![Website screenshot](docs/site.png)
+![Website screenshot](docs/rsql.png)
 
 ## Important
 App signing is in progress. To allow on macOS, use the following command:

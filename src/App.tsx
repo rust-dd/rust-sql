@@ -14,6 +14,7 @@ import { SchemaDiffPanel } from "@/components/schema-diff-panel";
 import { ExtensionsPanel } from "@/components/extensions-panel";
 import { EnumsPanel } from "@/components/enums-panel";
 import { PgSettingsPanel } from "@/components/pg-settings-panel";
+import { AIChatPanel } from "@/components/ai-chat-panel";
 import { TabBar } from "@/components/tab-bar";
 import { TopBar } from "@/components/top-bar";
 import { EditorToolbar } from "@/components/editor-toolbar";
@@ -65,6 +66,9 @@ export default function App() {
   const setConnectionModalOpen = useUIStore((s) => s.setConnectionModalOpen);
   const setSidebarWidth = useUIStore((s) => s.setSidebarWidth);
   const setEditorHeight = useUIStore((s) => s.setEditorHeight);
+  const aiPanelOpen = useUIStore((s) => s.aiPanelOpen);
+  const aiPanelWidth = useUIStore((s) => s.aiPanelWidth);
+  const setAIPanelWidth = useUIStore((s) => s.setAIPanelWidth);
 
   const loadProjects = useProjectStore((s) => s.loadProjects);
   const projects = useProjectStore((s) => s.projects);
@@ -547,6 +551,18 @@ export default function App() {
             </>
           )}
         </div>
+
+        {aiPanelOpen && (
+          <>
+            <ResizeHandle direction="horizontal" onResize={(d) => setAIPanelWidth(-d)} />
+            <div
+              style={{ width: `${aiPanelWidth}px`, minWidth: "300px" }}
+              className="flex-shrink-0 overflow-hidden border-l border-border/40"
+            >
+              <AIChatPanel />
+            </div>
+          </>
+        )}
       </div>
 
       <StatusBar />

@@ -4,9 +4,10 @@ import { ContextMenu, useContextMenu } from "@/components/ui/context-menu";
 import { cn } from "@/lib/utils";
 import { useTabStore } from "@/stores/tab-store";
 import { useProjectStore } from "@/stores/project-store";
+import { useUIStore } from "@/stores/ui-store";
 import { DriverFactory } from "@/lib/database-driver";
 import * as virtualCache from "@/lib/virtual-cache";
-import { Activity, Bell, Columns3, Copy, Database, List, Package, Plus, Settings, Shield, Terminal, Trash2, X, XCircle } from "lucide-react";
+import { Activity, Bell, Columns3, Copy, Database, List, Package, Plus, Settings, Shield, Sparkles, Terminal, Trash2, X, XCircle } from "lucide-react";
 
 export function TabBar() {
   const tabs = useTabStore((s) => s.tabs);
@@ -136,6 +137,15 @@ export function TabBar() {
           title="Open terminal (Cmd+`)"
         >
           <Terminal className="h-3.5 w-3.5" />
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => useUIStore.getState().toggleAIPanel()}
+          className="h-7 w-7 shrink-0 rounded-lg"
+          title="AI Chat"
+        >
+          <Sparkles className="h-3.5 w-3.5" />
         </Button>
       </div>
       {menu && <ContextMenu x={menu.x} y={menu.y} items={menu.items} onClose={closeMenu} />}

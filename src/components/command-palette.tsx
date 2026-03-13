@@ -10,7 +10,7 @@ import { format as formatSQL } from "sql-formatter";
 import {
   Table, Eye, FileCode, Layers, Database, Save, FolderOpen, Trash2,
   Plus, Play, GitBranch, AlignLeft, Moon, Sun, Terminal, Activity,
-  Network, XCircle, Pin, PinOff, Download,
+  Network, XCircle, Pin, PinOff, Download, Sparkles,
 } from "lucide-react";
 
 type Page = "root" | "save-workspace" | "load-workspace" | "delete-workspace" | "save-query";
@@ -277,6 +277,11 @@ export function CommandPalette({
                     <Terminal className="h-4 w-4 text-muted-foreground" />
                     <span>Open Terminal</span>
                     <span className="cmdk-detail">{navigator.platform.includes("Mac") ? "\u2318" : "Ctrl"}+`</span>
+                  </Command.Item>
+                  <Command.Item value="Open AI Chat" onSelect={() => { onClose(); useUIStore.getState().toggleAIPanel(); }}>
+                    <Sparkles className="h-4 w-4 text-muted-foreground" />
+                    <span>AI Chat</span>
+                    <span className="cmdk-meta">Assistant</span>
                   </Command.Item>
                   {activeProject && hasQuery && (
                     <>

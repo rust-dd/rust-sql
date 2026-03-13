@@ -5,10 +5,7 @@ use tauri::{AppHandle, Manager, Result, State};
 
 #[tauri::command(rename_all = "snake_case")]
 pub async fn query_db_select(app_state: State<'_, AppState>) -> Result<BTreeMap<String, String>> {
-    let conn = app_state
-        .local_db
-        .connect()
-        .map_err(|e| AppError::DatabaseError(e.to_string()))?;
+    let conn = app_state.local_conn.lock().await;
 
     let mut rows = conn
         .query("SELECT id, sql FROM queries ORDER BY id", ())
@@ -35,10 +32,7 @@ pub async fn query_db_select(app_state: State<'_, AppState>) -> Result<BTreeMap<
 #[tauri::command(rename_all = "snake_case")]
 pub async fn query_db_insert(query_id: &str, sql: &str, app: AppHandle) -> Result<()> {
     let app_state = app.state::<AppState>();
-    let conn = app_state
-        .local_db
-        .connect()
-        .map_err(|e| AppError::DatabaseError(e.to_string()))?;
+    let conn = app_state.local_conn.lock().await;
 
     conn.execute(
         "INSERT OR REPLACE INTO queries (id, sql) VALUES (?1, ?2)",
@@ -52,10 +46,7 @@ pub async fn query_db_insert(query_id: &str, sql: &str, app: AppHandle) -> Resul
 
 #[tauri::command(rename_all = "snake_case")]
 pub async fn query_db_delete(query_id: &str, app_state: State<'_, AppState>) -> Result<()> {
-    let conn = app_state
-        .local_db
-        .connect()
-        .map_err(|e| AppError::DatabaseError(e.to_string()))?;
+    let conn = app_state.local_conn.lock().await;
 
     conn.execute(
         "DELETE FROM queries WHERE id = ?1",

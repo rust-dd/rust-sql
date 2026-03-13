@@ -16,6 +16,8 @@ interface UIState {
   viewMode: "grid" | "record";
   selectedRow: number;
   pinnedResult: PinnedResult | null;
+  aiPanelOpen: boolean;
+  aiPanelWidth: number;
 
   toggleTheme: () => void;
   setTheme: (theme: "light" | "dark") => void;
@@ -26,6 +28,8 @@ interface UIState {
   setSelectedRow: (row: number | ((prev: number) => number)) => void;
   pinResult: (result: QueryResult, label: string) => void;
   clearPinnedResult: () => void;
+  toggleAIPanel: () => void;
+  setAIPanelWidth: (delta: number) => void;
 }
 
 export const useUIStore = create<UIState>()(
@@ -37,6 +41,8 @@ export const useUIStore = create<UIState>()(
     viewMode: "grid",
     selectedRow: 0,
     pinnedResult: null,
+    aiPanelOpen: false,
+    aiPanelWidth: 400,
 
     toggleTheme: () => {
       set((s) => {
@@ -92,5 +98,17 @@ export const useUIStore = create<UIState>()(
     },
 
     clearPinnedResult: () => set({ pinnedResult: null }),
+
+    toggleAIPanel: () => {
+      set((s) => {
+        s.aiPanelOpen = !s.aiPanelOpen;
+      });
+    },
+
+    setAIPanelWidth: (delta) => {
+      set((s) => {
+        s.aiPanelWidth = Math.max(300, Math.min(800, s.aiPanelWidth + delta));
+      });
+    },
   })),
 );

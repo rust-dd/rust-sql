@@ -129,10 +129,7 @@ async fn snapshot_upsert_metadata(
     page_size: usize,
     col_count: usize,
 ) -> std::result::Result<(), AppError> {
-    let conn = app_state
-        .local_db
-        .connect()
-        .map_err(|e| AppError::DatabaseError(e.to_string()))?;
+    let conn = app_state.local_conn.lock().await;
 
     conn.execute(
         "INSERT OR REPLACE INTO virtual_query_snapshots (
@@ -165,10 +162,7 @@ async fn snapshot_store_page(
         return Ok(());
     }
 
-    let conn = app_state
-        .local_db
-        .connect()
-        .map_err(|e| AppError::DatabaseError(e.to_string()))?;
+    let conn = app_state.local_conn.lock().await;
 
     for attempt in 0..SNAPSHOT_PAGE_WRITE_RETRIES {
         match conn
@@ -208,10 +202,7 @@ async fn snapshot_load_page(
     query_id: &str,
     page_index: usize,
 ) -> std::result::Result<Option<String>, AppError> {
-    let conn = app_state
-        .local_db
-        .connect()
-        .map_err(|e| AppError::DatabaseError(e.to_string()))?;
+    let conn = app_state.local_conn.lock().await;
 
     let mut rows = conn
         .query(
@@ -242,10 +233,7 @@ async fn snapshot_load_metadata(
     app_state: &AppState,
     query_id: &str,
 ) -> std::result::Result<Option<VirtualSnapshotMeta>, AppError> {
-    let conn = app_state
-        .local_db
-        .connect()
-        .map_err(|e| AppError::DatabaseError(e.to_string()))?;
+    let conn = app_state.local_conn.lock().await;
 
     let mut rows = conn
         .query(
@@ -296,10 +284,7 @@ async fn snapshot_cleanup_query(
     app_state: &AppState,
     query_id: &str,
 ) -> std::result::Result<(), AppError> {
-    let conn = app_state
-        .local_db
-        .connect()
-        .map_err(|e| AppError::DatabaseError(e.to_string()))?;
+    let conn = app_state.local_conn.lock().await;
 
     conn.execute(
         "DELETE FROM virtual_query_pages WHERE query_id = ?1",
@@ -378,6 +363,39 @@ async fn restore_virtual_from_snapshot(
 }
 
 #[tauri::command(rename_all = "snake_case")]
+pub async fn pgsql_test_connection(
+    key: [&str; 6],
+) -> Result<String> {
+    let user = key[0];
+    let password = key[1];
+    let database = key[2];
+    let host = key[3];
+    let port: u16 = key[4].parse().unwrap_or(5432);
+    let use_ssl = key[5] == "true";
+
+    let mut cfg = Config::new();
+    cfg.user(user)
+        .password(password)
+        .dbname(database)
+        .host(host)
+        .port(port);
+
+    let pool = create_pg_pool(&cfg, use_ssl, 1)?;
+    let client = pool
+        .get()
+        .await
+        .map_err(|e| AppError::ConnectionFailed(full_error_chain(&e)))?;
+
+    let row = client
+        .query_one("SELECT version()", &[])
+        .await
+        .map_err(|e| AppError::ConnectionFailed(e.to_string()))?;
+
+    let version: String = row.get(0);
+    Ok(version)
+}
+
+#[tauri::command(rename_all = "snake_case")]
 pub async fn pgsql_connector(
     project_id: &str,
     key: Option<[&str; 6]>,
@@ -402,10 +420,7 @@ pub async fn pgsql_connector(
             key[5] == "true",
         ),
         None => {
-            let conn = app_state
-                .local_db
-                .connect()
-                .map_err(|e| AppError::DatabaseError(e.to_string()))?;
+            let conn = app_state.local_conn.lock().await;
             let mut rows = conn
                 .query(
                     "SELECT username, password, database, host, port, ssl FROM projects WHERE id = ?1",
@@ -1090,10 +1105,7 @@ pub async fn pgsql_listen_start(project_id: &str, channel: &str, app: AppHandle)
 
     // Get connection config from local db
     let (cfg, use_ssl) = {
-        let conn = app_state
-            .local_db
-            .connect()
-            .map_err(|e| AppError::DatabaseError(e.to_string()))?;
+        let conn = app_state.local_conn.lock().await;
         let mut rows = conn
             .query(
                 "SELECT username, password, database, host, port, ssl FROM projects WHERE id = ?1",

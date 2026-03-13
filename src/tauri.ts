@@ -60,3 +60,7 @@ export async function workspaceLoadAll(): Promise<[string, string][]> {
 export async function workspaceDelete(name: string): Promise<void> {
   await invoke("workspace_delete", { name });
 }
+
+export async function pgsqlTestConnection(key: [string, string, string, string, string, string]): Promise<string> {
+  return await invoke<string>("pgsql_test_connection", { key });
+}

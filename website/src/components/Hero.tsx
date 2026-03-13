@@ -32,7 +32,7 @@ export function Hero() {
         <div className="animate-fade-in-up">
           <div className="inline-flex items-center gap-2 rounded-full border border-border/50 bg-card/40 px-4 py-1.5 text-sm text-muted-foreground backdrop-blur-sm">
             <span className="h-2 w-2 rounded-full bg-success animate-pulse" />
-            v1.1.1 - desktop-grade PostgreSQL client
+            v1.1.2 - desktop-grade PostgreSQL client
           </div>
 
           <div className="mt-10 grid gap-10 lg:grid-cols-[minmax(0,1.12fr)_300px] lg:items-end">

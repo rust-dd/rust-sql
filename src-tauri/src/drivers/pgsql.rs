@@ -94,6 +94,27 @@ async fn acquire_client(
         .map_err(|e| AppError::ConnectionFailed(e.to_string()))
 }
 
+async fn apply_statement_timeout(
+    client: &deadpool_postgres::Client,
+    timeout_ms: u32,
+) {
+    if timeout_ms > 0 {
+        client
+            .simple_query(&format!("SET statement_timeout = {}", timeout_ms))
+            .await
+            .ok();
+    }
+}
+
+async fn reset_statement_timeout(
+    client: &deadpool_postgres::Client,
+    timeout_ms: u32,
+) {
+    if timeout_ms > 0 {
+        client.simple_query("RESET statement_timeout").await.ok();
+    }
+}
+
 async fn set_cancel_token(
     app_state: &AppState,
     project_id: &str,
@@ -375,6 +396,39 @@ async fn restore_virtual_from_snapshot(
     }
 
     Ok(true)
+}
+
+#[tauri::command(rename_all = "snake_case")]
+pub async fn pgsql_test_connection(
+    key: [&str; 6],
+) -> Result<String> {
+    let user = key[0];
+    let password = key[1];
+    let database = key[2];
+    let host = key[3];
+    let port: u16 = key[4].parse().unwrap_or(5432);
+    let use_ssl = key[5] == "true";
+
+    let mut cfg = Config::new();
+    cfg.user(user)
+        .password(password)
+        .dbname(database)
+        .host(host)
+        .port(port);
+
+    let pool = create_pg_pool(&cfg, use_ssl, 1)?;
+    let client = pool
+        .get()
+        .await
+        .map_err(|e| AppError::ConnectionFailed(full_error_chain(&e)))?;
+
+    let row = client
+        .query_one("SELECT version()", &[])
+        .await
+        .map_err(|e| AppError::ConnectionFailed(e.to_string()))?;
+
+    let version: String = row.get(0);
+    Ok(version)
 }
 
 #[tauri::command(rename_all = "snake_case")]
@@ -836,12 +890,18 @@ pub async fn pgsql_cancel_query(project_id: &str, app_state: State<'_, AppState>
 pub async fn pgsql_run_query_packed(
     project_id: &str,
     sql: &str,
+    timeout_ms: Option<u32>,
     app_state: State<'_, AppState>,
 ) -> Result<Response> {
     let client = acquire_client(&app_state.clients, project_id).await?;
     set_cancel_token(&app_state, project_id, client.cancel_token()).await?;
 
-    let result = execute_query_packed(&client, sql).await?;
+    let timeout = timeout_ms.unwrap_or(0);
+    apply_statement_timeout(&client, timeout).await;
+    let result = execute_query_packed(&client, sql).await;
+    reset_statement_timeout(&client, timeout).await;
+
+    let result = result?;
     let json = sonic_rs::to_string(&result).map_err(|e| AppError::QueryFailed(e.to_string()))?;
     Ok(Response::new(json))
 }
@@ -868,13 +928,18 @@ pub async fn pgsql_execute_virtual(
     sql: &str,
     query_id: &str,
     page_size: usize,
+    timeout_ms: Option<u32>,
     app_state: State<'_, AppState>,
 ) -> Result<Response> {
     let client = acquire_client(&app_state.clients, project_id).await?;
     set_cancel_token(&app_state, project_id, client.cancel_token()).await?;
 
+    let timeout = timeout_ms.unwrap_or(0);
+    apply_statement_timeout(&client, timeout).await;
     let result =
-        execute_virtual(&client, &app_state.virtual_cache, sql, query_id, page_size).await?;
+        execute_virtual(&client, &app_state.virtual_cache, sql, query_id, page_size).await;
+    reset_statement_timeout(&client, timeout).await;
+    let result = result?;
 
     let col_count = if result.0.is_empty() {
         0

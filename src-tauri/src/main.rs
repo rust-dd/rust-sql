@@ -259,6 +259,7 @@ fn main() {
             dbs::workspace::workspace_save,
             dbs::workspace::workspace_load_all,
             dbs::workspace::workspace_delete,
+            drivers::pgsql::pgsql_test_connection,
             drivers::pgsql::pgsql_connector,
             drivers::pgsql::pgsql_load_databases,
             drivers::pgsql::pgsql_load_tablespaces,

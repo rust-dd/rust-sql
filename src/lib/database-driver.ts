@@ -68,9 +68,9 @@ export interface DatabaseDriver {
   loadMaterializedViews(projectId: string, schema: string): Promise<string[]>;
   loadFunctions(projectId: string, schema: string): Promise<FunctionInfo[]>;
   loadTriggerFunctions(projectId: string, schema: string): Promise<TriggerFunctionInfo[]>;
-  runQuery(projectId: string, sql: string): Promise<WireQueryResult>;
+  runQuery(projectId: string, sql: string, timeoutMs?: number): Promise<WireQueryResult>;
   runQueryStreamed?(projectId: string, sql: string, streamId: string, callbacks: StreamCallbacks): Promise<void>;
-  executeVirtual?(projectId: string, sql: string, queryId: string, pageSize: number): Promise<[string, number, string, number]>;
+  executeVirtual?(projectId: string, sql: string, queryId: string, pageSize: number, timeoutMs?: number): Promise<[string, number, string, number]>;
   fetchPage?(projectId: string, queryId: string, colCount: number, offset: number, limit: number): Promise<string>;
   closeVirtual?(projectId: string, queryId: string): Promise<void>;
   loadActivity(projectId: string): Promise<string[][]>;
@@ -205,9 +205,11 @@ class PostgreSQLDriver implements DatabaseDriver {
     const wire = await invoke<WireTriggerFunctionInfo[]>("pgsql_load_trigger_functions", { project_id: projectId, schema });
     return parseTriggerFunctionInfo(wire);
   }
-  async runQuery(projectId: string, sql: string) {
+  async runQuery(projectId: string, sql: string, timeoutMs?: number) {
     // Use packed format for faster IPC (avoids JSON overhead of nested arrays)
-    const [packed, time] = await invoke<WirePackedResult>("pgsql_run_query_packed", { project_id: projectId, sql });
+    const [packed, time] = await invoke<WirePackedResult>("pgsql_run_query_packed", {
+      project_id: projectId, sql, timeout_ms: timeoutMs ?? null,
+    });
     return unpackResult(packed, time);
   }
   async runQueryStreamed(
@@ -261,9 +263,9 @@ class PostgreSQLDriver implements DatabaseDriver {
 
     return streamDone;
   }
-  async executeVirtual(projectId: string, sql: string, queryId: string, pageSize: number) {
+  async executeVirtual(projectId: string, sql: string, queryId: string, pageSize: number, timeoutMs?: number) {
     return invoke<[string, number, string, number]>("pgsql_execute_virtual", {
-      project_id: projectId, sql, query_id: queryId, page_size: pageSize,
+      project_id: projectId, sql, query_id: queryId, page_size: pageSize, timeout_ms: timeoutMs ?? null,
     });
   }
   async fetchPage(_projectId: string, queryId: string, colCount: number, offset: number, limit: number) {

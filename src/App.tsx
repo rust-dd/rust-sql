@@ -44,7 +44,8 @@ function isQueryCancelledError(message: string): boolean {
   return lower.includes("canceling statement due to user request")
     || lower.includes("cancelling statement due to user request")
     || lower.includes("query canceled")
-    || lower.includes("query cancelled");
+    || lower.includes("query cancelled")
+    || lower.includes("statement timeout");
 }
 
 function notifyQueryComplete(sql: string, time: number, success: boolean, rowCount?: number) {
@@ -126,11 +127,13 @@ export default function App() {
         setVirtualQuery(idx, undefined);
       }
 
+      const timeoutMs = tab.queryTimeout || undefined;
+
       if (driver.executeVirtual) {
         const sql = tab.editorValue;
         const queryId = crypto.randomUUID().replace(/-/g, "").slice(0, 12);
         const [colsPacked, totalRows, pagePacked, elapsed] =
-          await driver.executeVirtual(tab.projectId, sql, queryId, PAGE_SIZE);
+          await driver.executeVirtual(tab.projectId, sql, queryId, PAGE_SIZE, timeoutMs);
 
         if (!colsPacked) {
           // Fallback format from backend: header + rows in one packed string.
@@ -180,7 +183,7 @@ export default function App() {
         }
       } else {
         // One-shot fallback
-        const [cols, rows, time] = await driver.runQuery(tab.projectId, tab.editorValue);
+        const [cols, rows, time] = await driver.runQuery(tab.projectId, tab.editorValue, timeoutMs);
         updateResult(idx, { columns: cols, rows, time });
         notifyQueryComplete(tab.editorValue, time, true, rows.length);
         addHistoryEntry({
@@ -472,6 +475,7 @@ export default function App() {
               <EditorToolbar
                 onExecute={() => void runQuery()}
                 onExplain={() => void runExplain()}
+                onCancel={() => void cancelQuery()}
               />
               <div className="flex flex-1 min-h-0 overflow-hidden">
                 {/* Left pane */}
@@ -531,6 +535,7 @@ export default function App() {
               <EditorToolbar
                 onExecute={() => void runQuery()}
                 onExplain={() => void runExplain()}
+                onCancel={() => void cancelQuery()}
               />
               <div style={{ height: `${editorHeight}%` }} className="flex flex-col overflow-hidden">
                 <QueryEditor

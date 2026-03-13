@@ -31,6 +31,7 @@ export interface Tab {
   result?: QueryResult;
   explainResult?: ExplainPlan;
   virtualQuery?: VirtualQuery;
+  queryTimeout?: number;
   isSplit?: boolean;
   splitEditorValue?: string;
   splitResult?: QueryResult;

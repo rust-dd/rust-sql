@@ -37,6 +37,7 @@ interface TabState {
   updateSplitContent: (index: number, value: string) => void;
   setSplitResult: (index: number, result: QueryResult) => void;
   setSplitExecuting: (index: number, executing: boolean) => void;
+  setQueryTimeout: (index: number, timeout: number) => void;
 }
 
 function makeSingletonTab(
@@ -214,6 +215,10 @@ export const useTabStore = create<TabState>()(
         set((s) => {
           s.tabs[index].isSplitExecuting = executing;
         }),
+      setQueryTimeout: (index, timeout) =>
+        set((s) => {
+          s.tabs[index].queryTimeout = timeout;
+        }),
     })),
     {
       name: "rsql-tabs",
@@ -228,6 +233,7 @@ export const useTabStore = create<TabState>()(
             title: tab.title,
             editorValue: tab.editorValue,
             isExecuting: false,
+            queryTimeout: tab.queryTimeout,
             isSplit: tab.isSplit,
             splitEditorValue: tab.splitEditorValue,
           })),

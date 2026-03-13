@@ -5,20 +5,33 @@ import { Input } from "@/components/ui/input";
 import { useProjectStore } from "@/stores/project-store";
 import { useTabStore, useActiveTab } from "@/stores/tab-store";
 import { useQueryStore } from "@/stores/query-store";
-import { AlignLeft, Columns2, GitBranch, Loader2, Play, Save } from "lucide-react";
+import { AlignLeft, Columns2, GitBranch, Play, Save, Square, Timer } from "lucide-react";
 import { format as formatSQL } from "sql-formatter";
+
+const TIMEOUT_OPTIONS = [
+  { label: "No limit", value: 0 },
+  { label: "5s", value: 5000 },
+  { label: "10s", value: 10000 },
+  { label: "30s", value: 30000 },
+  { label: "1m", value: 60000 },
+  { label: "5m", value: 300000 },
+  { label: "10m", value: 600000 },
+];
 
 export function EditorToolbar({
   onExecute,
   onExplain,
+  onCancel,
 }: {
   onExecute: () => void;
   onExplain: () => void;
+  onCancel: () => void;
 }) {
   const activeTab = useActiveTab();
   const selectedTabIndex = useTabStore((s) => s.selectedTabIndex);
   const updateContent = useTabStore((s) => s.updateContent);
   const toggleSplit = useTabStore((s) => s.toggleSplit);
+  const setQueryTimeout = useTabStore((s) => s.setQueryTimeout);
   const projects = useProjectStore((s) => s.projects);
   const saveQueryAction = useQueryStore((s) => s.saveQuery);
   const activeProject = activeTab?.projectId;
@@ -93,6 +106,24 @@ export function EditorToolbar({
 
         <div className="h-4 w-px bg-border/40 mx-1" />
 
+        <div className="flex items-center gap-1">
+          <Timer className="h-3 w-3 text-muted-foreground" />
+          <select
+            value={activeTab.queryTimeout ?? 0}
+            onChange={(e) => setQueryTimeout(selectedTabIndex, Number(e.target.value))}
+            className="h-7 bg-transparent border border-border/40 rounded text-xs font-mono text-muted-foreground px-1.5 outline-none focus:border-border cursor-pointer"
+            title="Query timeout"
+          >
+            {TIMEOUT_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="h-4 w-px bg-border/40 mx-1" />
+
         <Button
           variant="outline"
           size="sm"
@@ -106,25 +137,34 @@ export function EditorToolbar({
             {navigator.platform.includes("Mac") ? "\u2318" : "Ctrl"}+Shift+Enter
           </kbd>
         </Button>
-        <Button
-          variant="gradient"
-          size="sm"
-          className="h-7 gap-1.5 text-xs px-2.5"
-          onClick={onExecute}
-          disabled={!activeProject || activeTab.isExecuting}
-        >
-          {activeTab.isExecuting ? (
-            <Loader2 className="h-3.5 w-3.5 animate-spin" />
-          ) : (
+        {activeTab.isExecuting ? (
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-7 gap-1.5 text-xs px-2.5 border-destructive/50 text-destructive hover:bg-destructive/10"
+            onClick={onCancel}
+          >
+            <Square className="h-3 w-3" />
+            Stop
+            <kbd className="hidden sm:inline-flex ml-0.5 text-[10px] opacity-60">
+              {navigator.platform.includes("Mac") ? "\u2318" : "Ctrl"}+.
+            </kbd>
+          </Button>
+        ) : (
+          <Button
+            variant="gradient"
+            size="sm"
+            className="h-7 gap-1.5 text-xs px-2.5"
+            onClick={onExecute}
+            disabled={!activeProject}
+          >
             <Play className="h-3.5 w-3.5" />
-          )}
-          {activeTab.isExecuting ? "Running..." : "Execute"}
-          {!activeTab.isExecuting && (
+            Execute
             <kbd className="hidden sm:inline-flex ml-0.5 text-[10px] text-white/60">
               {navigator.platform.includes("Mac") ? "\u2318" : "Ctrl"}+Enter
             </kbd>
-          )}
-        </Button>
+          </Button>
+        )}
       </div>
 
       {/* Save Query Dialog */}

@@ -58,7 +58,7 @@ fn create_pg_pool(
     max_size: usize,
 ) -> std::result::Result<Pool, AppError> {
     let manager_config = ManagerConfig {
-        recycling_method: RecyclingMethod::Fast,
+        recycling_method: RecyclingMethod::Custom("ROLLBACK".into()),
     };
 
     if use_ssl {

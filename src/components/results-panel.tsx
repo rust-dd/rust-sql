@@ -22,7 +22,9 @@ import {
   Square,
   X,
   XCircle,
+  Trash2,
 } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "./ui/dialog";
 import { ResultsGrid } from "./results-grid";
 import { ResultsRecord } from "./results-record";
 import { QueryHistory } from "./query-history";
@@ -71,6 +73,7 @@ export function ResultsPanel() {
   const [editState, setEditState] = useState<EditState | null>(null);
   const [editError, setEditError] = useState<string | null>(null);
   const [isCommitting, setIsCommitting] = useState(false);
+  const [pendingDeleteCount, setPendingDeleteCount] = useState(0);
   const result = activeTab?.result;
   const isExecuting = activeTab?.isExecuting;
   const vq = activeTab?.virtualQuery;
@@ -269,10 +272,6 @@ export function ResultsPanel() {
     [fkMap, activeTab?.projectId],
   );
 
-  const changeCount = editState
-    ? editState.cellEdits.size + editState.deletedRows.size
-    : 0;
-
   // Enter edit mode
   const handleEnterEdit = useCallback(async () => {
     if (!editableTable || !activeTab?.projectId) return;
@@ -322,14 +321,41 @@ export function ResultsPanel() {
     setEditError(null);
   }, []);
 
-  // Commit edits
-  const handleCommit = useCallback(async () => {
-    if (!editState || !activeTab?.projectId || !result) return;
+  // Run statements + refresh results helper
+  const runAndRefresh = useCallback(async (statements: string[]) => {
+    if (!activeTab?.projectId || statements.length === 0) return;
+    setIsCommitting(true);
+    setEditError(null);
+
+    try {
+      const d = useProjectStore.getState().projects[activeTab.projectId];
+      if (!d) throw new Error("Project not found");
+      const driver = DriverFactory.getDriver(d.driver);
+
+      const txnSql = ["BEGIN", ...statements, "COMMIT"].join(";\n");
+      await driver.runQuery(activeTab.projectId, txnSql, 30000);
+
+      const [cols, rows, time] = await driver.runQuery(activeTab.projectId, activeTab.editorValue);
+      const tabIdx = useTabStore.getState().selectedTabIndex;
+      useTabStore.getState().updateResult(tabIdx, { columns: cols, rows, time });
+
+      setIsEditing(false);
+      setEditState(null);
+      setPendingDeleteCount(0);
+    } catch (err: any) {
+      setEditError(err?.message ?? "Commit failed");
+    } finally {
+      setIsCommitting(false);
+    }
+  }, [activeTab?.projectId, activeTab?.editorValue]);
+
+  // Commit — only cell edits (UPDATEs), no deletes
+  const handleCommit = useCallback(() => {
+    if (!editState || !result) return;
     const { schema, table, pkColumns, cellEdits, deletedRows } = editState;
     const columns = result.columns;
     const originalRows = result.rows;
 
-    // Group cell edits by row
     const editsByRow = new Map<number, Map<number, string>>();
     for (const [key, value] of cellEdits) {
       const [rowStr, colStr] = key.split(":");
@@ -341,13 +367,8 @@ export function ResultsPanel() {
     }
 
     const statements: string[] = [];
-
     for (const [rowIdx, changes] of editsByRow) {
       statements.push(generateUpdate(schema, table, columns, originalRows[rowIdx], changes, pkColumns));
-    }
-
-    for (const rowIdx of deletedRows) {
-      statements.push(generateDelete(schema, table, columns, originalRows[rowIdx], pkColumns));
     }
 
     if (statements.length === 0) {
@@ -355,38 +376,33 @@ export function ResultsPanel() {
       return;
     }
 
-    setIsCommitting(true);
-    setEditError(null);
+    void runAndRefresh(statements);
+  }, [editState, result, handleDiscard, runAndRefresh]);
 
-    try {
-      const d = useProjectStore.getState().projects[activeTab.projectId];
-      if (!d) throw new Error("Project not found");
-      const driver = DriverFactory.getDriver(d.driver);
+  // Delete — only checked rows (DELETEs), with inline confirmation
+  const handleDeleteRows = useCallback(() => {
+    if (!editState || editState.deletedRows.size === 0) return;
+    setPendingDeleteCount(editState.deletedRows.size);
+  }, [editState]);
 
-      await driver.runQuery(activeTab.projectId, "BEGIN");
-      try {
-        for (const stmt of statements) {
-          await driver.runQuery(activeTab.projectId, stmt);
-        }
-        await driver.runQuery(activeTab.projectId, "COMMIT");
-      } catch (err) {
-        await driver.runQuery(activeTab.projectId, "ROLLBACK").catch(() => {});
-        throw err;
-      }
+  const handleConfirmDelete = useCallback(() => {
+    if (!editState || !result) return;
+    const { schema, table, pkColumns, deletedRows } = editState;
+    const columns = result.columns;
+    const originalRows = result.rows;
 
-      // Refresh results
-      const [cols, rows, time] = await driver.runQuery(activeTab.projectId, activeTab.editorValue);
-      const tabIdx = useTabStore.getState().selectedTabIndex;
-      useTabStore.getState().updateResult(tabIdx, { columns: cols, rows, time });
-
-      setIsEditing(false);
-      setEditState(null);
-    } catch (err: any) {
-      setEditError(err?.message ?? "Commit failed");
-    } finally {
-      setIsCommitting(false);
+    const statements: string[] = [];
+    for (const rowIdx of deletedRows) {
+      statements.push(generateDelete(schema, table, columns, originalRows[rowIdx], pkColumns));
     }
-  }, [editState, activeTab?.projectId, activeTab?.editorValue, result, handleDiscard]);
+
+    setPendingDeleteCount(0);
+    void runAndRefresh(statements);
+  }, [editState, result, runAndRefresh]);
+
+  const handleCancelDelete = useCallback(() => {
+    setPendingDeleteCount(0);
+  }, []);
 
   // Cell edit handler
   const handleCellEdit = useCallback(
@@ -435,12 +451,16 @@ export function ResultsPanel() {
     hasExplain,
     isExecuting: !!isExecuting,
     isEditing,
+    editState,
     editableTable: !!editableTable && !vq,
-    changeCount,
     isCommitting,
     editError,
     onEnterEdit: handleEnterEdit,
     onCommit: handleCommit,
+    onDeleteRows: handleDeleteRows,
+    onConfirmDelete: handleConfirmDelete,
+    onCancelDelete: handleCancelDelete,
+    pendingDeleteCount,
     onDiscard: handleDiscard,
     onCancel: handleCancel,
     virtualQuery: vq,
@@ -563,12 +583,16 @@ interface ToolbarProps {
   hasExplain: boolean;
   isExecuting: boolean;
   isEditing: boolean;
+  editState: EditState | null;
   editableTable: boolean;
-  changeCount: number;
   isCommitting: boolean;
   editError: string | null;
   onEnterEdit: () => void;
   onCommit: () => void;
+  onDeleteRows: () => void;
+  onConfirmDelete: () => void;
+  onCancelDelete: () => void;
+  pendingDeleteCount: number;
   onDiscard: () => void;
   onCancel?: () => void;
   virtualQuery?: { queryId: string; totalRows: number; time: number; pageSize: number };
@@ -589,12 +613,16 @@ function ResultsToolbar(props: ToolbarProps) {
     hasExplain,
     isExecuting,
     isEditing,
+    editState,
     editableTable,
-    changeCount,
     isCommitting,
     editError,
     onEnterEdit,
     onCommit,
+    onDeleteRows,
+    onConfirmDelete,
+    onCancelDelete,
+    pendingDeleteCount,
     onDiscard,
     onCancel,
     virtualQuery,
@@ -709,12 +737,18 @@ function ResultsToolbar(props: ToolbarProps) {
             <span className="text-muted-foreground/50">&bull;</span>
             <Clock className="h-3 w-3" />
             <span>{result.time.toFixed(0)}ms</span>
-            {isEditing && changeCount > 0 && (
+            {isEditing && editState?.cellEdits.size ? (
               <>
                 <span className="text-muted-foreground/50">&bull;</span>
-                <span className="text-amber-500 font-medium">{changeCount} change{changeCount !== 1 ? "s" : ""}</span>
+                <span className="text-amber-500 font-medium">{editState.cellEdits.size} edit{editState.cellEdits.size !== 1 ? "s" : ""}</span>
               </>
-            )}
+            ) : null}
+            {isEditing && editState?.deletedRows.size ? (
+              <>
+                <span className="text-muted-foreground/50">&bull;</span>
+                <span className="text-destructive font-medium">{editState.deletedRows.size} delete{editState.deletedRows.size !== 1 ? "s" : ""}</span>
+              </>
+            ) : null}
           </div>
         )}
 
@@ -741,7 +775,7 @@ function ResultsToolbar(props: ToolbarProps) {
             )}
             <button
               onClick={onCommit}
-              disabled={changeCount === 0 || isCommitting}
+              disabled={(editState?.cellEdits.size ?? 0) === 0 || isCommitting}
               className="flex items-center gap-1 px-2.5 py-1 rounded text-xs font-mono bg-success text-success-foreground hover:bg-success/90 transition-colors disabled:opacity-50"
             >
               {isCommitting ? (
@@ -751,6 +785,38 @@ function ResultsToolbar(props: ToolbarProps) {
               )}
               Commit
             </button>
+            <button
+              onClick={onDeleteRows}
+              disabled={(editState?.deletedRows.size ?? 0) === 0 || isCommitting}
+              className="flex items-center gap-1 px-2.5 py-1 rounded text-xs font-mono border border-destructive/50 text-destructive hover:bg-destructive/10 transition-colors disabled:opacity-50"
+            >
+              <Trash2 className="h-3 w-3" />
+              Delete ({editState?.deletedRows.size ?? 0})
+            </button>
+            <Dialog open={pendingDeleteCount > 0} onOpenChange={(open) => { if (!open) onCancelDelete(); }}>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Delete rows</DialogTitle>
+                  <DialogDescription>
+                    Are you sure you want to permanently delete {pendingDeleteCount} row{pendingDeleteCount !== 1 ? "s" : ""}? This action cannot be undone.
+                  </DialogDescription>
+                </DialogHeader>
+                <DialogFooter>
+                  <button
+                    onClick={onCancelDelete}
+                    className="px-3 py-1.5 rounded-lg text-xs font-mono text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={onConfirmDelete}
+                    className="px-3 py-1.5 rounded-lg text-xs font-mono bg-destructive text-destructive-foreground hover:bg-destructive/90 transition-colors"
+                  >
+                    Yes, delete {pendingDeleteCount} row{pendingDeleteCount !== 1 ? "s" : ""}
+                  </button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
             <button
               onClick={onDiscard}
               disabled={isCommitting}
@@ -806,7 +872,7 @@ function ResultsToolbar(props: ToolbarProps) {
                 )}
                 {pinnedResult && (
                   <button
-                    onClick={() => setPanelView("diff")}
+                    onClick={() => setPanelView(panelView === "diff" ? "grid" : "diff")}
                     className={`flex items-center gap-1 px-2 py-0.5 rounded text-xs font-mono transition-colors ${
                       panelView === "diff"
                         ? "bg-primary text-primary-foreground"

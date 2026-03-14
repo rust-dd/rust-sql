@@ -359,11 +359,14 @@ export function ResultsGrid({
     setSelection((prev) => ({ ...prev, rows: sel }));
   }, [isEditing, deletedRows]);
 
+  const selectionRef = useRef(selection);
+  selectionRef.current = selection;
+
   const handleSelectionChange = useCallback(
     (newSel: GridSelection) => {
       if (!isEditing) return;
       // Find changes between old and new selection
-      const oldRows = selection.rows;
+      const oldRows = selectionRef.current.rows;
       const newRows = newSel.rows;
 
       // Check for newly added rows (marked for deletion)
@@ -376,7 +379,7 @@ export function ResultsGrid({
 
       setSelection(newSel);
     },
-    [isEditing, selection, rows.length, onRowDelete, onRowRestore],
+    [isEditing, rows.length, onRowDelete, onRowRestore],
   );
 
   return (

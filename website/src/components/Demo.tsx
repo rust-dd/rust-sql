@@ -86,7 +86,6 @@ export function Demo() {
     }
   };
 
-  // Auto-run first query when ready
   useEffect(() => {
     if (ready && !result) {
       executeMutation.mutate(SAMPLE_QUERIES[0].sql, {
@@ -98,87 +97,65 @@ export function Demo() {
 
   if (!ready) {
     return (
-      <section className="px-6 py-24 max-w-6xl mx-auto text-center" id="demo">
-        <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto mb-4" />
-        <p className="text-muted-foreground">Loading PostgreSQL runtime...</p>
+      <section className="px-6 py-24 text-center" id="demo">
+        <div className="mx-auto max-w-[1080px]">
+          <Loader2 className="h-6 w-6 animate-spin text-[var(--accent)] mx-auto mb-3" />
+          <p className="text-sm text-[var(--fg-muted)]">Starting PostgreSQL…</p>
+          <p className="text-xs text-[var(--fg-subtle)] mt-1 font-[var(--font-mono)]">PGlite WebAssembly engine</p>
+        </div>
       </section>
     );
   }
 
   return (
-    <section className="px-6 py-24 max-w-6xl mx-auto" id="demo">
-      <div className="border-t border-border/45 pt-10">
-        <div className="mb-8 max-w-3xl">
-          <p className="section-label mb-3">
-            In-browser sandbox
-          </p>
-          <h2 className="font-display text-[2.6rem] leading-[0.96] md:text-[3.9rem]">
-            Touch the flow
-            <br />
-            before you
-            <br />
-            install it.
+    <section className="px-6 py-24" id="demo">
+      <div className="mx-auto max-w-[1080px]">
+        <div className="divider mb-16" />
+
+        <div className="mb-10 max-w-lg">
+          <span className="section-label">Sandbox</span>
+          <h2 className="font-display text-[clamp(1.8rem,4vw,2.8rem)] mt-3">
+            Try it right here
           </h2>
-          <p className="mt-4 text-base leading-relaxed text-muted-foreground">
-            Full PostgreSQL running in WebAssembly. Real SQL, seeded data, no setup friction.
+          <p className="text-[var(--fg-muted)] mt-3 text-[15px] leading-relaxed">
+            Full PostgreSQL running in WebAssembly. Real SQL, seeded data, no install.
           </p>
-
-          <div className="mt-6 flex flex-wrap gap-2">
-            {SAMPLE_QUERIES.map((q) => (
-              <button
-                key={q.label}
-                onClick={() => {
-                  setSql(q.sql);
-                  executeMutation.mutate(q.sql, {
-                    onSuccess: (data) => setResult(data),
-                  });
-                }}
-                className={`rounded-full border px-4 py-2 text-left text-xs font-mono transition-colors ${
-                  sql === q.sql
-                    ? "border-primary bg-primary/10 text-primary"
-                    : "border-border bg-card/60 text-muted-foreground hover:text-foreground hover:border-muted-foreground/50"
-                }`}
-              >
-                {q.label}
-              </button>
-            ))}
-          </div>
-
-          <div className="mt-6 grid gap-3 border-t border-border/40 pt-4 sm:grid-cols-3">
-            <div>
-              <div className="font-mono text-[10px] uppercase tracking-[0.24em] text-muted-foreground">
-                Engine
-              </div>
-              <div className="mt-2 text-sm text-foreground">PGlite</div>
-            </div>
-            <div>
-              <div className="font-mono text-[10px] uppercase tracking-[0.24em] text-muted-foreground">
-                Dataset
-              </div>
-              <div className="mt-2 text-sm text-foreground">Seeded demo schema</div>
-            </div>
-            <div>
-              <div className="font-mono text-[10px] uppercase tracking-[0.24em] text-muted-foreground">
-                Setup
-              </div>
-              <div className="mt-2 text-sm text-foreground">Zero install</div>
-            </div>
-          </div>
         </div>
 
-        <div className="section-frame overflow-hidden rounded-[28px]">
-          <div className="flex items-center gap-2 px-4 py-2.5 bg-card/80 border-b border-border/50">
-            <div className="flex gap-1.5">
-              <span className="h-3 w-3 rounded-full bg-red-500/80" />
-              <span className="h-3 w-3 rounded-full bg-yellow-500/80" />
-              <span className="h-3 w-3 rounded-full bg-green-500/80" />
-            </div>
-            <span className="flex-1 text-center text-xs text-muted-foreground font-mono">
-              RSQL — browser.sandbox
+        {/* Query pills */}
+        <div className="mb-4 flex flex-wrap gap-2">
+          {SAMPLE_QUERIES.map((q) => (
+            <button
+              key={q.label}
+              onClick={() => {
+                setSql(q.sql);
+                executeMutation.mutate(q.sql, {
+                  onSuccess: (data) => setResult(data),
+                });
+              }}
+              className={`rounded-full border px-4 py-2 text-xs font-[var(--font-mono)] transition-colors ${
+                sql === q.sql
+                  ? "border-[var(--accent)] bg-[var(--accent-muted)] text-[var(--accent)]"
+                  : "border-[var(--border)] text-[var(--fg-muted)] hover:text-[var(--fg)] hover:border-[var(--fg-subtle)]"
+              }`}
+            >
+              {q.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Sandbox */}
+        <div className="product-frame">
+          <div className="product-frame-titlebar">
+            <div className="product-frame-dot bg-[#ff5f57]" />
+            <div className="product-frame-dot bg-[#febc2e]" />
+            <div className="product-frame-dot bg-[#28c840]" />
+            <span className="flex-1 text-center text-[11px] text-[var(--fg-subtle)] font-[var(--font-mono)]">
+              RSQL — browser sandbox
             </span>
             <button
               onClick={() => resetMutation.mutate()}
-              className="text-muted-foreground hover:text-foreground transition-colors"
+              className="text-[var(--fg-subtle)] hover:text-[var(--fg-muted)] transition-colors"
               title="Reset database"
             >
               <RotateCcw className="h-3.5 w-3.5" />
@@ -197,40 +174,43 @@ export function Demo() {
             />
 
             <div className="flex-1 flex flex-col min-w-0">
-              <div className="flex items-center gap-2 px-3 py-1.5 border-b border-border/50 bg-card/40">
+              {/* Toolbar */}
+              <div className="flex items-center gap-2 px-3 py-2 border-b border-[var(--border-subtle)] bg-[var(--surface-raised)]">
                 <button
                   onClick={execute}
                   disabled={executeMutation.isPending}
-                  className="gradient-btn inline-flex items-center gap-1.5 rounded-md px-3 py-1 text-xs font-semibold text-white disabled:opacity-50"
+                  className="flex items-center gap-1.5 rounded-lg bg-[var(--accent)] px-3 py-1 text-xs font-semibold text-white disabled:opacity-50"
                 >
                   {executeMutation.isPending ? (
                     <Loader2 className="h-3 w-3 animate-spin" />
                   ) : (
                     <Play className="h-3 w-3" />
                   )}
-                  Execute
+                  Run
                 </button>
-                <span className="text-[10px] text-muted-foreground font-mono ml-auto">
+                <span className="text-[10px] text-[var(--fg-subtle)] font-[var(--font-mono)] ml-auto">
                   {result
                     ? result.error
                       ? "Error"
-                      : `${result.rowCount} rows in ${result.time.toFixed(1)}ms`
-                    : "⌘+Enter to run"}
+                      : `${result.rowCount} rows · ${result.time.toFixed(1)}ms`
+                    : "⌘+Enter"}
                 </span>
               </div>
 
-              <div className="relative flex-none h-[180px] border-b border-border/50">
+              {/* Editor */}
+              <div className="relative flex-none h-[180px] border-b border-[var(--border-subtle)]">
                 <textarea
                   ref={textareaRef}
                   value={sql}
                   onChange={(e) => setSql(e.target.value)}
                   onKeyDown={handleKeyDown}
                   spellCheck={false}
-                  className="w-full h-full resize-none bg-[var(--editor-bg)] text-foreground font-mono text-[13px] leading-6 p-4 focus:outline-none"
-                  placeholder="Write your SQL here..."
+                  className="w-full h-full resize-none editor-bg text-[var(--fg)] font-[var(--font-mono)] text-[13px] leading-6 p-4 focus:outline-none"
+                  placeholder="Write SQL here..."
                 />
               </div>
 
+              {/* Results */}
               <div className="flex-1 overflow-auto">
                 {result && <DemoResults result={result} />}
               </div>
@@ -242,6 +222,8 @@ export function Demo() {
   );
 }
 
+/* ─── Sidebar ─── */
+
 function DemoSidebar({ onTableClick }: { onTableClick: (table: string) => void }) {
   const { data: tableList } = useTables();
   const [expandedTable, setExpandedTable] = useState<string | null>(null);
@@ -249,54 +231,49 @@ function DemoSidebar({ onTableClick }: { onTableClick: (table: string) => void }
   const [schemaOpen, setSchemaOpen] = useState(true);
 
   return (
-    <div className="w-[200px] flex-none border-r border-border/50 bg-card/30 overflow-y-auto text-xs select-none">
-      <div className="px-2 py-2 border-b border-border/50">
-        <span className="text-[10px] font-semibold text-muted-foreground tracking-widest uppercase">
-          NAVIGATOR
+    <div className="w-[200px] flex-none border-r border-[var(--border-subtle)] bg-[var(--surface-raised)] overflow-y-auto text-xs select-none">
+      <div className="px-3 py-2.5 border-b border-[var(--border-subtle)]">
+        <span className="text-[10px] font-semibold text-[var(--fg-subtle)] tracking-widest uppercase font-[var(--font-mono)]">
+          Navigator
         </span>
       </div>
 
-      {/* Server */}
       <button
         onClick={() => setServerOpen(!serverOpen)}
-        className="surface-hover flex items-center gap-1 w-full px-2 py-1 text-left"
+        className="surface-hover flex items-center gap-1.5 w-full px-3 py-1.5 text-left"
       >
-        {serverOpen ? <ChevronDown className="h-3 w-3 text-muted-foreground" /> : <ChevronRight className="h-3 w-3 text-muted-foreground" />}
-        <Server className="h-3 w-3 text-primary" />
-        <span className="font-mono font-semibold text-xs">local.runtime</span>
-        <span className="ml-auto h-1.5 w-1.5 rounded-full bg-success" />
+        {serverOpen ? <ChevronDown className="h-3 w-3 text-[var(--fg-subtle)]" /> : <ChevronRight className="h-3 w-3 text-[var(--fg-subtle)]" />}
+        <Server className="h-3 w-3 text-[var(--accent)]" />
+        <span className="font-[var(--font-mono)] font-semibold text-xs">local</span>
+        <span className="ml-auto h-1.5 w-1.5 rounded-full bg-[var(--success)]" />
       </button>
 
       {serverOpen && (
         <>
-          {/* Databases */}
-          <div className="flex items-center gap-1 px-2 py-1 pl-5 text-muted-foreground">
+          <div className="flex items-center gap-1.5 px-3 py-1 pl-6 text-[var(--fg-subtle)]">
             <ChevronDown className="h-3 w-3" />
             <Database className="h-3 w-3" />
-            <span className="font-mono text-[11px]">catalog (1)</span>
+            <span className="font-[var(--font-mono)] text-[11px]">catalog</span>
           </div>
 
-          {/* demo_db */}
           <button
             onClick={() => setSchemaOpen(!schemaOpen)}
-            className="surface-hover flex items-center gap-1 w-full px-2 py-1 pl-8 text-left"
+            className="surface-hover flex items-center gap-1.5 w-full px-3 py-1 pl-9 text-left"
           >
-            {schemaOpen ? <ChevronDown className="h-3 w-3 text-muted-foreground" /> : <ChevronRight className="h-3 w-3 text-muted-foreground" />}
-            <Database className="h-3 w-3 text-muted-foreground" />
-            <span className="font-mono text-[11px]">demo.workspace</span>
-            <span className="ml-auto h-1.5 w-1.5 rounded-full bg-success" />
+            {schemaOpen ? <ChevronDown className="h-3 w-3 text-[var(--fg-subtle)]" /> : <ChevronRight className="h-3 w-3 text-[var(--fg-subtle)]" />}
+            <Database className="h-3 w-3 text-[var(--fg-subtle)]" />
+            <span className="font-[var(--font-mono)] text-[11px]">demo</span>
+            <span className="ml-auto h-1.5 w-1.5 rounded-full bg-[var(--success)]" />
           </button>
 
           {schemaOpen && (
             <>
-              {/* public schema */}
-              <div className="flex items-center gap-1 px-2 py-0.5 pl-11 text-muted-foreground">
+              <div className="flex items-center gap-1.5 px-3 py-0.5 pl-12 text-[var(--fg-subtle)]">
                 <ChevronDown className="h-3 w-3" />
                 <FolderOpen className="h-3 w-3" />
-                <span className="font-mono text-[11px]">schema/public</span>
+                <span className="font-[var(--font-mono)] text-[11px]">public</span>
               </div>
 
-              {/* Tables */}
               {tableList?.map((table) => (
                 <TableNode
                   key={table}
@@ -330,28 +307,28 @@ function TableNode({
   return (
     <div>
       <button
-        className="surface-hover flex items-center gap-1 w-full px-2 py-0.5 pl-[52px] text-left group"
+        className="surface-hover flex items-center gap-1.5 w-full px-3 py-0.5 pl-[56px] text-left"
         onClick={onToggle}
         onDoubleClick={onClick}
       >
-        {expanded ? <ChevronDown className="h-3 w-3 text-muted-foreground" /> : <ChevronRight className="h-3 w-3 text-muted-foreground" />}
-        <Table className="h-3 w-3 text-muted-foreground" />
-        <span className="font-mono text-[11px] text-foreground">{table}</span>
+        {expanded ? <ChevronDown className="h-3 w-3 text-[var(--fg-subtle)]" /> : <ChevronRight className="h-3 w-3 text-[var(--fg-subtle)]" />}
+        <Table className="h-3 w-3 text-[var(--fg-subtle)]" />
+        <span className="font-[var(--font-mono)] text-[11px]">{table}</span>
       </button>
       {expanded && columns && (
         <div>
           {columns.map((col) => (
             <div
               key={col.column_name}
-              className="flex items-center gap-1 px-2 py-0 pl-[72px] text-muted-foreground"
+              className="flex items-center gap-1.5 px-3 py-0 pl-[76px] text-[var(--fg-subtle)]"
             >
               {col.column_name === "id" ? (
-                <Key className="h-2.5 w-2.5 text-yellow-500" />
+                <Key className="h-2.5 w-2.5 text-amber-400/60" />
               ) : (
-                <Columns3 className="h-2.5 w-2.5 text-muted-foreground/40" />
+                <Columns3 className="h-2.5 w-2.5 opacity-30" />
               )}
-              <span className="font-mono text-[10px] text-foreground/80">{col.column_name}</span>
-              <span className="font-mono text-[9px] text-muted-foreground/60">{col.data_type}</span>
+              <span className="font-[var(--font-mono)] text-[10px]">{col.column_name}</span>
+              <span className="font-[var(--font-mono)] text-[9px] opacity-40">{col.data_type}</span>
             </div>
           ))}
         </div>
@@ -364,27 +341,27 @@ function DemoResults({ result }: { result: QueryResult }) {
   if (result.error) {
     return (
       <div className="p-4">
-        <pre className="font-mono text-xs text-destructive whitespace-pre-wrap">{result.error}</pre>
+        <pre className="font-[var(--font-mono)] text-xs text-[var(--destructive)] whitespace-pre-wrap">{result.error}</pre>
       </div>
     );
   }
 
   if (!result.columns.length) {
     return (
-      <div className="p-4 text-xs text-muted-foreground font-mono">
+      <div className="p-4 text-xs text-[var(--fg-muted)] font-[var(--font-mono)]">
         Query executed successfully. No rows returned.
       </div>
     );
   }
 
   return (
-    <table className="w-full text-left font-mono text-[12px] border-collapse">
+    <table className="w-full text-left font-[var(--font-mono)] text-[12px] border-collapse">
       <thead>
         <tr>
           {result.columns.map((col) => (
             <th
               key={col}
-              className="sticky top-0 z-10 border-b border-r border-border/30 bg-card px-3 py-1.5 text-[11px] font-semibold whitespace-nowrap text-muted-foreground"
+              className="sticky top-0 z-10 border-b border-r last:border-r-0 border-[var(--border-subtle)] bg-[var(--surface-raised)] px-3 py-1.5 text-[10px] font-semibold whitespace-nowrap text-[var(--fg-muted)]"
             >
               {col}
             </th>
@@ -393,11 +370,11 @@ function DemoResults({ result }: { result: QueryResult }) {
       </thead>
       <tbody>
         {result.rows.map((row, i) => (
-          <tr key={i} className="hover:bg-[var(--table-hover)] even:bg-[var(--table-stripe)]">
+          <tr key={i} className="hover:bg-[var(--accent-muted)] transition-colors">
             {result.columns.map((col) => (
               <td
                 key={col}
-                className="px-3 py-1 text-foreground/90 border-b border-r border-border/20 whitespace-nowrap"
+                className="px-3 py-1 text-[var(--fg-muted)] border-b border-r last:border-r-0 border-[var(--border-subtle)] whitespace-nowrap"
               >
                 {formatCell(row[col])}
               </td>

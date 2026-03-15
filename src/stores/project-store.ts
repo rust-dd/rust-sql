@@ -74,6 +74,7 @@ interface ProjectState {
     table: string,
   ) => Promise<void>;
   loadSchemaObjects: (projectId: string, schema: string) => Promise<void>;
+  refreshConnection: (projectId: string) => Promise<void>;
   deleteProject: (projectId: string) => Promise<void>;
   saveConnection: (name: string, details: ProjectDetails) => Promise<void>;
   updateConnection: (name: string, details: ProjectDetails) => Promise<void>;
@@ -106,12 +107,29 @@ export const useProjectStore = create<ProjectState>()(
     triggerFunctions: {},
 
     loadProjects: async () => {
-      const raw = await getProjects();
-      const projects: ProjectMap = {};
-      for (const [id, arr] of Object.entries(raw)) {
-        projects[id] = parseProjectDetails(arr);
+      try {
+        const raw = await getProjects();
+        const projects: ProjectMap = {};
+        for (const [id, arr] of Object.entries(raw)) {
+          projects[id] = parseProjectDetails(arr);
+        }
+        set({ projects });
+      } catch (err) {
+        console.error("Failed to load projects, retrying in 500ms...", err);
+        // Retry once after a short delay — handles race where
+        // the Tauri backend hasn't finished setup yet.
+        await new Promise((r) => setTimeout(r, 500));
+        try {
+          const raw = await getProjects();
+          const projects: ProjectMap = {};
+          for (const [id, arr] of Object.entries(raw)) {
+            projects[id] = parseProjectDetails(arr);
+          }
+          set({ projects });
+        } catch (retryErr) {
+          console.error("Failed to load projects after retry:", retryErr);
+        }
       }
-      set({ projects });
     },
 
     connect: async (projectId: string) => {
@@ -336,6 +354,79 @@ export const useProjectStore = create<ProjectState>()(
         s.functions[key] = val(fnR, []);
         s.triggerFunctions[key] = val(tfnR, []);
       });
+    },
+
+    refreshConnection: async (projectId: string) => {
+      const { projects, status } = get();
+      const d = projects[projectId];
+      if (!d || status[projectId] !== PCS.Connected) return;
+
+      // Clear all cached metadata for this project
+      set((s) => {
+        // Clear schema-level caches
+        const schemaPrefix = `${projectId}::`;
+        for (const key of Object.keys(s.tables)) {
+          if (key.startsWith(schemaPrefix)) delete s.tables[key];
+        }
+        for (const key of Object.keys(s.columns)) {
+          if (key.startsWith(schemaPrefix)) delete s.columns[key];
+        }
+        for (const key of Object.keys(s.columnDetails)) {
+          if (key.startsWith(schemaPrefix)) delete s.columnDetails[key];
+        }
+        for (const key of Object.keys(s.indexes)) {
+          if (key.startsWith(schemaPrefix)) delete s.indexes[key];
+        }
+        for (const key of Object.keys(s.constraints)) {
+          if (key.startsWith(schemaPrefix)) delete s.constraints[key];
+        }
+        for (const key of Object.keys(s.triggers)) {
+          if (key.startsWith(schemaPrefix)) delete s.triggers[key];
+        }
+        for (const key of Object.keys(s.rules)) {
+          if (key.startsWith(schemaPrefix)) delete s.rules[key];
+        }
+        for (const key of Object.keys(s.policies)) {
+          if (key.startsWith(schemaPrefix)) delete s.policies[key];
+        }
+        for (const key of Object.keys(s.views)) {
+          if (key.startsWith(schemaPrefix)) delete s.views[key];
+        }
+        for (const key of Object.keys(s.materializedViews)) {
+          if (key.startsWith(schemaPrefix)) delete s.materializedViews[key];
+        }
+        for (const key of Object.keys(s.functions)) {
+          if (key.startsWith(schemaPrefix)) delete s.functions[key];
+        }
+        for (const key of Object.keys(s.triggerFunctions)) {
+          if (key.startsWith(schemaPrefix)) delete s.triggerFunctions[key];
+        }
+
+        // Clear project-level caches
+        delete s.schemas[projectId];
+        delete s.serverDatabases[projectId];
+        delete s.serverTablespaces[projectId];
+      });
+
+      // Reload schemas, databases, tablespaces
+      try {
+        const driver = DriverFactory.getDriver(d.driver);
+        const [sc, dbs, tsp] = await Promise.allSettled([
+          driver.loadSchemas(projectId),
+          driver.loadDatabases?.(projectId),
+          driver.loadTablespaces?.(projectId),
+        ]);
+        set((s) => {
+          s.schemas[projectId] = sc.status === "fulfilled" ? sc.value : [];
+          s.serverDatabases[projectId] =
+            dbs.status === "fulfilled" && dbs.value ? dbs.value : [];
+          s.serverTablespaces[projectId] =
+            tsp.status === "fulfilled" && tsp.value ? tsp.value : [];
+        });
+        toast.success("Connection refreshed");
+      } catch {
+        toast.error("Failed to refresh connection data");
+      }
     },
 
     deleteProject: async (projectId: string) => {

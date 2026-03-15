@@ -104,6 +104,7 @@ export function ServerSidebar({
   const loadColumns = useProjectStore((s) => s.loadColumns);
   const loadTableMetadata = useProjectStore((s) => s.loadTableMetadata);
   const loadSchemaObjects = useProjectStore((s) => s.loadSchemaObjects);
+  const refreshConnection = useProjectStore((s) => s.refreshConnection);
   const deleteProject = useProjectStore((s) => s.deleteProject);
   const addDatabaseToServer = useProjectStore((s) => s.addDatabaseToServer);
   const setConnectionModalOpen = useUIStore((s) => s.setConnectionModalOpen);
@@ -632,6 +633,7 @@ export function ServerSidebar({
                                     { label: "New Query", icon: <Plus className="h-3 w-3" />, onClick: () => openTab(dbPid) },
                                     { label: isDbConnected ? "Reconnect" : "Connect", icon: <RefreshCw className="h-3 w-3" />, onClick: () => void onConnect(dbPid) },
                                     ...(isDbConnected ? [
+                                      { label: "Refresh", icon: <RefreshCw className="h-3 w-3" />, onClick: () => void refreshConnection(dbPid) },
                                       { label: "LISTEN/NOTIFY", icon: <Zap className="h-3 w-3" />, onClick: () => openNotifyTab(dbPid) },
                                       { label: "Schema Diff", icon: <Columns3 className="h-3 w-3" />, onClick: () => openSchemaDiffTab(dbPid) },
                                       { label: "Extensions", icon: <Package className="h-3 w-3" />, onClick: () => openExtensionsTab(dbPid) },

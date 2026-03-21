@@ -357,14 +357,19 @@ export const useProjectStore = create<ProjectState>()(
     },
 
     refreshConnection: async (projectId: string) => {
-      const { projects, status } = get();
+      const { projects, status, tables } = get();
       const d = projects[projectId];
       if (!d || status[projectId] !== PCS.Connected) return;
+
+      // Remember which schemas had tables loaded so we can reload them
+      const schemaPrefix = `${projectId}::`;
+      const expandedSchemas = Object.keys(tables)
+        .filter((k) => k.startsWith(schemaPrefix))
+        .map((k) => k.slice(schemaPrefix.length));
 
       // Clear all cached metadata for this project
       set((s) => {
         // Clear schema-level caches
-        const schemaPrefix = `${projectId}::`;
         for (const key of Object.keys(s.tables)) {
           if (key.startsWith(schemaPrefix)) delete s.tables[key];
         }
@@ -423,6 +428,17 @@ export const useProjectStore = create<ProjectState>()(
           s.serverTablespaces[projectId] =
             tsp.status === "fulfilled" && tsp.value ? tsp.value : [];
         });
+
+        // Reload tables and schema objects for previously expanded schemas
+        await Promise.all(
+          expandedSchemas.map((schema) =>
+            Promise.all([
+              get().loadTables(projectId, schema),
+              get().loadSchemaObjects(projectId, schema),
+            ]),
+          ),
+        );
+
         toast.success("Connection refreshed");
       } catch {
         toast.error("Failed to refresh connection data");

@@ -178,7 +178,6 @@ export function PerformanceMonitor({ projectId }: { projectId: string }) {
     };
   }, [autoRefresh, refresh]);
 
-  // Project-specific history
   const projectHistory = historyEntries.filter((e) => e.projectId === projectId);
   const avgTime = projectHistory.length > 0
     ? projectHistory.reduce((sum, e) => sum + e.executionTime, 0) / projectHistory.length

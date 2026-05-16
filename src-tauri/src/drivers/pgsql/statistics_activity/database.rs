@@ -4,7 +4,6 @@ use crate::common::enums::AppError;
 
 use super::super::DbStat;
 
-/// Load pg_stat_activity - active connections and queries.
 pub async fn load_activity(client: &Client) -> Result<Vec<Vec<String>>, AppError> {
     let rows = client
         .query(
@@ -33,7 +32,6 @@ pub async fn load_activity(client: &Client) -> Result<Vec<Vec<String>>, AppError
         .collect())
 }
 
-/// Load pg_stat_database - database-level stats.
 pub async fn load_database_stats(client: &Client) -> Result<Vec<DbStat>, AppError> {
     let rows = client
         .query(
@@ -87,7 +85,6 @@ pub async fn load_database_stats(client: &Client) -> Result<Vec<DbStat>, AppErro
         .collect())
 }
 
-/// Load pg_stat_user_tables - table-level stats.
 pub async fn load_table_stats(client: &Client) -> Result<Vec<Vec<String>>, AppError> {
     let rows = client
         .query(

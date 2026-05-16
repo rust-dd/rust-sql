@@ -7,13 +7,11 @@ interface ResultsMapProps {
   rows: string[][];
 }
 
-// WKT patterns for detecting geometry columns
 const WKT_PREFIX =
   /^(POINT|LINESTRING|POLYGON|MULTIPOINT|MULTILINESTRING|MULTIPOLYGON|GEOMETRYCOLLECTION)\s*\(/i;
 const GEOJSON_PREFIX = /^\s*\{\s*"type"\s*:/;
 const WKB_HEX = /^[0-9a-f]{8,}$/i;
 
-// Simple hex byte reader for EWKB
 function hexToFloat64LE(hex: string, offset: number): number {
   const bytes = new Uint8Array(8);
   for (let i = 0; i < 8; i++) {
@@ -106,11 +104,9 @@ function parseGeoJSON(json: string, rowIndex: number): ParsedGeom | null {
 }
 
 function detectGeomColumnIndex(columns: string[], rows: string[][]): number {
-  // Check first 10 rows for geometry-like data
   const sample = rows.slice(0, 10);
   for (let ci = 0; ci < columns.length; ci++) {
     const colName = columns[ci].toLowerCase();
-    // Check column name hints
     const isGeoName = /geom|geometry|geography|location|coordinates|the_geom|wkb_geometry|shape|point|latlng/.test(colName);
 
     let geoCount = 0;
@@ -162,7 +158,6 @@ export function ResultsMap({ columns, rows }: ResultsMapProps) {
   useEffect(() => {
     if (!mapRef.current || geometries.length === 0) return;
 
-    // Create map if not exists
     if (!leafletMap.current) {
       leafletMap.current = L.map(mapRef.current, {
         zoomControl: true,
@@ -176,17 +171,14 @@ export function ResultsMap({ columns, rows }: ResultsMapProps) {
 
     const map = leafletMap.current;
 
-    // Clear existing layers (except tile layer)
     map.eachLayer((layer) => {
       if (!(layer instanceof L.TileLayer)) map.removeLayer(layer);
     });
 
-    // Add geometries
     const bounds = L.latLngBounds([]);
     const nonGeomCols = columns.filter((_, i) => i !== geomCol);
 
     for (const geom of geometries) {
-      // Build popup content from non-geometry columns
       const row = rows[geom.rowIndex];
       const popupContent = nonGeomCols
         .map((col) => {
@@ -224,7 +216,6 @@ export function ResultsMap({ columns, rows }: ResultsMapProps) {
       }
     }
 
-    // Fit map to bounds
     if (bounds.isValid()) {
       map.fitBounds(bounds, { padding: [40, 40], maxZoom: 16 });
     }
@@ -232,7 +223,6 @@ export function ResultsMap({ columns, rows }: ResultsMapProps) {
     return () => {};
   }, [geometries, columns, rows, geomCol]);
 
-  // Cleanup map on unmount
   useEffect(() => {
     return () => {
       if (leafletMap.current) {
@@ -242,7 +232,6 @@ export function ResultsMap({ columns, rows }: ResultsMapProps) {
     };
   }, []);
 
-  // Invalidate map size when container resizes
   useEffect(() => {
     if (!mapRef.current || !leafletMap.current) return;
     const obs = new ResizeObserver(() => {

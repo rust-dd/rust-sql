@@ -88,15 +88,13 @@ export const createConnectionSlice: StateCreator<
     const d = projects[projectId];
     if (!d || status[projectId] !== PCS.Connected) return;
 
-    // Remember which schemas had tables loaded so we can reload them
+    // Remember which schemas had tables loaded so we can re-expand them after the wipe
     const schemaPrefix = `${projectId}::`;
     const expandedSchemas = Object.keys(tables)
       .filter((k) => k.startsWith(schemaPrefix))
       .map((k) => k.slice(schemaPrefix.length));
 
-    // Clear all cached metadata for this project
     set((s) => {
-      // Clear schema-level caches
       for (const key of Object.keys(s.tables)) {
         if (key.startsWith(schemaPrefix)) delete s.tables[key];
       }
@@ -134,13 +132,11 @@ export const createConnectionSlice: StateCreator<
         if (key.startsWith(schemaPrefix)) delete s.triggerFunctions[key];
       }
 
-      // Clear project-level caches
       delete s.schemas[projectId];
       delete s.serverDatabases[projectId];
       delete s.serverTablespaces[projectId];
     });
 
-    // Reload schemas, databases, tablespaces
     try {
       const driver = DriverFactory.getDriver(d.driver);
       const [sc, dbs, tsp] = await Promise.allSettled([
@@ -156,7 +152,6 @@ export const createConnectionSlice: StateCreator<
           tsp.status === "fulfilled" && tsp.value ? tsp.value : [];
       });
 
-      // Reload tables and schema objects for previously expanded schemas
       await Promise.all(
         expandedSchemas.map((schema) =>
           Promise.all([

@@ -29,7 +29,6 @@ setupLanguageFeatures(LanguageIdEnum.PG, {
   references: true,
 });
 
-// Register our custom completion provider once, at init time
 registerContextAwareCompletions(monaco);
 
 monaco.editor.defineTheme("rsql-light", {

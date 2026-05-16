@@ -1,6 +1,5 @@
 import { I } from "./constants";
 
-/** Indent guide lines */
 export function IndentGuides({ indent }: { indent: number }) {
   const guides: number[] = [];
   // Draw guides at each nesting level (every 12px starting from the first nested level)

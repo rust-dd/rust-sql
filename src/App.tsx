@@ -45,7 +45,6 @@ export default function App() {
   const activeTab = useActiveTab();
   const updateContent = useTabStore((s) => s.updateContent);
 
-  // Edit connection state
   const [editingConnection, setEditingConnection] = useState<{ name: string; details: ProjectDetails } | null>(null);
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
 

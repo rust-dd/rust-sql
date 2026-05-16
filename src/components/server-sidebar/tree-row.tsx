@@ -3,7 +3,6 @@ import { ChevronDown, ChevronRight, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { IndentGuides } from "./indent-guides";
 
-/** Generic tree row */
 export function TreeRow({
   indent, icon, label, bold, expanded, loading: isLoading, trailing, selected,
   onClick, onDoubleClick, onContextMenu,

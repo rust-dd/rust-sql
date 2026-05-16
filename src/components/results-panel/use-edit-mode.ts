@@ -19,13 +19,11 @@ export function useEditMode({ projectId, editorValue, result }: UseEditModeArgs)
   const [isCommitting, setIsCommitting] = useState(false);
   const [pendingDeleteCount, setPendingDeleteCount] = useState(0);
 
-  // Detect if query is a simple SELECT (editable)
   const editableTable = useMemo(() => {
     if (!editorValue) return null;
     return parseSelectTable(editorValue);
   }, [editorValue]);
 
-  // FK column map: columnName → { targetSchema, targetTable, targetColumn }
   const [fkMap, setFkMap] = useState<Map<string, { schema: string; table: string; column: string }>>(new Map());
 
   useEffect(() => {
@@ -53,7 +51,6 @@ export function useEditMode({ projectId, editorValue, result }: UseEditModeArgs)
     }).catch(() => setFkMap(new Map()));
   }, [editableTable, projectId]);
 
-  // FK navigate handler - opens a new tab and auto-executes the query
   const handleFKNavigate = useCallback(
     (colName: string, value: string) => {
       const target = fkMap.get(colName);
@@ -63,7 +60,6 @@ export function useEditMode({ projectId, editorValue, result }: UseEditModeArgs)
       const sql = `SELECT * FROM ${quoteIdent(target.schema)}.${quoteIdent(target.table)} WHERE ${quoteIdent(target.column)} = ${quoteLiteral(value)} LIMIT 100`;
       useTabStore.getState().openTab(pid, sql);
 
-      // Auto-execute the query in the new tab
       const d = useProjectStore.getState().projects[pid];
       if (!d) return;
       const newTabIdx = useTabStore.getState().tabs.length - 1;
@@ -78,7 +74,6 @@ export function useEditMode({ projectId, editorValue, result }: UseEditModeArgs)
     [fkMap, projectId],
   );
 
-  // Enter edit mode
   const handleEnterEdit = useCallback(async () => {
     if (!editableTable || !projectId) return;
     const d = useProjectStore.getState().projects[projectId];
@@ -99,7 +94,6 @@ export function useEditMode({ projectId, editorValue, result }: UseEditModeArgs)
         return;
       }
 
-      // Check that PK columns exist in result columns
       const resultCols = result?.columns ?? [];
       const missingPKs = pkColumns.filter((pk) => !resultCols.includes(pk));
       if (missingPKs.length > 0) {
@@ -120,14 +114,12 @@ export function useEditMode({ projectId, editorValue, result }: UseEditModeArgs)
     }
   }, [editableTable, projectId, result?.columns]);
 
-  // Discard edits
   const handleDiscard = useCallback(() => {
     setIsEditing(false);
     setEditState(null);
     setEditError(null);
   }, []);
 
-  // Run statements + refresh results helper
   const runAndRefresh = useCallback(async (statements: string[]) => {
     if (!projectId || statements.length === 0) return;
     setIsCommitting(true);
@@ -155,7 +147,6 @@ export function useEditMode({ projectId, editorValue, result }: UseEditModeArgs)
     }
   }, [projectId, editorValue]);
 
-  // Commit — only cell edits (UPDATEs), no deletes
   const handleCommit = useCallback(() => {
     if (!editState || !result) return;
     const { schema, table, pkColumns, cellEdits, deletedRows } = editState;
@@ -185,7 +176,6 @@ export function useEditMode({ projectId, editorValue, result }: UseEditModeArgs)
     void runAndRefresh(statements);
   }, [editState, result, handleDiscard, runAndRefresh]);
 
-  // Delete — only checked rows (DELETEs), with inline confirmation
   const handleDeleteRows = useCallback(() => {
     if (!editState || editState.deletedRows.size === 0) return;
     setPendingDeleteCount(editState.deletedRows.size);
@@ -210,7 +200,6 @@ export function useEditMode({ projectId, editorValue, result }: UseEditModeArgs)
     setPendingDeleteCount(0);
   }, []);
 
-  // Cell edit handler
   const handleCellEdit = useCallback(
     (rowIndex: number, colIndex: number, value: string) => {
       setEditState((prev) => {

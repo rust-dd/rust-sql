@@ -65,7 +65,6 @@ export function EditorToolbar({
     }
   };
 
-  // Only show for query tabs
   if (!activeTab || activeTab.type !== "query") return null;
 
   const hasContent = !!activeTab.editorValue?.trim();
@@ -167,7 +166,6 @@ export function EditorToolbar({
         )}
       </div>
 
-      {/* Save Query Dialog */}
       <Dialog open={saveDialogOpen} onOpenChange={setSaveDialogOpen}>
         <DialogContent className="sm:max-w-[400px]">
           <DialogHeader>

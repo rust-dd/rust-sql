@@ -2,7 +2,6 @@ use tokio_postgres::{Client, SimpleQueryMessage};
 
 use crate::common::enums::AppError;
 
-/// Generate full DDL for an object. Returns lines of DDL as a single String.
 pub async fn generate_full_ddl(
     client: &Client,
     schema: &str,
@@ -58,7 +57,6 @@ SELECT string_agg(col_def, E',\n' ORDER BY ordinal_position) FROM col_ddl"#
 
     let mut ddl = format!("CREATE TABLE \"{schema}\".\"{table}\" (\n{col_defs}\n);\n");
 
-    // Helper: extract single-column text rows from simple_query results
     fn collect_lines(messages: &[SimpleQueryMessage]) -> Vec<String> {
         let mut out = Vec::new();
         for msg in messages {
@@ -73,7 +71,6 @@ SELECT string_agg(col_def, E',\n' ORDER BY ordinal_position) FROM col_ddl"#
         out
     }
 
-    // Constraints (PK, FK, UNIQUE, CHECK)
     let con_sql = format!(
         r#"SELECT 'ALTER TABLE "{schema}"."{table}" ADD CONSTRAINT "' || con.conname || '" ' || pg_get_constraintdef(con.oid) || ';'
            FROM pg_constraint con
@@ -92,7 +89,6 @@ SELECT string_agg(col_def, E',\n' ORDER BY ordinal_position) FROM col_ddl"#
         ddl.push('\n');
     }
 
-    // Indexes (non-constraint)
     let idx_sql = format!(
         r#"SELECT pg_get_indexdef(i.indexrelid) || ';'
            FROM pg_index i
@@ -112,7 +108,6 @@ SELECT string_agg(col_def, E',\n' ORDER BY ordinal_position) FROM col_ddl"#
         ddl.push('\n');
     }
 
-    // Triggers
     let trig_sql = format!(
         r#"SELECT pg_get_triggerdef(t.oid) || ';'
            FROM pg_trigger t
@@ -131,7 +126,6 @@ SELECT string_agg(col_def, E',\n' ORDER BY ordinal_position) FROM col_ddl"#
         ddl.push('\n');
     }
 
-    // RLS
     let rls_sql = format!(
         r#"SELECT CASE WHEN c.relrowsecurity THEN 'ALTER TABLE "{schema}"."{table}" ENABLE ROW LEVEL SECURITY;' ELSE '' END
            FROM pg_class c
@@ -148,7 +142,6 @@ SELECT string_agg(col_def, E',\n' ORDER BY ordinal_position) FROM col_ddl"#
         ddl.push('\n');
     }
 
-    // Policies
     let pol_sql = format!(
         r#"SELECT 'CREATE POLICY "' || pol.polname || '" ON "{schema}"."{table}"' ||
              CASE pol.polcmd WHEN 'r' THEN ' FOR SELECT' WHEN 'a' THEN ' FOR INSERT' WHEN 'w' THEN ' FOR UPDATE' WHEN 'd' THEN ' FOR DELETE' WHEN '*' THEN '' END ||
@@ -171,7 +164,6 @@ SELECT string_agg(col_def, E',\n' ORDER BY ordinal_position) FROM col_ddl"#
         ddl.push('\n');
     }
 
-    // Table comment
     let cmt_sql = format!(
         r#"SELECT 'COMMENT ON TABLE "{schema}"."{table}" IS ' || quote_literal(d.description) || ';'
            FROM pg_description d
@@ -189,7 +181,6 @@ SELECT string_agg(col_def, E',\n' ORDER BY ordinal_position) FROM col_ddl"#
         ddl.push('\n');
     }
 
-    // Column comments
     let col_cmt_sql = format!(
         r#"SELECT 'COMMENT ON COLUMN "{schema}"."{table}"."' || a.attname || '" IS ' || quote_literal(d.description) || ';'
            FROM pg_description d
@@ -249,7 +240,6 @@ async fn generate_matview_ddl(
         }
     }
 
-    // Indexes on matview
     let idx_sql = format!(
         r#"SELECT pg_get_indexdef(i.indexrelid) || ';'
            FROM pg_index i

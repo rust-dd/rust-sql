@@ -22,7 +22,6 @@ export function useObjectData(
   const [ddlError, setDdlError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  // Live fetched data
   const [tableStats, setTableStats] = useState<TableStats | null>(null);
   const [outgoingFKs, setOutgoingFKs] = useState<FKInfo[]>([]);
   const [incomingFKs, setIncomingFKs] = useState<FKInfo[]>([]);
@@ -30,7 +29,6 @@ export function useObjectData(
   const [functionMeta, setFunctionMeta] = useState<FunctionMeta | null>(null);
   const [matViewStats, setMatViewStats] = useState<MatViewStats | null>(null);
 
-  // Cached metadata from store
   const columnDetails = useProjectStore((s) => s.columnDetails);
   const indexes = useProjectStore((s) => s.indexes);
   const projects = useProjectStore((s) => s.projects);
@@ -60,7 +58,6 @@ export function useObjectData(
           ],
         );
 
-        // Ensure columns & indexes are loaded (may already be cached)
         if (!columnDetails[metaKey]) {
           storeLoadColumnDetails(projectId, schema, name).catch(() => {});
         }
@@ -176,7 +173,6 @@ export function useObjectData(
     storeLoadIndexes,
   ]);
 
-  // Reset & fetch on open
   useEffect(() => {
     if (!open) return;
     setDdl(null);
@@ -191,7 +187,6 @@ export function useObjectData(
     void fetchLiveData();
   }, [open, objectType, projectId, schema, name]);
 
-  // Fetch DDL via backend
   const fetchDDL = useCallback(async () => {
     const driver = getDriver();
     if (!driver) return;
@@ -218,7 +213,6 @@ export function useObjectData(
   }, [getDriver, objectType, projectId, schema, name]);
 
   return {
-    // state
     ddl,
     ddlLoading,
     ddlError,
@@ -229,7 +223,6 @@ export function useObjectData(
     viewInfo,
     functionMeta,
     matViewStats,
-    // helpers
     metaKey,
     getDriver,
     fetchLiveData,

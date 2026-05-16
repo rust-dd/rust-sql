@@ -35,7 +35,6 @@ pub fn setup_app(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>>
             .await
             .expect("Failed to open local database");
 
-        // Create tables
         let conn = db.connect().expect("Failed to create connection");
         conn.execute(
             "CREATE TABLE IF NOT EXISTS projects (
@@ -110,7 +109,6 @@ pub fn setup_app(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>>
         .await
         .ok();
 
-        // SSH tunnel columns migration
         for col in [
             "ssh_enabled",
             "ssh_host",
@@ -149,7 +147,6 @@ pub fn setup_app(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>>
         app_handle.manage(terminal_state);
     });
 
-    // Native menu
     let handle = app.handle();
 
     let app_menu = SubmenuBuilder::new(handle, "RSQL")

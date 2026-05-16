@@ -12,10 +12,6 @@ import { I } from "./constants";
 import { SectionHeader } from "./section-header";
 import type { SidebarRenderCtx } from "./types";
 
-/**
- * Renders the inner details of an expanded table: columns, indexes,
- * constraints, triggers, rules, and RLS policies.
- */
 export function renderTableDetails(
   ctx: SidebarRenderCtx,
   pid: string,
@@ -37,7 +33,6 @@ export function renderTableDetails(
 
   return (
     <>
-      {/* Columns */}
       <SectionHeader indent={I.section} label={`Columns (${cols.length})`}
         icon={<Columns3 className="h-3 w-3" />} sectionKey={`${tKey}::cols`}
         expanded={isOpen(`${tKey}::cols`, true)} onClick={() => toggle(`${tKey}::cols`)} />
@@ -54,7 +49,6 @@ export function renderTableDetails(
         </div>
       ))}
 
-      {/* Indexes */}
       {idxs && idxs.length > 0 && (
         <>
           <SectionHeader indent={I.section} label={`Indexes (${new Set(idxs.map((i) => i.indexName)).size})`}
@@ -75,7 +69,6 @@ export function renderTableDetails(
         </>
       )}
 
-      {/* Constraints */}
       {cons && cons.length > 0 && (
         <>
           <SectionHeader indent={I.section} label={`Constraints (${new Set(cons.map((c) => c.constraintName)).size})`}
@@ -94,7 +87,6 @@ export function renderTableDetails(
         </>
       )}
 
-      {/* Triggers */}
       {trigs && trigs.length > 0 && (
         <>
           <SectionHeader indent={I.section} label={`Triggers (${trigs.length})`}
@@ -110,7 +102,6 @@ export function renderTableDetails(
         </>
       )}
 
-      {/* Rules */}
       {rls && rls.length > 0 && (
         <>
           <SectionHeader indent={I.section} label={`Rules (${rls.length})`}
@@ -126,7 +117,6 @@ export function renderTableDetails(
         </>
       )}
 
-      {/* RLS Policies */}
       {pols && pols.length > 0 && (
         <>
           <SectionHeader indent={I.section} label={`RLS Policies (${pols.length})`}

@@ -19,7 +19,6 @@ pub(crate) fn is_sqlite_lock_error(message: &str) -> bool {
     lower.contains("database is locked") || lower.contains("database busy")
 }
 
-/// Walk the full std::error::Error source chain into a single string.
 pub(crate) fn full_error_chain(e: &dyn std::error::Error) -> String {
     let mut msg = e.to_string();
     let mut src = e.source();
@@ -189,7 +188,6 @@ pub async fn pgsql_connector(
         }
     };
 
-    // Determine effective host/port, potentially through an SSH tunnel
     let (effective_host, effective_port_str) = if let Some(ref ssh_params) = ssh {
         // ssh_params: [ssh_host, ssh_port, ssh_user, ssh_password, ssh_key_path]
         if ssh_params.len() >= 3 && !ssh_params[0].is_empty() {
@@ -205,7 +203,6 @@ pub async fn pgsql_connector(
                 .filter(|s| !s.is_empty())
                 .map(|s| s.as_str());
 
-            // Stop any existing tunnel for this project
             app_state.ssh_tunnels.lock().await.remove(project_id);
 
             let tunnel = crate::ssh::start_tunnel(
@@ -243,7 +240,6 @@ pub async fn pgsql_connector(
         .host(&effective_host)
         .port(port);
 
-    // Create two pools: one for user queries, one for metadata.
     let query_pool = match create_pg_pool(&cfg, use_ssl, 16) {
         Ok(p) => Arc::new(p),
         Err(e) => {

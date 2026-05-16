@@ -13,7 +13,6 @@ export type WirePackedResult = [string, number]; // [packed_string, elapsed_ms]
 export const CELL_SEP = "\x1F"; // Unit Separator
 export const ROW_SEP = "\x1E"; // Record Separator
 
-/** Parse packed result format into columns, rows, and time */
 export function unpackResult(packed: string, time: number): WireQueryResult {
   if (!packed) return [[], [], time];
   const parts = packed.split(ROW_SEP);
@@ -38,7 +37,6 @@ export interface ForeignKey {
   targetColumn: string;
 }
 
-/** Events received during streamed query execution */
 export type QueryStreamEvent =
   | { type: "columns"; columns: string; total_rows: number }
   | { type: "chunk"; data: string }
@@ -149,6 +147,5 @@ export function parseTriggerFunctionInfo(wire: WireTriggerFunctionInfo[]): Trigg
   }));
 }
 
-// Public re-exports so external imports continue to work unchanged.
 export { DriverFactory, DRIVER_CONFIGS } from "./factory";
 export type { DriverConfig, DriverType } from "./factory";

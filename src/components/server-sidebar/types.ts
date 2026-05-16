@@ -36,7 +36,6 @@ export type PropsModalState = {
  * This is plain prop-drilling, NOT React Context.
  */
 export interface SidebarRenderCtx {
-  // store slices
   projects: ProjectMap;
   status: Record<string, ProjectConnectionStatus>;
   serverDatabases: Record<string, string[]>;
@@ -54,7 +53,6 @@ export interface SidebarRenderCtx {
   functions: Record<string, FunctionInfo[]>;
   triggerFunctions: Record<string, TriggerFunctionInfo[]>;
 
-  // store actions
   connect: (projectId: string) => Promise<void>;
   loadColumns: (projectId: string, schema: string, table: string) => Promise<string[]>;
   refreshConnection: (projectId: string) => Promise<void>;
@@ -70,7 +68,6 @@ export interface SidebarRenderCtx {
   openEnumsTab: (projectId: string) => void;
   openPgSettingsTab: (projectId: string) => void;
 
-  // local component state + setters
   loading: Record<string, boolean>;
   selectedItem: string | null;
   setSelectedItem: (k: string | null) => void;
@@ -78,7 +75,6 @@ export interface SidebarRenderCtx {
   setAddDbSource: (id: string | null) => void;
   openProperties: (objectType: ObjectKind, projectId: string, schema: string, name: string) => void;
 
-  // computed helpers
   toggle: (key: string) => void;
   isOpen: (key: string, defaultOpen?: boolean) => boolean;
   onConnect: (projectId: string) => Promise<void>;
@@ -86,7 +82,6 @@ export interface SidebarRenderCtx {
   onExpandTable: (projectId: string, schema: string, table: string) => Promise<void>;
   onOpenTableQuery: (projectId: string, schema: string, table: string) => void;
 
-  // misc
   copy: (text: string) => void;
   showMenu: (e: React.MouseEvent, items: ContextMenuEntry[]) => void;
   onEditConnection?: (projectId: string) => void;

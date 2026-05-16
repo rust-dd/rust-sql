@@ -48,11 +48,10 @@ export function renderServerGroup(
   const gKey = `srv::${fp}`;
   const dbCatKey = `${gKey}::databases`;
 
-  // Server label: project name for single-project, host:port for multi
   const serverLabel = pids.length === 1 ? pids[0] : `${primaryDetails.host}:${primaryDetails.port}`;
   const connectedPid = pids.find((p) => status[p] === ProjectConnectionStatus.Connected);
 
-  // Collect all databases: discovered from pg_database + project database names
+  // Union of databases discovered from pg_database + ones we have a project for
   const discoveredDbs = new Set<string>();
   for (const pid of pids) {
     const dbs = serverDatabases[pid];
@@ -72,7 +71,6 @@ export function renderServerGroup(
 
   return (
     <div key={gKey}>
-      {/* Server */}
       <TreeRow
         indent={I.server}
         icon={<Server className="h-3.5 w-3.5 text-primary" />}
@@ -105,7 +103,6 @@ export function renderServerGroup(
 
       {isOpen(gKey, true) && (
         <>
-          {/* Databases category */}
           <TreeRow
             indent={I.cat}
             icon={<Database className="h-3.5 w-3.5 text-muted-foreground" />}
@@ -119,7 +116,6 @@ export function renderServerGroup(
             const dbKey = `db::${fp}::${dbName}`;
 
             if (dbPid) {
-              // Database has a project entry
               const dbConn = status[dbPid];
               const isDbConnected = dbConn === ProjectConnectionStatus.Connected;
               const isDbConnecting = dbConn === ProjectConnectionStatus.Connecting;
@@ -164,12 +160,11 @@ export function renderServerGroup(
                     }
                   />
 
-                  {/* Schemas for connected database */}
                   {isDbConnected && isOpen(dbKey, true) && renderSchemas(ctx, dbPid)}
                 </div>
               );
             } else {
-              // Discovered database without a project — click to auto-create
+              // No project entry yet — clicking auto-creates one
               return (
                 <TreeRow
                   key={dbName}
@@ -186,7 +181,6 @@ export function renderServerGroup(
             }
           })}
 
-          {/* Login/Group Roles */}
           <TreeRow
             indent={I.cat}
             icon={<Shield className="h-3.5 w-3.5 text-muted-foreground" />}
@@ -197,7 +191,6 @@ export function renderServerGroup(
             }}
           />
 
-          {/* Tablespaces */}
           {(() => {
             const tspCatKey = `${gKey}::tablespaces`;
             const tspData = connectedPid ? (serverTablespaces[connectedPid] || []) : [];

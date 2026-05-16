@@ -38,7 +38,6 @@ export function ResultsPanel() {
   const isExecuting = activeTab?.isExecuting;
   const vq = activeTab?.virtualQuery;
 
-  // Cancel running query
   const handleCancel = useCallback(async () => {
     if (!activeTab?.projectId || !activeTab.isExecuting) return;
     const d = useProjectStore.getState().projects[activeTab.projectId];
@@ -51,13 +50,11 @@ export function ResultsPanel() {
     }
   }, [activeTab?.projectId, activeTab?.isExecuting]);
 
-  // Virtual page loading
   const { gridRef, handlePageNeeded, handleViewportRowChange, restoreRowIndex } = useVirtualPaging({
     vq,
     projectId: activeTab?.projectId,
   });
 
-  // Edit mode
   const {
     isEditing,
     editState,
@@ -95,7 +92,6 @@ export function ResultsPanel() {
   const explainResult = activeTab?.explainResult;
   const hasExplain = !!explainResult;
 
-  // Common toolbar props
   const toolbarProps = {
     panelView,
     setPanelView,

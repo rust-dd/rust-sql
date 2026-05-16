@@ -120,7 +120,6 @@ export function ContextMenu({ x, y, items, onClose }: ContextMenuProps) {
   );
 }
 
-/** Hook to manage context menu state */
 export function useContextMenu() {
   const [menu, setMenu] = React.useState<{ x: number; y: number; items: ContextMenuEntry[] } | null>(null);
 

@@ -120,7 +120,6 @@ pub async fn pgsql_table_action(
 ) -> Result<String> {
     let client = acquire_client(&app_state.clients, project_id).await?;
 
-    // Quote identifiers safely
     fn qi(name: &str) -> String {
         format!("\"{}\"", name.replace('"', "\"\""))
     }
@@ -128,23 +127,19 @@ pub async fn pgsql_table_action(
     let qualified = format!("{}.{}", qi(schema), qi(table));
 
     let sql = match (object_type, action) {
-        // Table actions
         ("table", "ANALYZE") => format!("ANALYZE {qualified}"),
         ("table", "VACUUM") => format!("VACUUM {qualified}"),
         ("table", "VACUUM FULL") => format!("VACUUM FULL {qualified}"),
         ("table", "REINDEX") => format!("REINDEX TABLE {qualified}"),
         ("table", "TRUNCATE") => format!("TRUNCATE TABLE {qualified}"),
         ("table", "DROP TABLE") => format!("DROP TABLE {qualified}"),
-        // View actions
         ("view", "DROP VIEW") => format!("DROP VIEW {qualified}"),
         ("view", "DROP VIEW CASCADE") => format!("DROP VIEW {qualified} CASCADE"),
-        // Materialized view actions
         ("matview", "REFRESH") => format!("REFRESH MATERIALIZED VIEW {qualified}"),
         ("matview", "REFRESH CONCURRENTLY") => {
             format!("REFRESH MATERIALIZED VIEW CONCURRENTLY {qualified}")
         }
         ("matview", "DROP MATERIALIZED VIEW") => format!("DROP MATERIALIZED VIEW {qualified}"),
-        // Function actions
         ("function" | "trigger-function", "DROP FUNCTION") => format!("DROP FUNCTION {qualified}"),
         ("function" | "trigger-function", "DROP FUNCTION CASCADE") => {
             format!("DROP FUNCTION {qualified} CASCADE")

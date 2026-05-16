@@ -49,7 +49,6 @@ export function PkSection({
                       newCols = [...currentCols, colName];
                     }
                     if (newCols.length === 0) {
-                      // Remove PK
                       if (
                         prev.primaryKey &&
                         prev.primaryKey.originalColumns

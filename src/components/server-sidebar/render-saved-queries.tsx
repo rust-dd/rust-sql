@@ -4,7 +4,6 @@ import { TreeRow } from "./tree-row";
 import type { SavedQuery } from "@/stores/query-store";
 import type { SidebarRenderCtx } from "./types";
 
-/** Saved queries bottom panel — always visible */
 export function renderSavedQueries(
   ctx: SidebarRenderCtx,
   savedQueries: SavedQuery[],

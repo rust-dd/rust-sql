@@ -36,7 +36,6 @@ export function useQueryLifecycle({ setCommandPaletteOpen }: UseQueryLifecycleAr
     const d = useProjectStore.getState().projects[tab.projectId];
     if (!d) return;
 
-    // Auto-connect if not connected
     const connStatus = useProjectStore.getState().status[tab.projectId];
     if (connStatus !== "Connected") {
       await connectProject(tab.projectId);
@@ -49,7 +48,6 @@ export function useQueryLifecycle({ setCommandPaletteOpen }: UseQueryLifecycleAr
     try {
       const driver = DriverFactory.getDriver(d.driver);
 
-      // Clean up previous virtual query
       const prevVQ = tab.virtualQuery;
       if (prevVQ?.queryId) {
         await driver.closeVirtual?.(tab.projectId, prevVQ.queryId).catch(() => {});
@@ -66,7 +64,6 @@ export function useQueryLifecycle({ setCommandPaletteOpen }: UseQueryLifecycleAr
           await driver.executeVirtual(tab.projectId, sql, queryId, PAGE_SIZE, timeoutMs);
 
         if (!colsPacked) {
-          // Fallback format from backend: header + rows in one packed string.
           const parts = pagePacked ? pagePacked.split(ROW_SEP) : [];
           const columns = parts[0] ? parts[0].split(CELL_SEP) : [];
           const rows = parts.slice(1).map((r) => r.split(CELL_SEP));
@@ -112,7 +109,6 @@ export function useQueryLifecycle({ setCommandPaletteOpen }: UseQueryLifecycleAr
           });
         }
       } else {
-        // One-shot fallback
         const [cols, rows, time] = await driver.runQuery(tab.projectId, tab.editorValue, timeoutMs);
         updateResult(idx, { columns: cols, rows, time });
         notifyQueryComplete(tab.editorValue, time, true, rows.length);
@@ -160,7 +156,6 @@ export function useQueryLifecycle({ setCommandPaletteOpen }: UseQueryLifecycleAr
     const d = useProjectStore.getState().projects[tab.projectId];
     if (!d) return;
 
-    // Auto-connect if not connected
     const connStatus = useProjectStore.getState().status[tab.projectId];
     if (connStatus !== "Connected") {
       await connectProject(tab.projectId);
@@ -171,7 +166,7 @@ export function useQueryLifecycle({ setCommandPaletteOpen }: UseQueryLifecycleAr
     setExecuting(idx, true);
     try {
       const driver = DriverFactory.getDriver(d.driver);
-      // Strip trailing semicolons from user's query to avoid syntax errors
+      // Strip trailing semicolons — wrapping in EXPLAIN(...) doesn't accept them
       const userSql = tab.editorValue.replace(/;\s*$/, "");
       const sql = `EXPLAIN (ANALYZE, FORMAT JSON) ${userSql}`;
       const [, rows] = await driver.runQuery(tab.projectId, sql);
@@ -181,8 +176,7 @@ export function useQueryLifecycle({ setCommandPaletteOpen }: UseQueryLifecycleAr
       try {
         plans = JSON.parse(jsonText);
       } catch {
-        // Some drivers return each row separately or wrap in brackets
-        // Try finding valid JSON within the text
+        // Some drivers split rows or wrap differently — fall back to extracting the JSON array
         const match = jsonText.match(/\[[\s\S]*\]/);
         if (match) {
           plans = JSON.parse(match[0]);
@@ -253,7 +247,6 @@ export function useQueryLifecycle({ setCommandPaletteOpen }: UseQueryLifecycleAr
     }
   }, [setSplitExecuting, setSplitResult, connectProject]);
 
-  // Keyboard shortcuts
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === "w") {

@@ -4,7 +4,6 @@ use crate::common::enums::AppError;
 
 use super::super::{FKDetail, ForeignKeyInfo, ObjectStats};
 
-/// Load live statistics for a table.
 pub async fn load_table_statistics(
     client: &Client,
     schema: &str,
@@ -64,7 +63,6 @@ pub async fn load_table_statistics(
     }
 }
 
-/// Load outgoing or incoming FK details for a table.
 pub async fn load_fk_details(
     client: &Client,
     schema: &str,
@@ -128,7 +126,6 @@ pub async fn load_fk_details(
         .collect())
 }
 
-/// Load all foreign key relationships for a given schema.
 pub async fn load_foreign_keys(
     client: &Client,
     schema: &str,

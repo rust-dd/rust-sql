@@ -13,7 +13,6 @@ pub async fn extract_schema_objects(
 ) -> Result<Vec<SchemaObject>, AppError> {
     let mut objects = Vec::new();
 
-    // Tables with columns
     let rows = client
         .query(
             "SELECT c.relname,
@@ -42,7 +41,6 @@ pub async fn extract_schema_objects(
         });
     }
 
-    // Views
     let rows = client
         .query(
             "SELECT viewname, definition FROM pg_views WHERE schemaname = $1 ORDER BY viewname",
@@ -59,7 +57,6 @@ pub async fn extract_schema_objects(
         });
     }
 
-    // Materialized views
     let rows = client
         .query(
             "SELECT matviewname, definition FROM pg_matviews WHERE schemaname = $1 ORDER BY matviewname",
@@ -76,7 +73,6 @@ pub async fn extract_schema_objects(
         });
     }
 
-    // Functions
     let rows = client
         .query(
             "SELECT p.proname || '(' || pg_get_function_identity_arguments(p.oid) || ')',
@@ -97,7 +93,6 @@ pub async fn extract_schema_objects(
         });
     }
 
-    // Indexes
     let rows = client
         .query(
             "SELECT indexname, indexdef FROM pg_indexes WHERE schemaname = $1 ORDER BY indexname",

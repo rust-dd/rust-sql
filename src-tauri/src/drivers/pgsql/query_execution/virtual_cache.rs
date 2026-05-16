@@ -28,7 +28,6 @@ pub async fn execute_virtual(
 
     let (columns, all_rows) = process_simple_messages(messages);
 
-    // Non-SELECT or empty result
     if columns.is_empty() {
         let elapsed = start.elapsed().as_millis() as f32;
         return Ok((String::new(), 0, String::new(), elapsed));
@@ -62,7 +61,6 @@ pub async fn execute_virtual(
     let columns_packed = join_sep(&columns, CELL_SEP);
     let first_page_packed = pages.first().cloned().unwrap_or_default();
 
-    // Store pre-packed pages in cache
     {
         let mut c = cache.lock().await;
         c.insert(query_id.to_string(), CachedQuery { pages, page_size });

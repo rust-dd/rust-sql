@@ -45,7 +45,6 @@ pub struct CachedQuery {
     pub(crate) page_size: usize,
 }
 
-/// In-memory virtual cache: query_id → pre-packed pages.
 pub type VirtualCache = std::collections::BTreeMap<String, CachedQuery>;
 
 /// Column detail info: (name, data_type, nullable, default_value)

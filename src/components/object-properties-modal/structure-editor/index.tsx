@@ -58,14 +58,13 @@ export function StructureEditorContent({
   const [error, setError] = useState<string | null>(null);
   const [showSql, setShowSql] = useState(false);
 
-  // Build initial state
   const initialState = useMemo(
     () => initStructureState(cols, idxs, cons, outgoingFKs),
     [cols, idxs, cons, outgoingFKs],
   );
   const [draft, setDraft] = useState<StructureEditorState>(initialState);
 
-  // Reset when initial state changes (e.g. modal re-opened)
+  // Reset draft when source data refreshes (e.g. after re-opening the modal)
   useEffect(() => {
     setDraft(initialState);
     setError(null);
@@ -77,7 +76,6 @@ export function StructureEditorContent({
     .filter((c) => c._status !== "removed")
     .map((c) => c.name);
 
-  // Tables for FK target (from store)
   const tables = useProjectStore((s) => s.tables);
   const schemas = useProjectStore((s) => s.schemas);
   const loadTables = useProjectStore((s) => s.loadTables);
@@ -85,14 +83,12 @@ export function StructureEditorContent({
   const getTablesForSchema = (s: string) =>
     (tables[`${projectId}::${s}`] ?? []).map((t) => t.name);
 
-  // SQL preview
   const sqlStatements = useMemo(
     () => generateAlterTableSQL(schema, tableName, initialState, draft),
     [schema, tableName, initialState, draft],
   );
   const sqlPreview = sqlStatements.join("\n");
 
-  // Apply changes
   const applyChanges = useCallback(async () => {
     const driver = getDriver();
     if (!driver || sqlStatements.length === 0) return;
@@ -118,7 +114,6 @@ export function StructureEditorContent({
     }
   }, [getDriver, projectId, sqlStatements, onApplied]);
 
-  // Sub-tab list
   const subTabs: { key: StructureSubTab; label: string }[] = [
     { key: "columns", label: "Columns" },
     { key: "pk", label: "Primary Key" },
@@ -131,7 +126,6 @@ export function StructureEditorContent({
 
   return (
     <div className="flex-1 flex flex-col min-h-0 pt-2">
-      {/* Sub-tab nav */}
       <div className="flex gap-0.5 bg-background/30 rounded-lg p-0.5 border border-border/20 shrink-0 mb-2">
         {subTabs.map((t) => (
           <button
@@ -149,7 +143,6 @@ export function StructureEditorContent({
         ))}
       </div>
 
-      {/* Sub-tab content */}
       <div className="flex-1 min-h-0 overflow-y-auto">
         {subTab === "columns" && (
           <ColumnsSection draft={draft} setDraft={setDraft} />
@@ -198,7 +191,6 @@ export function StructureEditorContent({
         )}
       </div>
 
-      {/* SQL preview panel */}
       {showSql && sqlStatements.length > 0 && (
         <div className="shrink-0 mt-2 rounded-xl border border-border/40 overflow-hidden bg-[hsl(var(--background))]">
           <div className="flex items-center justify-between px-3 py-1.5 bg-muted/30 border-b border-border/30">
@@ -233,7 +225,6 @@ export function StructureEditorContent({
         </div>
       )}
 
-      {/* Error */}
       {error && (
         <div className="shrink-0 mt-2 flex items-center gap-2 px-3 py-2 rounded-md bg-destructive/10 text-destructive text-xs font-mono">
           <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
@@ -241,7 +232,6 @@ export function StructureEditorContent({
         </div>
       )}
 
-      {/* Bottom action bar */}
       {changes > 0 && (
         <div className="shrink-0 mt-2 flex items-center gap-2 pt-2 border-t border-border/20">
           <span className="text-[10px] font-medium text-muted-foreground">

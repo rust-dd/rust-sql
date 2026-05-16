@@ -25,7 +25,6 @@ interface UseVirtualPagingArgs {
 }
 
 export function useVirtualPaging({ vq, projectId }: UseVirtualPagingArgs) {
-  // Virtual page loading
   const loadingPages = useRef(new Set<number>());
   const queuedPages = useRef<number[]>([]);
   const queuedPageSet = useRef(new Set<number>());

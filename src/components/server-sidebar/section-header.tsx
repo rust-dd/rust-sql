@@ -2,7 +2,6 @@ import React from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { IndentGuides } from "./indent-guides";
 
-/** Collapsible section header */
 export function SectionHeader({
   indent, label, icon, expanded, onClick,
 }: {

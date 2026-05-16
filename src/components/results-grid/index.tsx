@@ -92,7 +92,7 @@ export function ResultsGrid({
     },
   }), [columns.length, containerSize.height, virtualQuery]);
 
-  // Observe container size (debounced to avoid mid-scroll re-renders)
+  // Debounced via rAF to avoid mid-scroll re-renders
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
@@ -113,10 +113,8 @@ export function ResultsGrid({
     };
   }, []);
 
-  // Calculate column widths based on content
   const gridColumns = useMemo((): GridColumn[] => computeGridColumns(columns, rows), [columns, rows]);
 
-  // Build set of FK column indices for fast lookup
   const fkColIndices = useMemo(() => computeFkColIndices(columns, fkColumns), [columns, fkColumns]);
 
   // Pre-compute theme override objects — avoids creating new objects per cell render
@@ -124,10 +122,9 @@ export function ResultsGrid({
   const modifiedOverride = useMemo(() => buildModifiedOverride(theme), [theme]);
   const fkOverride = useMemo(() => FK_OVERRIDE, []);
 
-  // Total row count: virtual mode uses totalRows, otherwise rows.length
   const totalRowCount = virtualQuery ? virtualQuery.totalRows : rows.length;
 
-  // Restore previous viewport row when switching back to a tab/query.
+  // Restore previous viewport row when switching back to a tab/query
   useLayoutEffect(() => {
     if (typeof restoreRowIndex !== "number" || totalRowCount <= 0) return;
     const targetRow = Math.min(restoreRowIndex, totalRowCount - 1);
@@ -145,7 +142,6 @@ export function ResultsGrid({
     onViewportRowChange?.(targetRow);
   }, [viewportKey, restoreRowIndex, totalRowCount]);
 
-  // Get cell content callback (the core of glide-data-grid)
   const getCellContent = useCallback(
     (cell: Item): GridCell => buildCellContent(cell, {
       rows,
@@ -163,7 +159,7 @@ export function ResultsGrid({
     [rows, cellEdits, deletedRows, isEditing, theme, fkColIndices, virtualQuery, onPageNeeded],
   );
 
-  // Virtual scroll handler: trigger page loads on scroll (throttled via rAF)
+  // Trigger page loads on scroll, throttled via rAF
   const scrollRafId = useRef(0);
   const handleVisibleRegionChanged = useCallback(
     (range: { x: number; y: number; width: number; height: number }) => {
@@ -190,7 +186,6 @@ export function ResultsGrid({
     cancelAnimationFrame(scrollRafId.current);
   }, []);
 
-  // Handle cell edit
   const onCellEdited = useCallback(
     (cell: Item, newVal: EditableGridCell) => {
       if (newVal.kind !== GridCellKind.Text) return;
@@ -200,13 +195,11 @@ export function ResultsGrid({
     [onCellEdit],
   );
 
-  // Cell click → FK navigate only
   const handleRowClick = useCallback(
     (cell: Item) => {
       if (isEditing || virtualQuery) return;
       const [colIdx, rowIdx] = cell;
 
-      // FK navigation: if clicking an FK column, navigate to the referenced row
       if (fkColIndices.has(colIdx) && onFKNavigate) {
         const colName = columns[colIdx];
         const value = rows[rowIdx]?.[colIdx] ?? "";
@@ -218,24 +211,20 @@ export function ResultsGrid({
     [isEditing, virtualQuery, fkColIndices, onFKNavigate, columns, rows],
   );
 
-  // Theme for glide-data-grid
   const gridTheme = useMemo((): Partial<Theme> => buildGridTheme(theme), [theme]);
 
-  // Row markers for delete buttons when editing
   const rowMarkers = isEditing ? ("checkbox-visible" as const) : ("none" as const);
   const [selection, setSelection] = useState<GridSelection>({
     rows: CompactSelection.empty(),
     columns: CompactSelection.empty(),
   });
 
-  // Handle row selection change for deleting
   useEffect(() => {
     if (!isEditing) {
       setSelection({ rows: CompactSelection.empty(), columns: CompactSelection.empty() });
     }
   }, [isEditing]);
 
-  // Sync deletedRows to selection
   useEffect(() => {
     if (!isEditing || !deletedRows) return;
     let sel = CompactSelection.empty();
@@ -251,11 +240,9 @@ export function ResultsGrid({
   const handleSelectionChange = useCallback(
     (newSel: GridSelection) => {
       if (!isEditing) return;
-      // Find changes between old and new selection
       const oldRows = selectionRef.current.rows;
       const newRows = newSel.rows;
 
-      // Check for newly added rows (marked for deletion)
       for (let i = 0; i < rows.length; i++) {
         const wasSelected = oldRows.hasIndex(i);
         const isSelected = newRows.hasIndex(i);

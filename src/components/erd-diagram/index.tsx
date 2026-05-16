@@ -44,7 +44,6 @@ export function ERDDiagram({ projectId, schema }: ERDProps) {
   const key = `${projectId}::${schema}`;
   const schemaTables = tables[key] ?? [];
 
-  // Load tables and FK data
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
@@ -60,7 +59,6 @@ export function ERDDiagram({ projectId, schema }: ERDProps) {
 
       const driver = DriverFactory.getDriver(d.driver);
 
-      // Step 1: load tables + FKs in parallel
       let loadedFks: ForeignKey[] = [];
       try {
         const [, fkResult] = await Promise.allSettled([
@@ -79,14 +77,13 @@ export function ERDDiagram({ projectId, schema }: ERDProps) {
       if (cancelled) return;
       setFks(loadedFks);
 
-      // Step 2: get the current tables from the store
       const currentTables = useProjectStore.getState().tables[`${projectId}::${schema}`] ?? [];
       if (currentTables.length === 0) {
         setLoading(false);
         return;
       }
 
-      // Step 3: load column details + indexes for all tables (fire-and-forget)
+      // Fire-and-forget: column details + indexes for each table
       const detailPromises = currentTables.map((t) => {
         const detailKey = `${projectId}::${schema}::${t.name}`;
         const state = useProjectStore.getState();
@@ -112,13 +109,11 @@ export function ERDDiagram({ projectId, schema }: ERDProps) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId, schema]);
 
-  // Derive whether we have enough detail data to render
   const detailsReady = schemaTables.length === 0 || schemaTables.some((t) => {
     const detailKey = `${projectId}::${schema}::${t.name}`;
     return columnDetails[detailKey] != null;
   });
 
-  // Build ERD table data with column types and PK/FK info
   const tableData = useMemo(() => {
     if (!detailsReady) return [];
 
@@ -148,7 +143,6 @@ export function ERDDiagram({ projectId, schema }: ERDProps) {
 
   const initialBoxes = useMemo(() => layoutTables(tableData, fks), [tableData, fks]);
 
-  // Apply custom positions from dragging
   const boxes = useMemo(() => {
     if (tablePositions.size === 0) return initialBoxes;
     return initialBoxes.map((b) => {
@@ -162,7 +156,6 @@ export function ERDDiagram({ projectId, schema }: ERDProps) {
   const totalWidth = Math.max(800, ...boxes.map((b) => b.x + b.width + 60));
   const totalHeight = Math.max(600, ...boxes.map((b) => b.y + b.height + 60));
 
-  // Get connected tables for highlighting
   const { connectedTables, connectedFKs } = useTableDetails(hoveredTable, fks);
 
   const handleWheel = useCallback(createHandleWheel(setZoom), []);
@@ -222,13 +215,10 @@ export function ERDDiagram({ projectId, schema }: ERDProps) {
 
   return (
     <div className="relative flex-1 overflow-hidden">
-      {/* Zoom controls */}
       <ERDToolbar setZoom={setZoom} fitToView={fitToView} exportSVG={exportSVG} />
 
-      {/* Status indicator */}
       <ERDStatusBar boxCount={boxes.length} fkCount={fks.length} zoom={zoom} />
 
-      {/* SVG Canvas */}
       <div
         ref={containerRef}
         className="h-full cursor-grab active:cursor-grabbing bg-background"
@@ -250,10 +240,8 @@ export function ERDDiagram({ projectId, schema }: ERDProps) {
         >
           <ERDDefs />
 
-          {/* Grid dots background */}
           <ERDGridBackground totalWidth={totalWidth} totalHeight={totalHeight} />
 
-          {/* FK relationship lines */}
           <ERDFKLines
             fks={fks}
             boxMap={boxMap}
@@ -261,7 +249,6 @@ export function ERDDiagram({ projectId, schema }: ERDProps) {
             connectedFKs={connectedFKs}
           />
 
-          {/* Table boxes */}
           <ERDTableBoxes
             boxes={boxes}
             hoveredTable={hoveredTable}

@@ -5,7 +5,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { ProjectDetails } from "@/types";
 
-/** Dialog for adding a database to a server group */
 export function AddDatabaseDialog({
   open, onOpenChange, sourceProjectId, projects, onAdd,
 }: {

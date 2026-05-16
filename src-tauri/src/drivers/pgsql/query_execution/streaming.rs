@@ -20,7 +20,6 @@ pub enum QueryStreamEvent {
 
 /// Maximum rows to send to the frontend to prevent OOM in the webview.
 const MAX_STREAM_ROWS: usize = 500_000;
-/// Rows fetched per cursor FETCH round-trip.
 const CURSOR_FETCH_SIZE: usize = 10_000;
 
 /// Stream query results using a PostgreSQL cursor.
@@ -86,7 +85,6 @@ pub async fn execute_query_streamed(
                     break;
                 }
 
-                // Emit columns on first batch
                 if !columns_sent && let Some(cols) = batch_columns {
                     let header = join_sep(&cols, CELL_SEP);
                     let _ = app.emit(
@@ -109,7 +107,6 @@ pub async fn execute_query_streamed(
                 }
             }
 
-            // No rows at all
             if !columns_sent {
                 let _ = app.emit(
                     &event_name,
@@ -120,7 +117,6 @@ pub async fn execute_query_streamed(
                 );
             }
 
-            // Clean up cursor + transaction
             client.batch_execute("CLOSE _rsql_cur").await.ok();
             client.batch_execute("COMMIT").await.ok();
 

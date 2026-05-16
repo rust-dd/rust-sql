@@ -7,7 +7,6 @@ use crate::common::pgsql::{PgsqlLoadColumns, PgsqlLoadSchemas, PgsqlLoadTables};
 
 use super::{ColumnDetail, ConstraintDetail, IndexDetail, PolicyDetail, RuleDetail, TriggerDetail};
 
-/// Load schemas with a timeout. The query string is driver-specific.
 pub async fn load_schemas(client: &Client, query_sql: &str) -> Result<PgsqlLoadSchemas, AppError> {
     let rows = tokio_time::timeout(
         tokio_time::Duration::from_secs(10),
@@ -20,7 +19,6 @@ pub async fn load_schemas(client: &Client, query_sql: &str) -> Result<PgsqlLoadS
     Ok(rows.iter().map(|r| r.get(0)).collect())
 }
 
-/// Load all user databases from pg_database.
 pub async fn load_databases(pool: &Pool) -> Result<Vec<String>, AppError> {
     let client = pool.get().await.map_err(|e| AppError::DatabaseError(e.to_string()))?;
     let rows = client
@@ -33,7 +31,6 @@ pub async fn load_databases(pool: &Pool) -> Result<Vec<String>, AppError> {
     Ok(rows.iter().map(|r| r.get::<_, String>(0)).collect())
 }
 
-/// Load tablespaces from the server.
 pub async fn load_tablespaces(pool: &Pool) -> Result<Vec<(String, String, String)>, AppError> {
     let client = pool.get().await.map_err(|e| AppError::DatabaseError(e.to_string()))?;
     let rows = client
@@ -50,7 +47,6 @@ pub async fn load_tablespaces(pool: &Pool) -> Result<Vec<(String, String, String
     }).collect())
 }
 
-/// Load tables for a given schema.
 pub async fn load_tables(
     client: &Client,
     query_sql: &str,
@@ -64,7 +60,6 @@ pub async fn load_tables(
     Ok(rows.iter().map(|r| (r.get(0), r.get(1))).collect())
 }
 
-/// Load columns for a given schema and table.
 pub async fn load_columns(
     client: &Client,
     schema: &str,
@@ -84,7 +79,6 @@ pub async fn load_columns(
     Ok(rows.iter().map(|r| r.get::<_, String>(0)).collect())
 }
 
-/// Load detailed column info for a given schema and table.
 pub async fn load_column_details(
     client: &Client,
     schema: &str,
@@ -113,7 +107,6 @@ pub async fn load_column_details(
         .collect())
 }
 
-/// Load indexes for a given schema and table.
 pub async fn load_indexes(
     client: &Client,
     schema: &str,
@@ -150,7 +143,6 @@ pub async fn load_indexes(
         .collect())
 }
 
-/// Load triggers for a given schema and table.
 pub async fn load_triggers(
     client: &Client,
     schema: &str,
@@ -178,7 +170,6 @@ pub async fn load_triggers(
         .collect())
 }
 
-/// Load rules for a given schema and table.
 pub async fn load_rules(
     client: &Client,
     schema: &str,
@@ -205,7 +196,6 @@ pub async fn load_rules(
         .collect())
 }
 
-/// Load RLS policies for a given schema and table.
 pub async fn load_policies(
     client: &Client,
     schema: &str,
@@ -244,7 +234,6 @@ pub async fn load_policies(
         .collect())
 }
 
-/// Load constraints for a given schema and table.
 pub async fn load_constraints(
     client: &Client,
     schema: &str,

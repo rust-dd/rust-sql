@@ -270,7 +270,6 @@ export const useTabStore = create<TabState>()(
   ),
 );
 
-/** Derived selector: get active tab reactively */
 export function useActiveTab(): Tab | undefined {
   return useTabStore((s) => s.tabs[s.selectedTabIndex]);
 }

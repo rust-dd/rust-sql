@@ -67,7 +67,6 @@ export function CommandPalette({
     }
   }, [open, workspacesLoaded, loadWorkspaces]);
 
-  // Close on Escape at root page
   useEffect(() => {
     if (!open) return;
     const handler = (e: KeyboardEvent) => {
@@ -87,7 +86,6 @@ export function CommandPalette({
     return () => window.removeEventListener("keydown", handler);
   }, [open, page, onClose]);
 
-  // Click outside to close
   useEffect(() => {
     if (!open) return;
     const handler = (e: MouseEvent) => {
@@ -207,7 +205,6 @@ export function CommandPalette({
               <Command.List>
                 <Command.Empty>No results found</Command.Empty>
 
-                {/* Actions */}
                 <ActionsGroup
                   onClose={onClose}
                   setConnectionModalOpen={setConnectionModalOpen}
@@ -225,7 +222,6 @@ export function CommandPalette({
                   activeTabResult={!!activeTab?.result}
                 />
 
-                {/* Connections */}
                 <ConnectionsGroup
                   projects={projects}
                   status={status}
@@ -234,13 +230,11 @@ export function CommandPalette({
                   connectProject={connectProject}
                 />
 
-                {/* Workspaces */}
                 <WorkspacesGroup
                   setPage={setPage}
                   workspaces={workspaces}
                 />
 
-                {/* Database objects */}
                 <DatabaseObjectsGroups
                   tables={tables}
                   views={views}

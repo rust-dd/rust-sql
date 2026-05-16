@@ -90,7 +90,6 @@ export function TerminalPanel({ terminalId }: TerminalPanelProps) {
     terminalRef.current = term;
     fitAddonRef.current = fitAddon;
 
-    // Spawn the PTY process
     if (!spawnedRef.current) {
       spawnedRef.current = true;
       const cols = term.cols;
@@ -101,7 +100,6 @@ export function TerminalPanel({ terminalId }: TerminalPanelProps) {
       });
     }
 
-    // Listen for data from PTY
     const dataUnlisten = listen<string>(`terminal-data-${terminalId}`, (event) => {
       term.write(event.payload);
     });
@@ -110,12 +108,10 @@ export function TerminalPanel({ terminalId }: TerminalPanelProps) {
       term.writeln("\r\n[Process exited]");
     });
 
-    // Send keystrokes to PTY
     const dataDisposable = term.onData((data) => {
       invoke("terminal_write", { id: terminalId, data }).catch(() => {});
     });
 
-    // Handle resize
     const resizeObs = new ResizeObserver(() => {
       fitAddon.fit();
       const cols = term.cols;
@@ -136,7 +132,6 @@ export function TerminalPanel({ terminalId }: TerminalPanelProps) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [terminalId]);
 
-  // Update theme when it changes
   useEffect(() => {
     if (terminalRef.current) {
       terminalRef.current.options.theme = getTermTheme();

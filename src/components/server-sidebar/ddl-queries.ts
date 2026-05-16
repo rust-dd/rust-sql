@@ -1,4 +1,3 @@
-// DDL query generators
 export function ddlTableQuery(schema: string, table: string): string {
   return `-- Generate CREATE TABLE DDL for "${schema}"."${table}"
 SELECT 'CREATE TABLE "' || schemaname || '"."' || tablename || '" (' || E'\\n' ||

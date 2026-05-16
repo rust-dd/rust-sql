@@ -28,7 +28,6 @@ export function FKCard({
 }) {
   const [targetCols, setTargetCols] = useState<string[]>([]);
 
-  // Load target table columns when target changes
   useEffect(() => {
     if (!fk.targetTable || !fk.targetSchema) {
       setTargetCols([]);
@@ -42,7 +41,6 @@ export function FKCard({
       .catch(() => setTargetCols([]));
   }, [fk.targetSchema, fk.targetTable, projectId, getDriver]);
 
-  // Ensure tables are loaded for the selected schema
   useEffect(() => {
     if (fk.targetSchema) {
       loadTables(projectId, fk.targetSchema).catch(() => {});
@@ -60,7 +58,6 @@ export function FKCard({
           : "border-border/25 bg-muted/10",
       )}
     >
-      {/* Name + delete */}
       <div className="flex items-center gap-2">
         <input
           type="text"
@@ -77,7 +74,6 @@ export function FKCard({
         </button>
       </div>
 
-      {/* Target: schema + table */}
       <div className="grid grid-cols-2 gap-2">
         <div>
           <div className="text-[9px] text-muted-foreground/60 uppercase tracking-wider font-semibold mb-1">
@@ -122,7 +118,6 @@ export function FKCard({
         </div>
       </div>
 
-      {/* Column mapping: source → target (paired rows) */}
       <div>
         <div className="flex items-center justify-between mb-1">
           <div className="text-[9px] text-muted-foreground/60 uppercase tracking-wider font-semibold">Column Mapping</div>
@@ -192,7 +187,6 @@ export function FKCard({
         </div>
       </div>
 
-      {/* ON UPDATE / ON DELETE */}
       <div className="grid grid-cols-2 gap-2">
         <div>
           <div className="text-[9px] text-muted-foreground/60 uppercase tracking-wider font-semibold mb-1">

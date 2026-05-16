@@ -4,7 +4,6 @@ use crate::common::enums::AppError;
 
 use super::{FunctionInfo, ObjectStats};
 
-/// View info: (view_name)
 pub async fn load_views(client: &Client, schema: &str) -> Result<Vec<String>, AppError> {
     let rows = client
         .query(
@@ -20,7 +19,6 @@ pub async fn load_views(client: &Client, schema: &str) -> Result<Vec<String>, Ap
     Ok(rows.iter().map(|r| r.get::<_, String>(0)).collect())
 }
 
-/// Load materialized views for a schema.
 pub async fn load_materialized_views(
     client: &Client,
     schema: &str,
@@ -39,7 +37,6 @@ pub async fn load_materialized_views(
     Ok(rows.iter().map(|r| r.get::<_, String>(0)).collect())
 }
 
-/// Load functions for a schema (excluding trigger functions and aggregates).
 pub async fn load_functions(client: &Client, schema: &str) -> Result<Vec<FunctionInfo>, AppError> {
     let rows = client
         .query(
@@ -68,7 +65,6 @@ pub async fn load_functions(client: &Client, schema: &str) -> Result<Vec<Functio
         .collect())
 }
 
-/// Load trigger functions for a schema (functions that return trigger).
 pub async fn load_trigger_functions(
     client: &Client,
     schema: &str,
@@ -97,7 +93,6 @@ pub async fn load_trigger_functions(
         .collect())
 }
 
-/// Load view metadata.
 pub async fn load_view_info(
     client: &Client,
     schema: &str,
@@ -130,7 +125,6 @@ pub async fn load_view_info(
     }
 }
 
-/// Load materialized view metadata.
 pub async fn load_matview_info(
     client: &Client,
     schema: &str,
@@ -164,7 +158,6 @@ pub async fn load_matview_info(
     }
 }
 
-/// Load function metadata.
 pub async fn load_function_info(
     client: &Client,
     schema: &str,

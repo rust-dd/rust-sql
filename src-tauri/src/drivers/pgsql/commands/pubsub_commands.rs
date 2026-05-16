@@ -23,7 +23,6 @@ pub async fn pgsql_listen_start(project_id: &str, channel: &str, app: AppHandle)
         }
     }
 
-    // Get connection config from local db
     let (cfg, use_ssl) = {
         let conn = app_state
             .local_db
@@ -62,7 +61,6 @@ pub async fn pgsql_listen_start(project_id: &str, channel: &str, app: AppHandle)
     let event_name = format!("pg-notify-{}", project_id);
 
     let handle = tokio::spawn(async move {
-        // Helper: drive a connection, forwarding notifications as Tauri events
         async fn listen_loop<S, T>(
             client: tokio_postgres::Client,
             mut connection: tokio_postgres::Connection<S, T>,

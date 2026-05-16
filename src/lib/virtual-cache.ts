@@ -31,7 +31,6 @@ export function evictDistant(queryId: string, currentPage: number, maxPages: num
   const pages = cache.get(queryId);
   if (!pages || pages.size <= maxPages) return;
   const indices = [...pages.keys()].sort((a, b) => Math.abs(a - currentPage) - Math.abs(b - currentPage));
-  // Keep only the closest maxPages pages
   const toKeep = new Set(indices.slice(0, maxPages));
   for (const key of pages.keys()) {
     if (!toKeep.has(key)) pages.delete(key);

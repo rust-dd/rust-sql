@@ -40,7 +40,6 @@ export function EnumsPanel({ projectId }: { projectId: string }) {
     e.name.toLowerCase().includes(lowerFilter) || e.labels.toLowerCase().includes(lowerFilter) || e.schema.toLowerCase().includes(lowerFilter)
   );
 
-  // Group by schema
   const grouped = new Map<string, EnumType[]>();
   for (const e of filtered) {
     if (!grouped.has(e.schema)) grouped.set(e.schema, []);

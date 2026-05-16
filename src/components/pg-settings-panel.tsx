@@ -60,7 +60,6 @@ export function PgSettingsPanel({ projectId }: { projectId: string }) {
     return true;
   });
 
-  // Group by category
   const grouped = new Map<string, PgSetting[]>();
   for (const s of filtered) {
     if (!grouped.has(s.category)) grouped.set(s.category, []);

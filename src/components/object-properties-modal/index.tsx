@@ -55,7 +55,6 @@ export function ObjectPropertiesModal({
     fetchDDL,
   } = useObjectData(projectId, schema, name, objectType, open);
 
-  // Cached metadata from store
   const columnDetails = useProjectStore((s) => s.columnDetails);
   const indexes = useProjectStore((s) => s.indexes);
   const constraints = useProjectStore((s) => s.constraints);
@@ -74,7 +73,6 @@ export function ObjectPropertiesModal({
     (idxs ?? []).filter((i) => i.isPrimary).map((i) => i.columnName),
   );
 
-  // Reset UI state on open
   useEffect(() => {
     if (!open) return;
     setActiveTab(objectType === "table" ? "overview" : "overview");
@@ -104,7 +102,6 @@ export function ObjectPropertiesModal({
       try {
         const msg = await driver.tableAction(projectId, actionLabel, schema, name, objectType);
         setActionResult({ type: "success", message: msg });
-        // Refresh stats
         void fetchLiveData();
       } catch (err: any) {
         setActionResult({
@@ -119,7 +116,6 @@ export function ObjectPropertiesModal({
     [getDriver, projectId, schema, name, objectType, fetchLiveData],
   );
 
-  // Build available tabs based on object type
   const availableTabs: { key: Tab; label: string }[] = [];
   availableTabs.push({ key: "overview", label: "Overview" });
   if (objectType === "table") {
@@ -153,7 +149,6 @@ export function ObjectPropertiesModal({
           setActiveTab={setActiveTab}
         />
 
-        {/* Content */}
         <div
           className={cn(
             "flex-1 min-h-0 px-5 pb-5",
@@ -174,7 +169,6 @@ export function ObjectPropertiesModal({
               getDriver={getDriver}
               onApplied={() => {
                 void fetchLiveData();
-                // Invalidate cached metadata so it re-fetches
                 useProjectStore.setState((s) => {
                   delete s.columnDetails[metaKey];
                   delete s.indexes[metaKey];

@@ -46,14 +46,12 @@ export function registerContextAwareCompletions(monaco: typeof Monaco) {
       });
       const context = textUntilPosition.slice(-1000);
 
-      // Get active project context
       const { tabs, selectedTabIndex } = useTabStore.getState();
       const activeTab = tabs[selectedTabIndex];
       const projectId = activeTab?.projectId;
       const state = useProjectStore.getState();
       const d = projectId ? state.projects[projectId] : undefined;
 
-      // Context-aware completions (require active connection)
       if (projectId && d) {
         const aliasMap = extractAliasMap(context);
         const tableCtx = /([A-Za-z0-9_"]+)\s*\.\s*([A-Za-z0-9_"]*)$/i.exec(
@@ -64,7 +62,6 @@ export function registerContextAwareCompletions(monaco: typeof Monaco) {
           const left = stripQuotes(tableCtx[1]);
           const right = stripQuotes(tableCtx[2]);
 
-          // Alias -> column completion
           const aliasKey = Object.keys(aliasMap).find(
             (k) => k.toLowerCase() === left.toLowerCase(),
           );
@@ -92,7 +89,6 @@ export function registerContextAwareCompletions(monaco: typeof Monaco) {
             }
           }
 
-          // schema. -> table completion
           if (right.length === 0) {
             const t = await ensureTables(projectId, left);
             for (const ti of t) {
@@ -108,7 +104,6 @@ export function registerContextAwareCompletions(monaco: typeof Monaco) {
             return { suggestions };
           }
 
-          // schema.table. -> column completion
           const cols = await ensureColumns(projectId, left, right);
           cols.forEach((c) =>
             add(
@@ -122,7 +117,6 @@ export function registerContextAwareCompletions(monaco: typeof Monaco) {
           return { suggestions };
         }
 
-        // FROM/JOIN context -> table completion
         const fromCtx = /(from|join)\s+([A-Za-z0-9_".]*)$/i.exec(context);
         if (fromCtx) {
           const projSchemas = state.schemas[projectId] || [];
@@ -142,7 +136,6 @@ export function registerContextAwareCompletions(monaco: typeof Monaco) {
           return { suggestions };
         }
 
-        // Schema names
         const projSchemas = state.schemas[projectId] || [];
         projSchemas.forEach((s) =>
           add(

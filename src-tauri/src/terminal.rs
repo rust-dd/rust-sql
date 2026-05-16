@@ -54,7 +54,6 @@ pub async fn terminal_spawn(
         .await
         .insert(id.clone(), session);
 
-    // Spawn reader thread to emit events
     let terminal_id = id.clone();
     std::thread::spawn(move || {
         let mut buf = [0u8; 4096];

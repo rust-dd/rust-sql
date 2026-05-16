@@ -44,7 +44,6 @@ export function CSVImportModal({ open: isOpen, onOpenChange, projectId, schema, 
       setCsvHeaders(headers);
       setPreviewRows(rows);
 
-      // Auto-map columns by name match
       const autoMapping: Record<number, string> = {};
       headers.forEach((h, i) => {
         const match = tableColumns.find(

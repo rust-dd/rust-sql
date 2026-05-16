@@ -11,7 +11,6 @@ export function ColumnsSection({
   draft: StructureEditorState;
   setDraft: React.Dispatch<React.SetStateAction<StructureEditorState>>;
 }) {
-  // Column helpers
   const updateColumn = (id: string, updates: Partial<DraftColumn>) => {
     setDraft((prev) => ({
       ...prev,
@@ -75,7 +74,6 @@ export function ColumnsSection({
 
   return (
     <div className="space-y-1">
-      {/* Header */}
       <div className="grid grid-cols-[1fr_140px_70px_1fr_36px] gap-1.5 px-1 text-[9px] font-semibold text-muted-foreground/60 uppercase tracking-wider">
         <span>Name</span>
         <span>Type</span>
@@ -166,7 +164,6 @@ export function ColumnsSection({
       >
         <Plus className="h-3.5 w-3.5" /> Add Column
       </button>
-      {/* HTML datalist for type suggestions */}
       <datalist id="pg-types">
         {PG_COMMON_TYPES.map((t) => (
           <option key={t} value={t} />

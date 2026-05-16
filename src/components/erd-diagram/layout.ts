@@ -24,7 +24,6 @@ export function layoutTables(
 ): TableBox[] {
   if (tables.length === 0) return [];
 
-  // Build adjacency for connected-component ordering
   const adj = new Map<string, Set<string>>();
   for (const t of tables) adj.set(t.name, new Set());
   for (const fk of fks) {
@@ -32,7 +31,6 @@ export function layoutTables(
     adj.get(fk.targetTable)?.add(fk.sourceTable);
   }
 
-  // Sort: most connected tables first, then alphabetically
   const sorted = [...tables].sort((a, b) => {
     const ac = adj.get(a.name)?.size ?? 0;
     const bc = adj.get(b.name)?.size ?? 0;
@@ -50,7 +48,6 @@ export function layoutTables(
 
   for (let i = 0; i < gridCols; i++) {
     colXOffsets.push(currentX);
-    // Estimate width for this column based on tables that will go here
     const colTables = sorted.filter((_, idx) => idx % gridCols === i);
     const maxWidth = colTables.reduce((max, t) => {
       const w = measureTableWidth(t.name, t.columns);

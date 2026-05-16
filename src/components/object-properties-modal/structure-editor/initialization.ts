@@ -38,7 +38,6 @@ export function initStructureState(
     originalDefault: c.defaultValue,
   }));
 
-  // Primary key from indexes
   const pkEntries = (idxs ?? []).filter((i) => i.isPrimary);
   const pkName = pkEntries[0]?.indexName ?? "";
   const primaryKey: DraftPrimaryKey | null =
@@ -51,7 +50,6 @@ export function initStructureState(
         }
       : null;
 
-  // Unique constraints from constraints
   const uniqueMap = new Map<string, string[]>();
   for (const c of cons ?? []) {
     if (c.constraintType === "UNIQUE") {
@@ -69,7 +67,6 @@ export function initStructureState(
     columns: ucCols,
   }));
 
-  // Non-primary, non-unique indexes
   const idxMap = new Map<string, { columns: string[]; isUnique: boolean }>();
   for (const i of idxs ?? []) {
     if (i.isPrimary) continue;
@@ -90,7 +87,6 @@ export function initStructureState(
     isUnique: info.isUnique,
   }));
 
-  // Foreign keys: group by constraintName
   const fkMap = new Map<string, FKInfo[]>();
   for (const fk of outgoingFKs) {
     const existing = fkMap.get(fk.constraintName) ?? [];

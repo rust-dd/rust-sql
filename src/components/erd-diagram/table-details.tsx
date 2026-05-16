@@ -1,14 +1,7 @@
 import { useMemo } from "react";
 import type { ForeignKey } from "./types";
 
-/**
- * Derives connection metadata for the currently hovered table.
- *
- * Returns the set of table names connected to the hovered table by a
- * foreign key (in either direction) and the set of FK indices that
- * touch the hovered table — used by the renderer to highlight related
- * tables and dim everything else.
- */
+// FKs are matched in both directions so highlighting works for either endpoint.
 export function useTableDetails(hoveredTable: string | null, fks: ForeignKey[]) {
   const connectedTables = useMemo(() => {
     if (!hoveredTable) return new Set<string>();

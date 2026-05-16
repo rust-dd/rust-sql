@@ -59,7 +59,6 @@ export function ServerSidebar({
   const removeQuery = useQueryStore((s) => s.removeQuery);
   const { menu, showMenu, closeMenu } = useContextMenu();
 
-  // Object properties modal state
   const [propsModal, setPropsModal] = React.useState<PropsModalState>({
     open: false,
     objectType: "table",
@@ -72,7 +71,6 @@ export function ServerSidebar({
     setPropsModal({ open: true, objectType, projectId, schema, name });
   };
 
-  // CSV Import modal state
   const [csvImportTarget, setCsvImportTarget] = React.useState<CsvImportTarget | null>(null);
 
   React.useEffect(() => {
@@ -179,7 +177,6 @@ export function ServerSidebar({
         })()}
       </div>
 
-      {/* Saved Queries — always visible */}
       {renderSavedQueries(ctx, savedQueries, removeQuery)}
 
       <AddDatabaseDialog

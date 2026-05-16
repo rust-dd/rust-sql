@@ -1,7 +1,4 @@
-use std::{
-    collections::BTreeMap,
-    sync::Arc,
-};
+use std::{collections::BTreeMap, sync::Arc};
 
 use deadpool_postgres::{Manager as PgManager, ManagerConfig, Pool, RecyclingMethod};
 
@@ -72,10 +69,7 @@ pub(crate) async fn acquire_client(
         .map_err(|e| AppError::ConnectionFailed(e.to_string()))
 }
 
-pub(crate) async fn apply_statement_timeout(
-    client: &deadpool_postgres::Client,
-    timeout_ms: u32,
-) {
+pub(crate) async fn apply_statement_timeout(client: &deadpool_postgres::Client, timeout_ms: u32) {
     if timeout_ms > 0 {
         client
             .simple_query(&format!("SET statement_timeout = {}", timeout_ms))
@@ -84,10 +78,7 @@ pub(crate) async fn apply_statement_timeout(
     }
 }
 
-pub(crate) async fn reset_statement_timeout(
-    client: &deadpool_postgres::Client,
-    timeout_ms: u32,
-) {
+pub(crate) async fn reset_statement_timeout(client: &deadpool_postgres::Client, timeout_ms: u32) {
     if timeout_ms > 0 {
         client.simple_query("RESET statement_timeout").await.ok();
     }
@@ -104,9 +95,7 @@ pub(crate) async fn set_cancel_token(
 }
 
 #[tauri::command(rename_all = "snake_case")]
-pub async fn pgsql_test_connection(
-    key: [&str; 6],
-) -> Result<String> {
+pub async fn pgsql_test_connection(key: [&str; 6]) -> Result<String> {
     let user = key[0];
     let password = key[1];
     let database = key[2];

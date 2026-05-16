@@ -1,5 +1,5 @@
-use crate::common::enums::AppError;
 use crate::AppState;
+use crate::common::enums::AppError;
 use tauri::{Result, State};
 
 #[tauri::command(rename_all = "snake_case")]

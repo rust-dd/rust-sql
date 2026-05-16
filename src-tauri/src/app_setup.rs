@@ -155,8 +155,7 @@ pub fn setup_app(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>>
             version: Some(env!("CARGO_PKG_VERSION").into()),
             copyright: Some("\u{00a9} 2025 rust-dd".into()),
             comments: Some(
-                "Modern SQL client for PostgreSQL.\nBuilt with Tauri, React, and Rust."
-                    .into(),
+                "Modern SQL client for PostgreSQL.\nBuilt with Tauri, React, and Rust.".into(),
             ),
             website: Some("https://github.com/rust-dd/rust-sql".into()),
             website_label: Some("GitHub".into()),

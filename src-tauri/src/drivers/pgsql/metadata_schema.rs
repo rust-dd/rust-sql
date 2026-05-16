@@ -20,7 +20,10 @@ pub async fn load_schemas(client: &Client, query_sql: &str) -> Result<PgsqlLoadS
 }
 
 pub async fn load_databases(pool: &Pool) -> Result<Vec<String>, AppError> {
-    let client = pool.get().await.map_err(|e| AppError::DatabaseError(e.to_string()))?;
+    let client = pool
+        .get()
+        .await
+        .map_err(|e| AppError::DatabaseError(e.to_string()))?;
     let rows = client
         .query(
             "SELECT datname FROM pg_database WHERE datallowconn = true AND datistemplate = false ORDER BY datname",
@@ -32,7 +35,10 @@ pub async fn load_databases(pool: &Pool) -> Result<Vec<String>, AppError> {
 }
 
 pub async fn load_tablespaces(pool: &Pool) -> Result<Vec<(String, String, String)>, AppError> {
-    let client = pool.get().await.map_err(|e| AppError::DatabaseError(e.to_string()))?;
+    let client = pool
+        .get()
+        .await
+        .map_err(|e| AppError::DatabaseError(e.to_string()))?;
     let rows = client
         .query(
             "SELECT spcname, pg_catalog.pg_get_userbyid(spcowner) AS owner, \
@@ -42,9 +48,16 @@ pub async fn load_tablespaces(pool: &Pool) -> Result<Vec<(String, String, String
         )
         .await
         .map_err(|e| AppError::DatabaseError(e.to_string()))?;
-    Ok(rows.iter().map(|r| {
-        (r.get::<_, String>(0), r.get::<_, String>(1), r.get::<_, String>(2))
-    }).collect())
+    Ok(rows
+        .iter()
+        .map(|r| {
+            (
+                r.get::<_, String>(0),
+                r.get::<_, String>(1),
+                r.get::<_, String>(2),
+            )
+        })
+        .collect())
 }
 
 pub async fn load_tables(

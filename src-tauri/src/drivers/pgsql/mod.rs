@@ -3,23 +3,23 @@ use std::sync::Arc;
 
 use crate::common::enums::AppError;
 
-pub mod query_execution;
+pub mod commands;
+pub mod ddl_generation;
+pub mod extensions;
 pub mod metadata_schema;
 pub mod metadata_views_functions;
-pub mod statistics_activity;
-pub mod ddl_generation;
+pub mod query_execution;
 pub mod roles_schema_objects;
-pub mod extensions;
-pub mod commands;
+pub mod statistics_activity;
 
-pub use query_execution::*;
+pub use commands::*;
+pub use ddl_generation::*;
+pub use extensions::*;
 pub use metadata_schema::*;
 pub use metadata_views_functions::*;
-pub use statistics_activity::*;
-pub use ddl_generation::*;
+pub use query_execution::*;
 pub use roles_schema_objects::*;
-pub use extensions::*;
-pub use commands::*;
+pub use statistics_activity::*;
 
 /// Safely get a pool Arc from the AppState client map.
 /// Returns a cloned Arc so the caller can drop the MutexGuard immediately.

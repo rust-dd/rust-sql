@@ -118,8 +118,7 @@ pub async fn pgsql_execute_virtual(
 
     let timeout = timeout_ms.unwrap_or(0);
     apply_statement_timeout(&client, timeout).await;
-    let result =
-        execute_virtual(&client, &app_state.virtual_cache, sql, query_id, page_size).await;
+    let result = execute_virtual(&client, &app_state.virtual_cache, sql, query_id, page_size).await;
     reset_statement_timeout(&client, timeout).await;
     let result = result?;
 

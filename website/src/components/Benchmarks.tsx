@@ -129,7 +129,7 @@ export function Benchmarks() {
           <h2 className="font-display text-[clamp(1.8rem,4vw,2.8rem)] mt-3">
             Built to be fast
           </h2>
-          <p className="text-[var(--fg-muted)] mt-3 text-[15px] leading-relaxed">
+          <p className="text-[color:var(--fg-muted)] mt-3 text-[15px] leading-relaxed">
             Every layer is optimized — from SIMD serialization to canvas rendering.
           </p>
         </div>
@@ -141,9 +141,9 @@ export function Benchmarks() {
               <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between mb-5">
                 <div>
                   <h3 className="text-base font-semibold">{b.category}</h3>
-                  <p className="text-xs text-[var(--fg-subtle)] font-[var(--font-mono)]">{b.metric}</p>
+                  <p className="text-xs text-[color:var(--fg-subtle)] font-mono">{b.metric}</p>
                 </div>
-                <div className="text-lg font-bold accent-text font-[var(--font-mono)]">
+                <div className="text-lg font-bold accent-text font-mono">
                   {b.rsql.value}
                 </div>
               </div>
@@ -154,7 +154,7 @@ export function Benchmarks() {
                     <span className="w-[120px] sm:w-[160px] text-sm font-medium accent-text shrink-0">RSQL</span>
                     <div className="flex-1 h-6 bg-[var(--surface-raised)] rounded-lg overflow-hidden">
                       <div
-                        className="h-full rounded-lg flex items-center px-2 text-[10px] font-[var(--font-mono)] text-white font-semibold"
+                        className="h-full rounded-lg flex items-center px-2 text-[10px] font-mono text-white font-semibold"
                         style={{ width: `${Math.max(b.rsql.bar, 8)}%`, background: "var(--accent)" }}
                       >
                         {b.rsql.value}
@@ -163,10 +163,10 @@ export function Benchmarks() {
                   </div>
                   {b.others.map((o) => (
                     <div key={o.name} className="flex items-center gap-3">
-                      <span className="w-[120px] sm:w-[160px] text-sm text-[var(--fg-muted)] shrink-0 truncate">{o.name}</span>
+                      <span className="w-[120px] sm:w-[160px] text-sm text-[color:var(--fg-muted)] shrink-0 truncate">{o.name}</span>
                       <div className="flex-1 h-6 bg-[var(--surface-raised)] rounded-lg overflow-hidden">
                         <div
-                          className="h-full rounded-lg flex items-center px-2 text-[10px] font-[var(--font-mono)] text-[var(--fg-muted)] font-medium"
+                          className="h-full rounded-lg flex items-center px-2 text-[10px] font-mono text-[color:var(--fg-muted)] font-medium"
                           style={{ width: `${Math.max(o.bar, 8)}%`, background: "var(--border)" }}
                         >
                           {o.value}
@@ -184,20 +184,20 @@ export function Benchmarks() {
                       key={c.label}
                       className={`rounded-xl border px-4 py-3 ${
                         c.highlight
-                          ? "border-[var(--accent)] bg-[var(--accent-muted)]"
-                          : "border-[var(--border-subtle)]"
+                          ? "border-[color:var(--accent)] bg-[var(--accent-muted)]"
+                          : "border-[color:var(--border-subtle)]"
                       }`}
                     >
-                      <div className={`text-sm font-medium ${c.highlight ? "accent-text" : "text-[var(--fg-muted)]"}`}>
+                      <div className={`text-sm font-medium ${c.highlight ? "accent-text" : "text-[color:var(--fg-muted)]"}`}>
                         {c.label}
                       </div>
-                      <div className="text-xs text-[var(--fg-subtle)] mt-0.5 font-[var(--font-mono)]">{c.detail}</div>
+                      <div className="text-xs text-[color:var(--fg-subtle)] mt-0.5 font-mono">{c.detail}</div>
                     </div>
                   ))}
                 </div>
               )}
 
-              <p className="mt-4 text-xs text-[var(--fg-subtle)] leading-relaxed">{b.explanation}</p>
+              <p className="mt-4 text-xs text-[color:var(--fg-subtle)] leading-relaxed">{b.explanation}</p>
             </div>
           ))}
         </div>
@@ -209,21 +209,21 @@ export function Benchmarks() {
             <h3 className="font-display text-[clamp(1.4rem,3vw,2rem)] mt-3">
               Real numbers from the codebase
             </h3>
-            <p className="text-[var(--fg-muted)] mt-2 text-sm">
+            <p className="text-[color:var(--fg-muted)] mt-2 text-sm">
               Every constant below is verified from source — no marketing estimates.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-px bg-[var(--border-subtle)] rounded-2xl overflow-hidden border border-[var(--border-subtle)]">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-px bg-[var(--border-subtle)] rounded-2xl overflow-hidden border border-[color:var(--border-subtle)]">
             {archNumbers.map((n) => (
               <div key={n.label} className="bg-[var(--bg)] p-5 hover:bg-[var(--accent-muted)] transition-colors">
                 <div className="flex items-baseline gap-2 mb-1">
-                  <span className="text-2xl font-bold font-[var(--font-mono)] accent-text">{n.value}</span>
-                  <span className="text-xs text-[var(--fg-subtle)] font-[var(--font-mono)]">{n.unit}</span>
+                  <span className="text-2xl font-bold font-mono accent-text">{n.value}</span>
+                  <span className="text-xs text-[color:var(--fg-subtle)] font-mono">{n.unit}</span>
                 </div>
                 <div className="text-sm font-semibold mb-1">{n.label}</div>
-                <p className="text-xs text-[var(--fg-muted)] leading-relaxed">{n.detail}</p>
-                <div className="mt-2 text-[10px] text-[var(--fg-subtle)] font-[var(--font-mono)] opacity-60">
+                <p className="text-xs text-[color:var(--fg-muted)] leading-relaxed">{n.detail}</p>
+                <div className="mt-2 text-[10px] text-[color:var(--fg-subtle)] font-mono opacity-60">
                   {n.source}
                 </div>
               </div>
@@ -235,7 +235,7 @@ export function Benchmarks() {
         <div className="mt-12 card-raised p-6">
           <h4 className="text-sm font-semibold mb-4">Query execution pipeline</h4>
           <div className="overflow-x-auto">
-            <div className="flex items-center gap-0 min-w-[600px] font-[var(--font-mono)] text-[11px]">
+            <div className="flex items-center gap-0 min-w-[600px] font-mono text-[11px]">
               {[
                 { label: "SQL Query", sub: "Monaco Editor", color: "var(--accent)" },
                 { label: "Tauri IPC", sub: "< 0.1ms overhead" },
@@ -248,30 +248,30 @@ export function Benchmarks() {
                 <div key={step.label} className="flex items-center">
                   <div className={`px-3 py-2 rounded-xl border text-center shrink-0 ${
                     i === 0 || i === arr.length - 1
-                      ? "border-[var(--accent)] bg-[var(--accent-muted)]"
-                      : "border-[var(--border-subtle)]"
+                      ? "border-[color:var(--accent)] bg-[var(--accent-muted)]"
+                      : "border-[color:var(--border-subtle)]"
                   }`}>
-                    <div className={`font-semibold ${i === 0 || i === arr.length - 1 ? "accent-text" : "text-[var(--fg)]"}`}>
+                    <div className={`font-semibold ${i === 0 || i === arr.length - 1 ? "accent-text" : "text-[color:var(--fg)]"}`}>
                       {step.label}
                     </div>
-                    <div className="text-[9px] text-[var(--fg-subtle)] mt-0.5">{step.sub}</div>
+                    <div className="text-[9px] text-[color:var(--fg-subtle)] mt-0.5">{step.sub}</div>
                   </div>
                   {i < arr.length - 1 && (
                     <div className="w-6 h-px bg-[var(--border)] mx-0.5 shrink-0 relative">
-                      <div className="absolute right-0 top-1/2 -translate-y-1/2 w-0 h-0 border-l-[4px] border-l-[var(--fg-subtle)] border-t-[3px] border-t-transparent border-b-[3px] border-b-transparent" />
+                      <div className="absolute right-0 top-1/2 -translate-y-1/2 w-0 h-0 border-l-[4px] border-l-[color:var(--fg-subtle)] border-t-[3px] border-t-transparent border-b-[3px] border-b-transparent" />
                     </div>
                   )}
                 </div>
               ))}
             </div>
           </div>
-          <p className="mt-4 text-xs text-[var(--fg-subtle)] leading-relaxed">
+          <p className="mt-4 text-xs text-[color:var(--fg-subtle)] leading-relaxed">
             End-to-end: SQL text → Rust IPC → PostgreSQL cursor → parallel page packing → SIMD serialization → canvas paint.
             Each page (2,000 rows) is pre-packed and cached — subsequent page requests are served with zero processing overhead.
           </p>
         </div>
 
-        <p className="mt-6 text-[10px] text-[var(--fg-subtle)] font-[var(--font-mono)] text-center">
+        <p className="mt-6 text-[10px] text-[color:var(--fg-subtle)] font-mono text-center">
           All numbers verified from source: src-tauri/src/drivers/common.rs, pgsql.rs, src/components/results-panel.tsx.
           <br />
           Serialization throughput from sonic-rs published benchmarks. Memory figures are typical ranges on Apple M1.

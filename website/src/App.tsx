@@ -57,7 +57,7 @@ export function App() {
         }}
       >
         <div className="mx-auto flex h-14 max-w-[1080px] items-center justify-between px-6">
-          <a href="/" className="text-lg font-bold font-[var(--font-mono)] tracking-tight accent-text">
+          <a href="/" className="text-lg font-bold font-mono tracking-tight accent-text">
             RSQL
           </a>
 
@@ -149,7 +149,7 @@ export function App() {
           <div className="divider mb-8" />
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-3">
-              <span className="font-[var(--font-mono)] text-sm font-bold accent-text">RSQL</span>
+              <span className="font-mono text-sm font-bold accent-text">RSQL</span>
               <span className="text-sm" style={{ color: "var(--fg-subtle)" }}>
                 Open source PostgreSQL workbench
               </span>

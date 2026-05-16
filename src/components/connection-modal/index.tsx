@@ -1,45 +1,45 @@
-import type React from "react"
-import { useState, useEffect } from "react"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "../ui/dialog"
-import { Button } from "../ui/button"
-import { Loader2, CheckCircle2, XCircle } from "lucide-react"
-import { pgsqlTestConnection } from "@/tauri"
-import type { DriverType, ProjectDetails } from "@/types"
+import { CheckCircle2, Loader2, XCircle } from "lucide-react";
+import type React from "react";
+import { useEffect, useState } from "react";
+import { pgsqlTestConnection } from "@/tauri";
+import type { DriverType, ProjectDetails } from "@/types";
+import { Button } from "../ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "../ui/dialog";
 import {
   ConnStringField,
-  DriverDisplay,
-  NameField,
-  HostPortFields,
   DatabaseField,
-  UsernameField,
+  DriverDisplay,
+  HostPortFields,
+  NameField,
   PasswordField,
   SslCheckbox,
-} from "./form-fields"
-import { SshConfig } from "./ssh-config"
+  UsernameField,
+} from "./form-fields";
+import { SshConfig } from "./ssh-config";
 
 interface ConnectionModalProps {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  onSave: (connection: ConnectionConfig) => void
-  editData?: { name: string; details: ProjectDetails } | null
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onSave: (connection: ConnectionConfig) => void;
+  editData?: { name: string; details: ProjectDetails } | null;
 }
 
 export interface ConnectionConfig {
-  id: string
-  name: string
-  driver: DriverType
-  host: string
-  port: string
-  database: string
-  username: string
-  password: string
-  ssl: boolean
-  sshEnabled: boolean
-  sshHost: string
-  sshPort: string
-  sshUser: string
-  sshPassword: string
-  sshKeyPath: string
+  id: string;
+  name: string;
+  driver: DriverType;
+  host: string;
+  port: string;
+  database: string;
+  username: string;
+  password: string;
+  ssl: boolean;
+  sshEnabled: boolean;
+  sshHost: string;
+  sshPort: string;
+  sshUser: string;
+  sshPassword: string;
+  sshKeyPath: string;
 }
 
 const defaultForm: Omit<ConnectionConfig, "id"> = {
@@ -57,7 +57,7 @@ const defaultForm: Omit<ConnectionConfig, "id"> = {
   sshUser: "",
   sshPassword: "",
   sshKeyPath: "",
-}
+};
 
 function parseConnectionString(url: string): Partial<Omit<ConnectionConfig, "id">> | null {
   try {
@@ -66,7 +66,10 @@ function parseConnectionString(url: string): Partial<Omit<ConnectionConfig, "id"
     if (!normalized.startsWith("postgresql://")) return null;
     const parsed = new URL(normalized);
     const params = parsed.searchParams;
-    const ssl = params.get("sslmode") === "require" || params.get("sslmode") === "verify-full" || params.get("ssl") === "true";
+    const ssl =
+      params.get("sslmode") === "require" ||
+      params.get("sslmode") === "verify-full" ||
+      params.get("ssl") === "true";
     return {
       driver: "PGSQL",
       host: parsed.hostname || "localhost",
@@ -82,11 +85,11 @@ function parseConnectionString(url: string): Partial<Omit<ConnectionConfig, "id"
 }
 
 export function ConnectionModal({ open, onOpenChange, onSave, editData }: ConnectionModalProps) {
-  const [formData, setFormData] = useState<Omit<ConnectionConfig, "id">>(defaultForm)
-  const [connString, setConnString] = useState("")
-  const [connStringError, setConnStringError] = useState(false)
-  const [testing, setTesting] = useState(false)
-  const [testResult, setTestResult] = useState<{ ok: boolean; message: string } | null>(null)
+  const [formData, setFormData] = useState<Omit<ConnectionConfig, "id">>(defaultForm);
+  const [connString, setConnString] = useState("");
+  const [connStringError, setConnStringError] = useState(false);
+  const [testing, setTesting] = useState(false);
+  const [testResult, setTestResult] = useState<{ ok: boolean; message: string } | null>(null);
 
   useEffect(() => {
     if (open && editData) {
@@ -105,35 +108,35 @@ export function ConnectionModal({ open, onOpenChange, onSave, editData }: Connec
         sshUser: editData.details.sshUser || "",
         sshPassword: editData.details.sshPassword || "",
         sshKeyPath: editData.details.sshKeyPath || "",
-      })
-      setConnString("")
-      setConnStringError(false)
-      setTestResult(null)
+      });
+      setConnString("");
+      setConnStringError(false);
+      setTestResult(null);
     } else if (open && !editData) {
-      setFormData(defaultForm)
-      setConnString("")
-      setConnStringError(false)
-      setTestResult(null)
+      setFormData(defaultForm);
+      setConnString("");
+      setConnStringError(false);
+      setTestResult(null);
     }
-  }, [open, editData])
+  }, [open, editData]);
 
   const handleConnStringPaste = (value: string) => {
-    setConnString(value)
-    setConnStringError(false)
-    if (!value.trim()) return
-    const parsed = parseConnectionString(value)
+    setConnString(value);
+    setConnStringError(false);
+    if (!value.trim()) return;
+    const parsed = parseConnectionString(value);
     if (parsed) {
-      setFormData((prev) => ({ ...prev, ...parsed, name: prev.name || parsed.database || "" }))
+      setFormData((prev) => ({ ...prev, ...parsed, name: prev.name || parsed.database || "" }));
     } else {
-      setConnStringError(true)
+      setConnStringError(true);
     }
-  }
+  };
 
-  const isEditing = !!editData
+  const isEditing = !!editData;
 
   const handleTestConnection = async () => {
-    setTesting(true)
-    setTestResult(null)
+    setTesting(true);
+    setTestResult(null);
     try {
       const key: [string, string, string, string, string, string] = [
         formData.username,
@@ -142,26 +145,26 @@ export function ConnectionModal({ open, onOpenChange, onSave, editData }: Connec
         formData.host,
         formData.port,
         formData.ssl ? "true" : "false",
-      ]
-      const version = await pgsqlTestConnection(key)
-      setTestResult({ ok: true, message: version })
+      ];
+      const version = await pgsqlTestConnection(key);
+      setTestResult({ ok: true, message: version });
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : String(err)
-      setTestResult({ ok: false, message: msg })
+      const msg = err instanceof Error ? err.message : String(err);
+      setTestResult({ ok: false, message: msg });
     } finally {
-      setTesting(false)
+      setTesting(false);
     }
-  }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
+    e.preventDefault();
     const connection: ConnectionConfig = {
       ...formData,
       id: editData ? editData.name : `conn-${Date.now()}`,
-    }
-    onSave(connection)
-    onOpenChange(false)
-  }
+    };
+    onSave(connection);
+    onOpenChange(false);
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -262,7 +265,12 @@ export function ConnectionModal({ open, onOpenChange, onSave, editData }: Connec
               Test Connection
             </Button>
             <div className="flex gap-2">
-              <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} className="font-mono text-xs">
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => onOpenChange(false)}
+                className="font-mono text-xs"
+              >
                 Cancel
               </Button>
               <Button type="submit" variant="gradient" className="font-mono text-xs">
@@ -273,5 +281,5 @@ export function ConnectionModal({ open, onOpenChange, onSave, editData }: Connec
         </form>
       </DialogContent>
     </Dialog>
-  )
+  );
 }

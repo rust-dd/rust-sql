@@ -1,5 +1,5 @@
-import { useProjectStore } from "@/stores/project-store";
 import { DriverFactory } from "@/lib/database-driver";
+import { useProjectStore } from "@/stores/project-store";
 import type { TableInfo } from "@/types";
 import type { TableRef } from "./alias-parser";
 
@@ -23,16 +23,14 @@ export async function resolveTableRef(
       try {
         const rawRows = await driver.loadTables(projectId, schema);
         t = rawRows.map(([name, size]) => ({ name, size }));
-        useProjectStore.setState((s) => { s.tables[key] = t!; });
+        useProjectStore.setState((s) => {
+          s.tables[key] = t!;
+        });
       } catch {
         continue;
       }
     }
-    const match =
-      t &&
-      t.find(
-        (ti: TableInfo) => ti.name.toLowerCase() === ref.table.toLowerCase(),
-      );
+    const match = t?.find((ti: TableInfo) => ti.name.toLowerCase() === ref.table.toLowerCase());
     if (match) {
       return { schema, table: match.name };
     }
@@ -55,17 +53,16 @@ export async function ensureColumns(
 
   try {
     const cols = await driver.loadColumns(projectId, schema, table);
-    useProjectStore.setState((s) => { s.columns[colKey] = cols; });
+    useProjectStore.setState((s) => {
+      s.columns[colKey] = cols;
+    });
     return cols;
   } catch {
     return [];
   }
 }
 
-export async function ensureTables(
-  projectId: string,
-  schema: string,
-): Promise<TableInfo[]> {
+export async function ensureTables(projectId: string, schema: string): Promise<TableInfo[]> {
   const key = `${projectId}::${schema}`;
   const state = useProjectStore.getState();
   if (state.tables[key]) return state.tables[key];
@@ -77,7 +74,9 @@ export async function ensureTables(
   try {
     const rawRows = await driver.loadTables(projectId, schema);
     const t = rawRows.map(([name, size]) => ({ name, size }));
-    useProjectStore.setState((s) => { s.tables[key] = t; });
+    useProjectStore.setState((s) => {
+      s.tables[key] = t;
+    });
     return t;
   } catch {
     return [];

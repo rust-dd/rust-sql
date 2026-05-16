@@ -1,5 +1,5 @@
-import { useMemo, useEffect, useRef } from "react";
 import L from "leaflet";
+import { useEffect, useMemo, useRef } from "react";
 import "leaflet/dist/leaflet.css";
 
 interface ResultsMapProps {
@@ -25,9 +25,12 @@ function parseEWKBPoint(hex: string): [number, number] | null {
     // EWKB: byte_order(1) + type(4) [+ srid(4)] + x(8) + y(8)
     const bo = hex.substring(0, 2); // 01 = little-endian
     if (bo !== "01") return null;
-    let typeHex = hex.substring(2, 10);
+    const typeHex = hex.substring(2, 10);
     const typeInt = parseInt(
-      typeHex.substring(6, 8) + typeHex.substring(4, 6) + typeHex.substring(2, 4) + typeHex.substring(0, 2),
+      typeHex.substring(6, 8) +
+        typeHex.substring(4, 6) +
+        typeHex.substring(2, 4) +
+        typeHex.substring(0, 2),
       16,
     );
     const hasSRID = (typeInt & 0x20000000) !== 0;
@@ -107,12 +110,19 @@ function detectGeomColumnIndex(columns: string[], rows: string[][]): number {
   const sample = rows.slice(0, 10);
   for (let ci = 0; ci < columns.length; ci++) {
     const colName = columns[ci].toLowerCase();
-    const isGeoName = /geom|geometry|geography|location|coordinates|the_geom|wkb_geometry|shape|point|latlng/.test(colName);
+    const isGeoName =
+      /geom|geometry|geography|location|coordinates|the_geom|wkb_geometry|shape|point|latlng/.test(
+        colName,
+      );
 
     let geoCount = 0;
     for (const row of sample) {
       const val = row[ci] ?? "";
-      if (WKT_PREFIX.test(val) || GEOJSON_PREFIX.test(val) || (WKB_HEX.test(val) && val.length >= 40)) {
+      if (
+        WKT_PREFIX.test(val) ||
+        GEOJSON_PREFIX.test(val) ||
+        (WKB_HEX.test(val) && val.length >= 40)
+      ) {
         geoCount++;
       }
     }
@@ -189,7 +199,7 @@ export function ResultsMap({ columns, rows }: ResultsMapProps) {
 
       if (geom.type === "point" && geom.coords.length > 0) {
         const [lat, lng] = geom.coords[0];
-        if (isFinite(lat) && isFinite(lng)) {
+        if (Number.isFinite(lat) && Number.isFinite(lng)) {
           const marker = L.circleMarker([lat, lng], {
             radius: 6,
             color: "#3b82f6",
@@ -203,7 +213,9 @@ export function ResultsMap({ columns, rows }: ResultsMapProps) {
       } else if (geom.type === "linestring") {
         const line = L.polyline(geom.coords, { color: "#3b82f6", weight: 3 }).addTo(map);
         if (popupContent) line.bindPopup(popupContent);
-        geom.coords.forEach((c) => bounds.extend(c));
+        geom.coords.forEach((c) => {
+          bounds.extend(c);
+        });
       } else if (geom.type === "polygon") {
         const poly = L.polygon(geom.coords, {
           color: "#3b82f6",
@@ -212,7 +224,9 @@ export function ResultsMap({ columns, rows }: ResultsMapProps) {
           weight: 2,
         }).addTo(map);
         if (popupContent) poly.bindPopup(popupContent);
-        geom.coords.forEach((c) => bounds.extend(c));
+        geom.coords.forEach((c) => {
+          bounds.extend(c);
+        });
       }
     }
 

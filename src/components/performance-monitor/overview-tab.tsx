@@ -1,5 +1,5 @@
-import { cn } from "@/lib/utils";
 import { Database, HardDrive, Users, Zap } from "lucide-react";
+import { cn } from "@/lib/utils";
 import type { HistoryEntry } from "@/stores/history-store";
 
 interface OverviewTabProps {
@@ -16,10 +16,26 @@ export function OverviewTab({ dbStats, projectHistory, avgTime, failedQueries }:
     <div className="space-y-4">
       {/* Stat cards */}
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        <StatCard icon={<Users className="h-4 w-4" />} label="Active Connections" value={statValue("Active Connections")} />
-        <StatCard icon={<Database className="h-4 w-4" />} label="Database Size" value={statValue("Database Size")} />
-        <StatCard icon={<Zap className="h-4 w-4" />} label="Cache Hit Ratio" value={statValue("Cache Hit Ratio")} />
-        <StatCard icon={<HardDrive className="h-4 w-4" />} label="Deadlocks" value={statValue("Deadlocks")} />
+        <StatCard
+          icon={<Users className="h-4 w-4" />}
+          label="Active Connections"
+          value={statValue("Active Connections")}
+        />
+        <StatCard
+          icon={<Database className="h-4 w-4" />}
+          label="Database Size"
+          value={statValue("Database Size")}
+        />
+        <StatCard
+          icon={<Zap className="h-4 w-4" />}
+          label="Cache Hit Ratio"
+          value={statValue("Cache Hit Ratio")}
+        />
+        <StatCard
+          icon={<HardDrive className="h-4 w-4" />}
+          label="Deadlocks"
+          value={statValue("Deadlocks")}
+        />
       </div>
 
       {/* All stats table */}
@@ -57,7 +73,11 @@ export function OverviewTab({ dbStats, projectHistory, avgTime, failedQueries }:
             <div className="font-mono text-[10px] text-muted-foreground">Avg Execution Time</div>
           </div>
           <div className="p-3 text-center">
-            <div className={cn("font-mono text-lg font-bold", failedQueries > 0 && "text-destructive")}>{failedQueries}</div>
+            <div
+              className={cn("font-mono text-lg font-bold", failedQueries > 0 && "text-destructive")}
+            >
+              {failedQueries}
+            </div>
             <div className="font-mono text-[10px] text-muted-foreground">Failed Queries</div>
           </div>
         </div>

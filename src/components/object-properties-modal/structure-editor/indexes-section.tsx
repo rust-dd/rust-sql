@@ -1,6 +1,6 @@
+import { Plus, Trash2 } from "lucide-react";
 import type { DraftIndex, StructureEditorState } from "@/lib/alter-table-sql";
 import { cn } from "@/lib/utils";
-import { Plus, Trash2 } from "lucide-react";
 import { uid } from "./initialization";
 
 export function IndexesSection({
@@ -36,9 +36,7 @@ export function IndexesSection({
                   setDraft((prev) => ({
                     ...prev,
                     indexes: prev.indexes.map((i) =>
-                      i._id === idx._id
-                        ? { ...i, indexName: e.target.value }
-                        : i,
+                      i._id === idx._id ? { ...i, indexName: e.target.value } : i,
                     ),
                   }));
                 }}
@@ -53,9 +51,7 @@ export function IndexesSection({
                     setDraft((prev) => ({
                       ...prev,
                       indexes: prev.indexes.map((i) =>
-                        i._id === idx._id
-                          ? { ...i, isUnique: e.target.checked }
-                          : i,
+                        i._id === idx._id ? { ...i, isUnique: e.target.checked } : i,
                       ),
                     }));
                   }}
@@ -64,6 +60,7 @@ export function IndexesSection({
                 Unique
               </label>
               <button
+                type="button"
                 onClick={() => {
                   setDraft((prev) => ({
                     ...prev,
@@ -92,6 +89,7 @@ export function IndexesSection({
                 return (
                   <button
                     key={colName}
+                    type="button"
                     onClick={() => {
                       setDraft((prev) => ({
                         ...prev,
@@ -125,17 +123,14 @@ export function IndexesSection({
             key={idx._id}
             className="flex items-center gap-2 px-3 py-2 rounded-lg border border-red-500/20 bg-red-500/5 opacity-60"
           >
-            <span className="text-xs font-mono line-through flex-1">
-              {idx.indexName}
-            </span>
+            <span className="text-xs font-mono line-through flex-1">{idx.indexName}</span>
             <button
+              type="button"
               onClick={() =>
                 setDraft((prev) => ({
                   ...prev,
                   indexes: prev.indexes.map((i) =>
-                    i._id === idx._id
-                      ? { ...i, _status: "existing" as const }
-                      : i,
+                    i._id === idx._id ? { ...i, _status: "existing" as const } : i,
                   ),
                 }))
               }
@@ -146,6 +141,7 @@ export function IndexesSection({
           </div>
         ))}
       <button
+        type="button"
         onClick={() => {
           setDraft((prev) => ({
             ...prev,

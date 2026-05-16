@@ -1,12 +1,5 @@
+import { AlertTriangle, Check, Copy, FileCode, Play, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  AlertTriangle,
-  Check,
-  Copy,
-  FileCode,
-  Play,
-  RefreshCw,
-} from "lucide-react";
 import { LoadingPlaceholder } from "./shared";
 
 export function DDLContent({
@@ -37,12 +30,7 @@ export function DDLContent({
           <AlertTriangle className="h-5 w-5 text-destructive" />
         </div>
         <p className="text-sm text-destructive font-mono">{ddlError}</p>
-        <Button
-          variant="outline"
-          size="sm"
-          className="gap-1.5"
-          onClick={onRetry}
-        >
+        <Button variant="outline" size="sm" className="gap-1.5" onClick={onRetry}>
           <RefreshCw className="h-3 w-3" />
           Retry
         </Button>
@@ -67,9 +55,7 @@ export function DDLContent({
         <div className="flex items-center justify-between px-3 py-1.5 bg-muted/30 border-b border-border/30 shrink-0">
           <div className="flex items-center gap-2">
             <FileCode className="h-3 w-3 text-muted-foreground/50" />
-            <span className="text-[10px] font-mono text-muted-foreground/60">
-              DDL
-            </span>
+            <span className="text-[10px] font-mono text-muted-foreground/60">DDL</span>
           </div>
           <div className="flex items-center gap-1">
             <Button

@@ -1,10 +1,4 @@
 import {
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { cn } from "@/lib/utils";
-import {
   Check,
   Columns3,
   Copy,
@@ -19,6 +13,8 @@ import {
   Table,
   Zap,
 } from "lucide-react";
+import { DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { cn } from "@/lib/utils";
 import type { ObjectType, Tab } from "./types";
 
 const objectIcon: Record<ObjectType, React.ReactNode> = {
@@ -79,12 +75,7 @@ export function ModalHeader({
   setActiveTab: (tab: Tab) => void;
 }) {
   return (
-    <div
-      className={cn(
-        "relative px-5 pt-5 pb-3 bg-gradient-to-b",
-        typeColor[objectType],
-      )}
-    >
+    <div className={cn("relative px-5 pt-5 pb-3 bg-gradient-to-b", typeColor[objectType])}>
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(255,255,255,0.03),transparent_70%)]" />
       <DialogHeader className="relative">
         <div className="flex items-center gap-2.5">
@@ -95,6 +86,7 @@ export function ModalHeader({
             <DialogTitle className="flex items-center gap-2 text-base">
               <span className="truncate">{name}</span>
               <button
+                type="button"
                 onClick={() => copyText(`"${schema}"."${name}"`, "name")}
                 className="text-muted-foreground/40 hover:text-foreground transition-colors shrink-0"
                 title="Copy qualified name"
@@ -112,9 +104,7 @@ export function ModalHeader({
               </span>
               <span className="font-mono text-[11px]">{schema}</span>
               <span className="text-muted-foreground/30">|</span>
-              <span className="font-mono text-[11px] text-muted-foreground/60">
-                {projectId}
-              </span>
+              <span className="font-mono text-[11px] text-muted-foreground/60">{projectId}</span>
               {loading && <Loader2 className="h-3 w-3 animate-spin ml-1" />}
             </DialogDescription>
           </div>
@@ -126,6 +116,7 @@ export function ModalHeader({
         {availableTabs.map((tab) => (
           <button
             key={tab.key}
+            type="button"
             onClick={() => setActiveTab(tab.key)}
             className={cn(
               "flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-medium whitespace-nowrap rounded-md transition-all",

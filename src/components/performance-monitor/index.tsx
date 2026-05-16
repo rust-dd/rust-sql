@@ -1,8 +1,3 @@
-import { useState, useEffect, useCallback, useRef } from "react";
-import { DriverFactory } from "@/lib/database-driver";
-import { useProjectStore } from "@/stores/project-store";
-import { useHistoryStore } from "@/stores/history-store";
-import { cn } from "@/lib/utils";
 import {
   Activity,
   BarChart3,
@@ -16,7 +11,19 @@ import {
   Search,
   Table,
 } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { DriverFactory } from "@/lib/database-driver";
+import { cn } from "@/lib/utils";
+import { useHistoryStore } from "@/stores/history-store";
+import { useProjectStore } from "@/stores/project-store";
+import { ActivityTab } from "./activity-tab";
+import { BloatTab } from "./bloat-tab";
+import { HistoryTab } from "./history-tab";
+import { IndexesTab } from "./indexes-tab";
+import { LocksTab } from "./locks-tab";
+import { OverviewTab } from "./overview-tab";
+import { TableStatsTab } from "./table-stats-tab";
 import type {
   ActivityRow,
   BloatRow,
@@ -25,13 +32,6 @@ import type {
   MonitorTab,
   TableStatRow,
 } from "./types";
-import { OverviewTab } from "./overview-tab";
-import { ActivityTab } from "./activity-tab";
-import { TableStatsTab } from "./table-stats-tab";
-import { HistoryTab } from "./history-tab";
-import { LocksTab } from "./locks-tab";
-import { IndexesTab } from "./indexes-tab";
-import { BloatTab } from "./bloat-tab";
 
 export function PerformanceMonitor({ projectId }: { projectId: string }) {
   const projects = useProjectStore((s) => s.projects);
@@ -87,7 +87,7 @@ export function PerformanceMonitor({ projectId }: { projectId: string }) {
             durationSec: r[7],
             backendType: r[8],
             clientAddr: r[9],
-          }))
+          })),
         );
       }
       if (tStats.status === "fulfilled") {
@@ -107,7 +107,7 @@ export function PerformanceMonitor({ projectId }: { projectId: string }) {
             lastVacuum: r[11],
             lastAutovacuum: r[12],
             lastAnalyze: r[13],
-          }))
+          })),
         );
       }
       if (lk.status === "fulfilled" && lk.value) {
@@ -123,7 +123,7 @@ export function PerformanceMonitor({ projectId }: { projectId: string }) {
             query: r[7],
             duration: r[8],
             waitEvent: r[9],
-          }))
+          })),
         );
       }
       if (iu.status === "fulfilled" && iu.value) {
@@ -138,7 +138,7 @@ export function PerformanceMonitor({ projectId }: { projectId: string }) {
             tuplesFetched: r[6],
             status: r[7],
             definition: r[8],
-          }))
+          })),
         );
       }
       if (bl.status === "fulfilled" && bl.value) {
@@ -154,7 +154,7 @@ export function PerformanceMonitor({ projectId }: { projectId: string }) {
             lastAutovacuum: r[7],
             lastAnalyze: r[8],
             lastAutoanalyze: r[9],
-          }))
+          })),
         );
       }
       setLastRefresh(new Date());
@@ -179,11 +179,14 @@ export function PerformanceMonitor({ projectId }: { projectId: string }) {
   }, [autoRefresh, refresh]);
 
   const projectHistory = historyEntries.filter((e) => e.projectId === projectId);
-  const avgTime = projectHistory.length > 0
-    ? projectHistory.reduce((sum, e) => sum + e.executionTime, 0) / projectHistory.length
-    : 0;
+  const avgTime =
+    projectHistory.length > 0
+      ? projectHistory.reduce((sum, e) => sum + e.executionTime, 0) / projectHistory.length
+      : 0;
   const failedQueries = projectHistory.filter((e) => !e.success).length;
-  const slowQueries = [...projectHistory].sort((a, b) => b.executionTime - a.executionTime).slice(0, 10);
+  const slowQueries = [...projectHistory]
+    .sort((a, b) => b.executionTime - a.executionTime)
+    .slice(0, 10);
 
   const unusedIndexCount = indexUsage.filter((i) => i.status === "unused").length;
   const tablesNeedingVacuum = bloat.filter((b) => parseFloat(b.bloatPct) > 10);
@@ -225,8 +228,18 @@ export function PerformanceMonitor({ projectId }: { projectId: string }) {
           >
             {autoRefresh ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}
           </Button>
-          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => void refresh()} disabled={isLoading}>
-            {isLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7"
+            onClick={() => void refresh()}
+            disabled={isLoading}
+          >
+            {isLoading ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <RefreshCw className="h-3.5 w-3.5" />
+            )}
           </Button>
         </div>
       </div>
@@ -236,12 +249,13 @@ export function PerformanceMonitor({ projectId }: { projectId: string }) {
         {tabs.map((t) => (
           <button
             key={t.id}
+            type="button"
             onClick={() => setTab(t.id)}
             className={cn(
               "flex items-center gap-1.5 px-3 py-2 font-mono text-xs border-b-2 transition-colors",
               tab === t.id
                 ? "border-primary text-foreground"
-                : "border-transparent text-muted-foreground hover:text-foreground"
+                : "border-transparent text-muted-foreground hover:text-foreground",
             )}
           >
             {t.icon}
@@ -273,9 +287,7 @@ export function PerformanceMonitor({ projectId }: { projectId: string }) {
           <IndexesTab indexUsage={indexUsage} unusedIndexCount={unusedIndexCount} />
         )}
 
-        {tab === "bloat" && (
-          <BloatTab bloat={bloat} tablesNeedingVacuum={tablesNeedingVacuum} />
-        )}
+        {tab === "bloat" && <BloatTab bloat={bloat} tablesNeedingVacuum={tablesNeedingVacuum} />}
       </div>
     </div>
   );

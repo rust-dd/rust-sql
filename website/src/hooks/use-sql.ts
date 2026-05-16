@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { getDB, resetDB } from "@/lib/pglite";
 
 export interface QueryResult {
@@ -31,7 +31,7 @@ export function useTables() {
       const res = await db.query<{ table_name: string }>(
         `SELECT table_name FROM information_schema.tables
          WHERE table_schema = 'public' AND table_type = 'BASE TABLE'
-         ORDER BY table_name`
+         ORDER BY table_name`,
       );
       return res.rows.map((r) => r.table_name);
     },
@@ -51,7 +51,7 @@ export function useColumns(table: string | null) {
          FROM information_schema.columns
          WHERE table_schema = 'public' AND table_name = $1
          ORDER BY ordinal_position`,
-        [table]
+        [table],
       );
       return res.rows;
     },

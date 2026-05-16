@@ -18,7 +18,17 @@ export type DriverType = "PGSQL";
 
 export type ProjectMap = Record<string, ProjectDetails>;
 
-export type TabType = "query" | "monitor" | "erd" | "terminal" | "notify" | "roles" | "schema-diff" | "extensions" | "enums" | "pg-settings";
+export type TabType =
+  | "query"
+  | "monitor"
+  | "erd"
+  | "terminal"
+  | "notify"
+  | "roles"
+  | "schema-diff"
+  | "extensions"
+  | "enums"
+  | "pg-settings";
 
 export interface Tab {
   id: string;
@@ -41,15 +51,15 @@ export interface Tab {
 export interface ExplainNode {
   "Node Type": string;
   "Relation Name"?: string;
-  "Alias"?: string;
+  Alias?: string;
   "Join Type"?: string;
   "Index Name"?: string;
   "Index Cond"?: string;
-  "Filter"?: string;
+  Filter?: string;
   "Hash Cond"?: string;
   "Merge Cond"?: string;
   "Sort Key"?: string[];
-  "Strategy"?: string;
+  Strategy?: string;
   "Startup Cost": number;
   "Total Cost": number;
   "Plan Rows": number;
@@ -65,10 +75,10 @@ export interface ExplainNode {
 }
 
 export interface ExplainPlan {
-  "Plan": ExplainNode;
+  Plan: ExplainNode;
   "Planning Time"?: number;
   "Execution Time"?: number;
-  "Triggers"?: unknown[];
+  Triggers?: unknown[];
 }
 
 export interface QueryResult {

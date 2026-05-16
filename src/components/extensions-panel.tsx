@@ -1,11 +1,17 @@
-import { useState, useEffect, useCallback } from "react";
-import { DriverFactory } from "@/lib/database-driver";
-import { useProjectStore } from "@/stores/project-store";
-import { cn } from "@/lib/utils";
-import { ArrowUpCircle, Package, Loader2, RefreshCw, Download, Check, Trash2 } from "lucide-react";
+import { ArrowUpCircle, Check, Download, Loader2, Package, RefreshCw, Trash2 } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { DriverFactory } from "@/lib/database-driver";
+import { cn } from "@/lib/utils";
+import { useProjectStore } from "@/stores/project-store";
 
 interface Extension {
   name: string;
@@ -41,14 +47,24 @@ export function ExtensionsPanel({ projectId }: { projectId: string }) {
         driver.loadAvailableExtensions?.(projectId),
       ]);
       if (inst.status === "fulfilled" && inst.value) {
-        setInstalled(inst.value.map((r) => ({
-          name: r[0], installedVersion: r[1], defaultVersion: r[2], comment: r[3], schema: r[4],
-        })));
+        setInstalled(
+          inst.value.map((r) => ({
+            name: r[0],
+            installedVersion: r[1],
+            defaultVersion: r[2],
+            comment: r[3],
+            schema: r[4],
+          })),
+        );
       }
       if (avail.status === "fulfilled" && avail.value) {
-        setAvailable(avail.value.map((r) => ({
-          name: r[0], version: r[1], comment: r[2],
-        })));
+        setAvailable(
+          avail.value.map((r) => ({
+            name: r[0],
+            version: r[1],
+            comment: r[2],
+          })),
+        );
       }
     } finally {
       setIsLoading(false);
@@ -60,20 +76,23 @@ export function ExtensionsPanel({ projectId }: { projectId: string }) {
   const [confirmDrop, setConfirmDrop] = useState<string | null>(null);
   const [confirmInstall, setConfirmInstall] = useState<string | null>(null);
 
-  const execSQL = useCallback(async (sql: string, extName: string) => {
-    if (!details) return;
-    setBusy(extName);
-    setError(null);
-    try {
-      const driver = DriverFactory.getDriver(details.driver);
-      await driver.runQuery(projectId, sql);
-      await refresh();
-    } catch (err: any) {
-      setError(`${extName}: ${err?.message ?? String(err)}`);
-    } finally {
-      setBusy(null);
-    }
-  }, [details, projectId, refresh]);
+  const execSQL = useCallback(
+    async (sql: string, extName: string) => {
+      if (!details) return;
+      setBusy(extName);
+      setError(null);
+      try {
+        const driver = DriverFactory.getDriver(details.driver);
+        await driver.runQuery(projectId, sql);
+        await refresh();
+      } catch (err: any) {
+        setError(`${extName}: ${err?.message ?? String(err)}`);
+      } finally {
+        setBusy(null);
+      }
+    },
+    [details, projectId, refresh],
+  );
 
   const installExt = useCallback((name: string) => {
     setConfirmInstall(name);
@@ -95,18 +114,25 @@ export function ExtensionsPanel({ projectId }: { projectId: string }) {
     void execSQL(`DROP EXTENSION IF EXISTS "${confirmDrop}" CASCADE;`, confirmDrop);
   }, [confirmDrop, execSQL]);
 
-  const updateExt = useCallback((name: string) => {
-    void execSQL(`ALTER EXTENSION "${name}" UPDATE;`, name);
-  }, [execSQL]);
+  const updateExt = useCallback(
+    (name: string) => {
+      void execSQL(`ALTER EXTENSION "${name}" UPDATE;`, name);
+    },
+    [execSQL],
+  );
 
-  useEffect(() => { void refresh(); }, [refresh]);
+  useEffect(() => {
+    void refresh();
+  }, [refresh]);
 
   const lowerFilter = filter.toLowerCase();
-  const filteredInstalled = installed.filter((e) =>
-    e.name.toLowerCase().includes(lowerFilter) || e.comment.toLowerCase().includes(lowerFilter)
+  const filteredInstalled = installed.filter(
+    (e) =>
+      e.name.toLowerCase().includes(lowerFilter) || e.comment.toLowerCase().includes(lowerFilter),
   );
-  const filteredAvailable = available.filter((e) =>
-    e.name.toLowerCase().includes(lowerFilter) || e.comment.toLowerCase().includes(lowerFilter)
+  const filteredAvailable = available.filter(
+    (e) =>
+      e.name.toLowerCase().includes(lowerFilter) || e.comment.toLowerCase().includes(lowerFilter),
   );
 
   return (
@@ -115,25 +141,49 @@ export function ExtensionsPanel({ projectId }: { projectId: string }) {
         <div className="flex items-center gap-2">
           <Package className="h-4 w-4 text-primary" />
           <span className="font-mono text-sm font-semibold">Extensions</span>
-          <span className="font-mono text-xs text-muted-foreground">{details?.database ?? projectId}</span>
+          <span className="font-mono text-xs text-muted-foreground">
+            {details?.database ?? projectId}
+          </span>
         </div>
-        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => void refresh()} disabled={isLoading}>
-          {isLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-7 w-7"
+          onClick={() => void refresh()}
+          disabled={isLoading}
+        >
+          {isLoading ? (
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+          ) : (
+            <RefreshCw className="h-3.5 w-3.5" />
+          )}
         </Button>
       </div>
 
       <div className="flex items-center gap-2 border-b px-4 py-2">
         <div className="flex gap-0">
-          <button onClick={() => setTab("installed")} className={cn(
-            "px-3 py-1.5 font-mono text-xs border-b-2 transition-colors",
-            tab === "installed" ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground",
-          )}>
+          <button
+            type="button"
+            onClick={() => setTab("installed")}
+            className={cn(
+              "px-3 py-1.5 font-mono text-xs border-b-2 transition-colors",
+              tab === "installed"
+                ? "border-primary text-foreground"
+                : "border-transparent text-muted-foreground hover:text-foreground",
+            )}
+          >
             Installed ({installed.length})
           </button>
-          <button onClick={() => setTab("available")} className={cn(
-            "px-3 py-1.5 font-mono text-xs border-b-2 transition-colors",
-            tab === "available" ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground",
-          )}>
+          <button
+            type="button"
+            onClick={() => setTab("available")}
+            className={cn(
+              "px-3 py-1.5 font-mono text-xs border-b-2 transition-colors",
+              tab === "available"
+                ? "border-primary text-foreground"
+                : "border-transparent text-muted-foreground hover:text-foreground",
+            )}
+          >
             Available ({available.length})
           </button>
         </div>
@@ -155,11 +205,16 @@ export function ExtensionsPanel({ projectId }: { projectId: string }) {
         {tab === "installed" && (
           <div className="space-y-2">
             {filteredInstalled.map((ext) => (
-              <div key={ext.name} className="rounded-md border p-3 hover:bg-muted/30 transition-colors">
+              <div
+                key={ext.name}
+                className="rounded-md border p-3 hover:bg-muted/30 transition-colors"
+              >
                 <div className="flex items-center gap-2">
                   <Check className="h-3.5 w-3.5 text-green-500" />
                   <span className="font-mono text-sm font-medium">{ext.name}</span>
-                  <span className="rounded-full bg-primary/10 px-2 py-0.5 font-mono text-[10px] text-primary">{ext.installedVersion}</span>
+                  <span className="rounded-full bg-primary/10 px-2 py-0.5 font-mono text-[10px] text-primary">
+                    {ext.installedVersion}
+                  </span>
                   {ext.defaultVersion && ext.defaultVersion !== ext.installedVersion && (
                     <Button
                       variant="ghost"
@@ -168,12 +223,18 @@ export function ExtensionsPanel({ projectId }: { projectId: string }) {
                       onClick={() => updateExt(ext.name)}
                       disabled={busy === ext.name}
                     >
-                      {busy === ext.name ? <Loader2 className="h-3 w-3 animate-spin" /> : <ArrowUpCircle className="h-3 w-3" />}
+                      {busy === ext.name ? (
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                      ) : (
+                        <ArrowUpCircle className="h-3 w-3" />
+                      )}
                       Update to {ext.defaultVersion}
                     </Button>
                   )}
                   <span className="ml-auto flex items-center gap-2">
-                    <span className="font-mono text-[10px] text-muted-foreground">{ext.schema}</span>
+                    <span className="font-mono text-[10px] text-muted-foreground">
+                      {ext.schema}
+                    </span>
                     <Button
                       variant="ghost"
                       size="icon"
@@ -182,7 +243,11 @@ export function ExtensionsPanel({ projectId }: { projectId: string }) {
                       disabled={busy === ext.name}
                       title={`DROP EXTENSION "${ext.name}"`}
                     >
-                      {busy === ext.name ? <Loader2 className="h-3 w-3 animate-spin" /> : <Trash2 className="h-3 w-3" />}
+                      {busy === ext.name ? (
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                      ) : (
+                        <Trash2 className="h-3 w-3" />
+                      )}
                     </Button>
                   </span>
                 </div>
@@ -202,11 +267,16 @@ export function ExtensionsPanel({ projectId }: { projectId: string }) {
         {tab === "available" && (
           <div className="space-y-2">
             {filteredAvailable.map((ext) => (
-              <div key={ext.name} className="rounded-md border p-3 hover:bg-muted/30 transition-colors">
+              <div
+                key={ext.name}
+                className="rounded-md border p-3 hover:bg-muted/30 transition-colors"
+              >
                 <div className="flex items-center gap-2">
                   <Download className="h-3.5 w-3.5 text-muted-foreground" />
                   <span className="font-mono text-sm font-medium">{ext.name}</span>
-                  <span className="rounded-full bg-muted px-2 py-0.5 font-mono text-[10px] text-muted-foreground">{ext.version}</span>
+                  <span className="rounded-full bg-muted px-2 py-0.5 font-mono text-[10px] text-muted-foreground">
+                    {ext.version}
+                  </span>
                   <Button
                     variant="outline"
                     size="sm"
@@ -214,7 +284,11 @@ export function ExtensionsPanel({ projectId }: { projectId: string }) {
                     onClick={() => installExt(ext.name)}
                     disabled={busy === ext.name}
                   >
-                    {busy === ext.name ? <Loader2 className="h-3 w-3 animate-spin" /> : <Download className="h-3 w-3" />}
+                    {busy === ext.name ? (
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                    ) : (
+                      <Download className="h-3 w-3" />
+                    )}
                     Install
                   </Button>
                 </div>
@@ -232,39 +306,64 @@ export function ExtensionsPanel({ projectId }: { projectId: string }) {
         )}
       </div>
 
-      <Dialog open={!!confirmInstall} onOpenChange={(open) => { if (!open) setConfirmInstall(null); }}>
+      <Dialog
+        open={!!confirmInstall}
+        onOpenChange={(open) => {
+          if (!open) setConfirmInstall(null);
+        }}
+      >
         <DialogContent className="sm:max-w-[400px]">
           <DialogHeader>
             <DialogTitle className="font-mono">Install Extension</DialogTitle>
             <DialogDescription>
-              Install <span className="font-mono font-semibold text-foreground">{confirmInstall}</span> into the current database?
+              Install{" "}
+              <span className="font-mono font-semibold text-foreground">{confirmInstall}</span> into
+              the current database?
             </DialogDescription>
           </DialogHeader>
           <div className="rounded-md bg-muted/50 px-3 py-2 font-mono text-xs text-muted-foreground">
             CREATE EXTENSION IF NOT EXISTS "{confirmInstall}";
           </div>
           <div className="flex justify-end gap-2">
-            <Button variant="ghost" className="text-xs" onClick={() => setConfirmInstall(null)}>Cancel</Button>
-            <Button variant="gradient" className="text-xs" onClick={confirmInstallExt}>Install</Button>
+            <Button variant="ghost" className="text-xs" onClick={() => setConfirmInstall(null)}>
+              Cancel
+            </Button>
+            <Button variant="gradient" className="text-xs" onClick={confirmInstallExt}>
+              Install
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
 
-      <Dialog open={!!confirmDrop} onOpenChange={(open) => { if (!open) setConfirmDrop(null); }}>
+      <Dialog
+        open={!!confirmDrop}
+        onOpenChange={(open) => {
+          if (!open) setConfirmDrop(null);
+        }}
+      >
         <DialogContent className="sm:max-w-[400px]">
           <DialogHeader>
             <DialogTitle className="font-mono">Drop Extension</DialogTitle>
             <DialogDescription>
-              Are you sure you want to drop <span className="font-mono font-semibold text-foreground">{confirmDrop}</span>?
-              This will also drop all objects that depend on it (CASCADE).
+              Are you sure you want to drop{" "}
+              <span className="font-mono font-semibold text-foreground">{confirmDrop}</span>? This
+              will also drop all objects that depend on it (CASCADE).
             </DialogDescription>
           </DialogHeader>
           <div className="rounded-md bg-muted/50 px-3 py-2 font-mono text-xs text-muted-foreground">
             DROP EXTENSION IF EXISTS "{confirmDrop}" CASCADE;
           </div>
           <div className="flex justify-end gap-2">
-            <Button variant="ghost" className="text-xs" onClick={() => setConfirmDrop(null)}>Cancel</Button>
-            <Button variant="outline" className="text-xs text-destructive border-destructive/50 hover:bg-destructive/10" onClick={confirmDropExt}>Drop Extension</Button>
+            <Button variant="ghost" className="text-xs" onClick={() => setConfirmDrop(null)}>
+              Cancel
+            </Button>
+            <Button
+              variant="outline"
+              className="text-xs text-destructive border-destructive/50 hover:bg-destructive/10"
+              onClick={confirmDropExt}
+            >
+              Drop Extension
+            </Button>
           </div>
         </DialogContent>
       </Dialog>

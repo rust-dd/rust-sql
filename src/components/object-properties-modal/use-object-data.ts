@@ -1,14 +1,7 @@
+import { useCallback, useEffect, useState } from "react";
 import { DriverFactory } from "@/lib/database-driver";
 import { useProjectStore } from "@/stores/project-store";
-import { useCallback, useEffect, useState } from "react";
-import type {
-  FKInfo,
-  FunctionMeta,
-  MatViewStats,
-  ObjectType,
-  TableStats,
-  ViewInfo,
-} from "./types";
+import type { FKInfo, FunctionMeta, MatViewStats, ObjectType, TableStats, ViewInfo } from "./types";
 
 export function useObjectData(
   projectId: string,
@@ -50,13 +43,11 @@ export function useObjectData(
 
     try {
       if (objectType === "table") {
-        const [statsResult, outFKResult, inFKResult] = await Promise.allSettled(
-          [
-            driver.loadTableStatistics?.(projectId, schema, name),
-            driver.loadFKDetails?.(projectId, schema, name, "outgoing"),
-            driver.loadFKDetails?.(projectId, schema, name, "incoming"),
-          ],
-        );
+        const [statsResult, outFKResult, inFKResult] = await Promise.allSettled([
+          driver.loadTableStatistics?.(projectId, schema, name),
+          driver.loadFKDetails?.(projectId, schema, name, "outgoing"),
+          driver.loadFKDetails?.(projectId, schema, name, "incoming"),
+        ]);
 
         if (!columnDetails[metaKey]) {
           storeLoadColumnDetails(projectId, schema, name).catch(() => {});
@@ -85,18 +76,7 @@ export function useObjectData(
 
         const parseFKs = (
           result: PromiseSettledResult<
-            | [
-                string,
-                string,
-                string,
-                string,
-                string,
-                string,
-                string,
-                string,
-                string,
-              ][]
-            | undefined
+            [string, string, string, string, string, string, string, string, string][] | undefined
           >,
         ) => {
           if (result.status !== "fulfilled" || !result.value) return [];
@@ -135,10 +115,7 @@ export function useObjectData(
             definition: infoMap.definition ?? "",
           });
         }
-      } else if (
-        objectType === "function" ||
-        objectType === "trigger-function"
-      ) {
+      } else if (objectType === "function" || objectType === "trigger-function") {
         const info = await driver.loadFunctionInfo?.(projectId, schema, name);
         if (info) {
           const infoMap = Object.fromEntries(info);
@@ -185,7 +162,7 @@ export function useObjectData(
     setMatViewStats(null);
 
     void fetchLiveData();
-  }, [open, objectType, projectId, schema, name]);
+  }, [open, fetchLiveData]);
 
   const fetchDDL = useCallback(async () => {
     const driver = getDriver();
@@ -197,12 +174,7 @@ export function useObjectData(
 
     try {
       if (driver.generateDDL) {
-        const result = await driver.generateDDL(
-          projectId,
-          schema,
-          name,
-          objectType,
-        );
+        const result = await driver.generateDDL(projectId, schema, name, objectType);
         setDdl(result || "No DDL available");
       }
     } catch (err: any) {

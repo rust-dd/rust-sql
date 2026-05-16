@@ -8,7 +8,8 @@ const benchmarks = [
       { name: "DBeaver (JVM)", value: "~500 MB–1 GB", bar: 70 },
       { name: "DataGrip (JVM)", value: "~700 MB–2 GB", bar: 90 },
     ],
-    explanation: "Tauri v2 uses the system WebView instead of bundling Chromium. No separate browser process, no JVM heap overhead.",
+    explanation:
+      "Tauri v2 uses the system WebView instead of bundling Chromium. No separate browser process, no JVM heap overhead.",
   },
   {
     category: "Binary Size",
@@ -27,7 +28,8 @@ const benchmarks = [
     metric: "Rendering approach",
     rsql: { value: "HTML5 Canvas", bar: 0 },
     others: [],
-    explanation: "Glide Data Grid renders to a single <canvas> element. O(1) DOM complexity regardless of dataset size — no layout thrashing, smooth 60fps scroll across 100K+ rows.",
+    explanation:
+      "Glide Data Grid renders to a single <canvas> element. O(1) DOM complexity regardless of dataset size — no layout thrashing, smooth 60fps scroll across 100K+ rows.",
     comparison: [
       { label: "RSQL (Canvas)", detail: "1 DOM node, GPU-accelerated paint", highlight: true },
       { label: "DOM table (pgAdmin)", detail: "rows × cols DOM nodes, CPU layout" },
@@ -44,16 +46,16 @@ const benchmarks = [
       { name: "Java Jackson", value: "~600 MB/s", bar: 22 },
       { name: "Python json", value: "~300 MB/s", bar: 11 },
     ],
-    explanation: "sonic-rs uses SIMD instructions (AVX2/SSE4/NEON). Additionally, RSQL packs result data with flat ASCII separators (\\x1F cell, \\x1E row) bypassing JSON array overhead entirely.",
+    explanation:
+      "sonic-rs uses SIMD instructions (AVX2/SSE4/NEON). Additionally, RSQL packs result data with flat ASCII separators (\\x1F cell, \\x1E row) bypassing JSON array overhead entirely.",
   },
   {
     category: "Large Results",
     metric: "Memory for multi-million-row results",
     rsql: { value: "O(page_size)", bar: 5 },
-    others: [
-      { name: "Typical client", value: "O(total rows)", bar: 95 },
-    ],
-    explanation: "Virtual pagination pre-packs all rows into 2,000-row pages cached on the Rust backend. The frontend only holds ~24 pages in memory at any time — distant pages are LRU-evicted. Browsing 5 million rows uses the same frontend memory as 1,000 rows. No row limit on virtual pagination.",
+    others: [{ name: "Typical client", value: "O(total rows)", bar: 95 }],
+    explanation:
+      "Virtual pagination pre-packs all rows into 2,000-row pages cached on the Rust backend. The frontend only holds ~24 pages in memory at any time — distant pages are LRU-evicted. Browsing 5 million rows uses the same frontend memory as 1,000 rows. No row limit on virtual pagination.",
   },
 ];
 
@@ -65,56 +67,64 @@ const archNumbers = [
     value: "10,000",
     unit: "rows/round-trip",
     source: "CURSOR_FETCH_SIZE in common.rs",
-    detail: "Server-side DECLARE CURSOR + FETCH FORWARD. Streams results in 10K-row chunks without loading entire result set into backend memory.",
+    detail:
+      "Server-side DECLARE CURSOR + FETCH FORWARD. Streams results in 10K-row chunks without loading entire result set into backend memory.",
   },
   {
     label: "Page size",
     value: "2,000",
     unit: "rows/page",
     source: "VITE_PAGE_SIZE default",
-    detail: "Each virtual page contains 2,000 rows, pre-packed with flat separators. Pages are served from cache with zero packing overhead at request time.",
+    detail:
+      "Each virtual page contains 2,000 rows, pre-packed with flat separators. Pages are served from cache with zero packing overhead at request time.",
   },
   {
     label: "Cache window",
     value: "24",
     unit: "pages in memory",
     source: "results-panel.tsx",
-    detail: "Frontend keeps 24 pages around the current viewport. Distant pages are LRU-evicted, keeping memory constant regardless of total result size.",
+    detail:
+      "Frontend keeps 24 pages around the current viewport. Distant pages are LRU-evicted, keeping memory constant regardless of total result size.",
   },
   {
     label: "Concurrent fetches",
     value: "6",
     unit: "parallel page requests",
     source: "results-panel.tsx",
-    detail: "Up to 6 pages fetched in parallel with a queue depth of 32. Pre-fetches pages ahead of scroll direction for seamless navigation.",
+    detail:
+      "Up to 6 pages fetched in parallel with a queue depth of 32. Pre-fetches pages ahead of scroll direction for seamless navigation.",
   },
   {
     label: "Query connections",
     value: "16",
     unit: "pooled connections",
     source: "deadpool-postgres config",
-    detail: "Dual connection pool: 16 for queries, 8 for metadata (schema loading, autocomplete). Query and metadata traffic never block each other.",
+    detail:
+      "Dual connection pool: 16 for queries, 8 for metadata (schema loading, autocomplete). Query and metadata traffic never block each other.",
   },
   {
     label: "Parallel packing",
     value: "50K+",
     unit: "row threshold",
     source: "rayon in common.rs",
-    detail: "Results over 50,000 rows are packed into pages using rayon parallel iterators. Smaller datasets use sequential packing to avoid thread overhead.",
+    detail:
+      "Results over 50,000 rows are packed into pages using rayon parallel iterators. Smaller datasets use sequential packing to avoid thread overhead.",
   },
   {
     label: "Virtual pagination",
     value: "No limit",
     unit: "on row count",
     source: "execute_virtual in common.rs",
-    detail: "All rows are pre-packed into pages on the Rust backend. The frontend requests pages on demand — 5M+ rows work seamlessly. Streaming mode (real-time push) has a separate 500K safety cap.",
+    detail:
+      "All rows are pre-packed into pages on the Rust backend. The frontend requests pages on demand — 5M+ rows work seamlessly. Streaming mode (real-time push) has a separate 500K safety cap.",
   },
   {
     label: "IPC format",
     value: "\\x1F / \\x1E",
     unit: "cell / row separator",
     source: "common.rs packed format",
-    detail: "Results packed as flat strings with ASCII Unit Separator (\\x1F) between cells and Record Separator (\\x1E) between rows. No JSON array nesting, no per-cell quotes.",
+    detail:
+      "Results packed as flat strings with ASCII Unit Separator (\\x1F) between cells and Record Separator (\\x1E) between rows. No JSON array nesting, no per-cell quotes.",
   },
 ];
 
@@ -126,9 +136,7 @@ export function Benchmarks() {
 
         <div className="mb-12 max-w-lg">
           <span className="section-label">Performance</span>
-          <h2 className="font-display text-[clamp(1.8rem,4vw,2.8rem)] mt-3">
-            Built to be fast
-          </h2>
+          <h2 className="font-display text-[clamp(1.8rem,4vw,2.8rem)] mt-3">Built to be fast</h2>
           <p className="text-[color:var(--fg-muted)] mt-3 text-[15px] leading-relaxed">
             Every layer is optimized — from SIMD serialization to canvas rendering.
           </p>
@@ -143,19 +151,22 @@ export function Benchmarks() {
                   <h3 className="text-base font-semibold">{b.category}</h3>
                   <p className="text-xs text-[color:var(--fg-subtle)] font-mono">{b.metric}</p>
                 </div>
-                <div className="text-lg font-bold accent-text font-mono">
-                  {b.rsql.value}
-                </div>
+                <div className="text-lg font-bold accent-text font-mono">{b.rsql.value}</div>
               </div>
 
               {b.others.length > 0 && (
                 <div className="space-y-3">
                   <div className="flex items-center gap-3">
-                    <span className="w-[120px] sm:w-[160px] text-sm font-medium accent-text shrink-0">RSQL</span>
+                    <span className="w-[120px] sm:w-[160px] text-sm font-medium accent-text shrink-0">
+                      RSQL
+                    </span>
                     <div className="flex-1 h-6 bg-[var(--surface-raised)] rounded-lg overflow-hidden">
                       <div
                         className="h-full rounded-lg flex items-center px-2 text-[10px] font-mono text-white font-semibold"
-                        style={{ width: `${Math.max(b.rsql.bar, 8)}%`, background: "var(--accent)" }}
+                        style={{
+                          width: `${Math.max(b.rsql.bar, 8)}%`,
+                          background: "var(--accent)",
+                        }}
                       >
                         {b.rsql.value}
                       </div>
@@ -163,7 +174,9 @@ export function Benchmarks() {
                   </div>
                   {b.others.map((o) => (
                     <div key={o.name} className="flex items-center gap-3">
-                      <span className="w-[120px] sm:w-[160px] text-sm text-[color:var(--fg-muted)] shrink-0 truncate">{o.name}</span>
+                      <span className="w-[120px] sm:w-[160px] text-sm text-[color:var(--fg-muted)] shrink-0 truncate">
+                        {o.name}
+                      </span>
                       <div className="flex-1 h-6 bg-[var(--surface-raised)] rounded-lg overflow-hidden">
                         <div
                           className="h-full rounded-lg flex items-center px-2 text-[10px] font-mono text-[color:var(--fg-muted)] font-medium"
@@ -188,16 +201,22 @@ export function Benchmarks() {
                           : "border-[color:var(--border-subtle)]"
                       }`}
                     >
-                      <div className={`text-sm font-medium ${c.highlight ? "accent-text" : "text-[color:var(--fg-muted)]"}`}>
+                      <div
+                        className={`text-sm font-medium ${c.highlight ? "accent-text" : "text-[color:var(--fg-muted)]"}`}
+                      >
                         {c.label}
                       </div>
-                      <div className="text-xs text-[color:var(--fg-subtle)] mt-0.5 font-mono">{c.detail}</div>
+                      <div className="text-xs text-[color:var(--fg-subtle)] mt-0.5 font-mono">
+                        {c.detail}
+                      </div>
                     </div>
                   ))}
                 </div>
               )}
 
-              <p className="mt-4 text-xs text-[color:var(--fg-subtle)] leading-relaxed">{b.explanation}</p>
+              <p className="mt-4 text-xs text-[color:var(--fg-subtle)] leading-relaxed">
+                {b.explanation}
+              </p>
             </div>
           ))}
         </div>
@@ -216,7 +235,10 @@ export function Benchmarks() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-px bg-[var(--border-subtle)] rounded-2xl overflow-hidden border border-[color:var(--border-subtle)]">
             {archNumbers.map((n) => (
-              <div key={n.label} className="bg-[var(--bg)] p-5 hover:bg-[var(--accent-muted)] transition-colors">
+              <div
+                key={n.label}
+                className="bg-[var(--bg)] p-5 hover:bg-[var(--accent-muted)] transition-colors"
+              >
                 <div className="flex items-baseline gap-2 mb-1">
                   <span className="text-2xl font-bold font-mono accent-text">{n.value}</span>
                   <span className="text-xs text-[color:var(--fg-subtle)] font-mono">{n.unit}</span>
@@ -246,15 +268,21 @@ export function Benchmarks() {
                 { label: "Canvas Grid", sub: "WebGL render" },
               ].map((step, i, arr) => (
                 <div key={step.label} className="flex items-center">
-                  <div className={`px-3 py-2 rounded-xl border text-center shrink-0 ${
-                    i === 0 || i === arr.length - 1
-                      ? "border-[color:var(--accent)] bg-[var(--accent-muted)]"
-                      : "border-[color:var(--border-subtle)]"
-                  }`}>
-                    <div className={`font-semibold ${i === 0 || i === arr.length - 1 ? "accent-text" : "text-[color:var(--fg)]"}`}>
+                  <div
+                    className={`px-3 py-2 rounded-xl border text-center shrink-0 ${
+                      i === 0 || i === arr.length - 1
+                        ? "border-[color:var(--accent)] bg-[var(--accent-muted)]"
+                        : "border-[color:var(--border-subtle)]"
+                    }`}
+                  >
+                    <div
+                      className={`font-semibold ${i === 0 || i === arr.length - 1 ? "accent-text" : "text-[color:var(--fg)]"}`}
+                    >
                       {step.label}
                     </div>
-                    <div className="text-[9px] text-[color:var(--fg-subtle)] mt-0.5">{step.sub}</div>
+                    <div className="text-[9px] text-[color:var(--fg-subtle)] mt-0.5">
+                      {step.sub}
+                    </div>
                   </div>
                   {i < arr.length - 1 && (
                     <div className="w-6 h-px bg-[var(--border)] mx-0.5 shrink-0 relative">
@@ -266,15 +294,18 @@ export function Benchmarks() {
             </div>
           </div>
           <p className="mt-4 text-xs text-[color:var(--fg-subtle)] leading-relaxed">
-            End-to-end: SQL text → Rust IPC → PostgreSQL cursor → parallel page packing → SIMD serialization → canvas paint.
-            Each page (2,000 rows) is pre-packed and cached — subsequent page requests are served with zero processing overhead.
+            End-to-end: SQL text → Rust IPC → PostgreSQL cursor → parallel page packing → SIMD
+            serialization → canvas paint. Each page (2,000 rows) is pre-packed and cached —
+            subsequent page requests are served with zero processing overhead.
           </p>
         </div>
 
         <p className="mt-6 text-[10px] text-[color:var(--fg-subtle)] font-mono text-center">
-          All numbers verified from source: src-tauri/src/drivers/common.rs, pgsql.rs, src/components/results-panel.tsx.
+          All numbers verified from source: src-tauri/src/drivers/common.rs, pgsql.rs,
+          src/components/results-panel.tsx.
           <br />
-          Serialization throughput from sonic-rs published benchmarks. Memory figures are typical ranges on Apple M1.
+          Serialization throughput from sonic-rs published benchmarks. Memory figures are typical
+          ranges on Apple M1.
         </p>
       </div>
     </section>

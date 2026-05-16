@@ -1,11 +1,5 @@
+import { Check, Key, Link2, Loader2, Shield } from "lucide-react";
 import { cn } from "@/lib/utils";
-import {
-  Check,
-  Key,
-  Link2,
-  Loader2,
-  Shield,
-} from "lucide-react";
 
 export function StatCard({
   label,
@@ -47,9 +41,7 @@ export function InfoRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-center justify-between py-1.5 border-b border-border/20 last:border-0">
       <span className="text-muted-foreground/70 text-[11px]">{label}</span>
-      <span className="text-foreground text-[11px] font-medium text-right">
-        {value}
-      </span>
+      <span className="text-foreground text-[11px] font-medium text-right">{value}</span>
     </div>
   );
 }
@@ -80,14 +72,10 @@ export function PropertySection({
 }
 
 export function ConstraintIcon({ type }: { type: string }) {
-  if (type === "PRIMARY KEY")
-    return <Key className="h-3 w-3 text-warning shrink-0" />;
-  if (type === "FOREIGN KEY")
-    return <Link2 className="h-3 w-3 text-blue-500 shrink-0" />;
-  if (type === "UNIQUE")
-    return <Shield className="h-3 w-3 text-blue-500 shrink-0" />;
-  if (type === "CHECK")
-    return <Check className="h-3 w-3 text-muted-foreground shrink-0" />;
+  if (type === "PRIMARY KEY") return <Key className="h-3 w-3 text-warning shrink-0" />;
+  if (type === "FOREIGN KEY") return <Link2 className="h-3 w-3 text-blue-500 shrink-0" />;
+  if (type === "UNIQUE") return <Shield className="h-3 w-3 text-blue-500 shrink-0" />;
+  if (type === "CHECK") return <Check className="h-3 w-3 text-muted-foreground shrink-0" />;
   return <Link2 className="h-3 w-3 text-muted-foreground/50 shrink-0" />;
 }
 
@@ -107,7 +95,7 @@ export function formatTimestamp(ts: string): string {
   if (ts === "never") return "never";
   try {
     const d = new Date(ts);
-    if (isNaN(d.getTime())) return ts;
+    if (Number.isNaN(d.getTime())) return ts;
     const now = Date.now();
     const diff = now - d.getTime();
     if (diff < 60000) return "just now";

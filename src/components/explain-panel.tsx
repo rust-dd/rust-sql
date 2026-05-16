@@ -1,15 +1,7 @@
-import { useMemo } from "react";
+import { ArrowRight, ChevronDown, ChevronRight, Clock, Layers, Timer } from "lucide-react";
+import React, { useMemo } from "react";
 import { cn } from "@/lib/utils";
 import type { ExplainNode, ExplainPlan } from "@/types";
-import {
-  ArrowRight,
-  ChevronDown,
-  ChevronRight,
-  Clock,
-  Layers,
-  Timer,
-} from "lucide-react";
-import React from "react";
 
 interface ExplainPanelProps {
   plan: ExplainPlan;
@@ -64,11 +56,9 @@ function PlanNode({ node, depth, maxTime }: { node: ExplainNode; depth: number; 
   const nodeLabel = useMemo(() => {
     const parts = [node["Node Type"]];
     if (node["Join Type"]) parts[0] = `${node["Join Type"]} ${parts[0]}`;
-    if (node["Strategy"]) parts.push(`(${node["Strategy"]})`);
+    if (node.Strategy) parts.push(`(${node.Strategy})`);
     if (node["Relation Name"]) {
-      const alias = node["Alias"] && node["Alias"] !== node["Relation Name"]
-        ? ` as ${node["Alias"]}`
-        : "";
+      const alias = node.Alias && node.Alias !== node["Relation Name"] ? ` as ${node.Alias}` : "";
       parts.push(`on ${node["Relation Name"]}${alias}`);
     }
     if (node["Index Name"]) parts.push(`using ${node["Index Name"]}`);
@@ -76,7 +66,7 @@ function PlanNode({ node, depth, maxTime }: { node: ExplainNode; depth: number; 
   }, [node]);
 
   const details: string[] = [];
-  if (node["Filter"]) details.push(`Filter: ${node["Filter"]}`);
+  if (node.Filter) details.push(`Filter: ${node.Filter}`);
   if (node["Index Cond"]) details.push(`Index Cond: ${node["Index Cond"]}`);
   if (node["Hash Cond"]) details.push(`Hash Cond: ${node["Hash Cond"]}`);
   if (node["Merge Cond"]) details.push(`Merge Cond: ${node["Merge Cond"]}`);
@@ -91,9 +81,11 @@ function PlanNode({ node, depth, maxTime }: { node: ExplainNode; depth: number; 
         {/* Node header */}
         <div className="flex items-center gap-2">
           {hasChildren ? (
-            expanded
-              ? <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-              : <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+            expanded ? (
+              <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+            ) : (
+              <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+            )
           ) : (
             <ArrowRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground/30" />
           )}
@@ -106,7 +98,11 @@ function PlanNode({ node, depth, maxTime }: { node: ExplainNode; depth: number; 
             <div
               className={cn(
                 "h-full rounded-full transition-all",
-                timePercent > 80 ? "bg-destructive" : timePercent > 40 ? "bg-warning" : "bg-success",
+                timePercent > 80
+                  ? "bg-destructive"
+                  : timePercent > 40
+                    ? "bg-warning"
+                    : "bg-success",
               )}
               style={{ width: `${Math.max(1, timePercent)}%` }}
             />
@@ -117,9 +113,16 @@ function PlanNode({ node, depth, maxTime }: { node: ExplainNode; depth: number; 
         <div className="mt-1 ml-5.5 flex flex-wrap gap-x-4 gap-y-0.5">
           <Stat label="Time" value={`${totalActualTime.toFixed(2)}ms`} warn={timePercent > 60} />
           <Stat label="Rows" value={actualRows.toLocaleString()} />
-          <Stat label="Est." value={planRows.toLocaleString()} warn={rowEstimateRatio > 10 || rowEstimateRatio < 0.1} />
+          <Stat
+            label="Est."
+            value={planRows.toLocaleString()}
+            warn={rowEstimateRatio > 10 || rowEstimateRatio < 0.1}
+          />
           {loops > 1 && <Stat label="Loops" value={loops.toLocaleString()} />}
-          <Stat label="Cost" value={`${node["Startup Cost"]?.toFixed(1)}..${node["Total Cost"]?.toFixed(1)}`} />
+          <Stat
+            label="Cost"
+            value={`${node["Startup Cost"]?.toFixed(1)}..${node["Total Cost"]?.toFixed(1)}`}
+          />
           {node["Shared Hit Blocks"] != null && (
             <Stat label="Buffers Hit" value={node["Shared Hit Blocks"].toLocaleString()} />
           )}
@@ -132,7 +135,9 @@ function PlanNode({ node, depth, maxTime }: { node: ExplainNode; depth: number; 
         {details.length > 0 && (
           <div className="mt-1 ml-5.5 space-y-0.5">
             {details.map((d) => (
-              <div key={d} className="font-mono text-[10px] text-muted-foreground">{d}</div>
+              <div key={d} className="font-mono text-[10px] text-muted-foreground">
+                {d}
+              </div>
             ))}
           </div>
         )}
@@ -141,7 +146,7 @@ function PlanNode({ node, depth, maxTime }: { node: ExplainNode; depth: number; 
       {/* Children */}
       {expanded && hasChildren && (
         <div className="border-l border-border/50 ml-2.5">
-          {node.Plans!.map((child, i) => (
+          {node.Plans?.map((child, i) => (
             <PlanNode key={i} node={child} depth={depth + 1} maxTime={maxTime} />
           ))}
         </div>

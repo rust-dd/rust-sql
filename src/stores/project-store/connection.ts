@@ -1,5 +1,5 @@
-import type { StateCreator } from "zustand";
 import { toast } from "sonner";
+import type { StateCreator } from "zustand";
 import { DriverFactory } from "@/lib/database-driver";
 import { ProjectConnectionStatus as PCS } from "@/types";
 import type { ProjectState } from "./index";
@@ -37,13 +37,7 @@ export const createConnectionSlice: StateCreator<
       ];
       const ssh =
         d.sshEnabled === "true"
-          ? [
-              d.sshHost,
-              d.sshPort || "22",
-              d.sshUser,
-              d.sshPassword,
-              d.sshKeyPath,
-            ]
+          ? [d.sshHost, d.sshPort || "22", d.sshUser, d.sshPassword, d.sshKeyPath]
           : undefined;
       const st = await driver.connect(projectId, key, ssh);
       set((s) => {
@@ -58,19 +52,13 @@ export const createConnectionSlice: StateCreator<
         ]);
         set((s) => {
           s.schemas[projectId] = sc.status === "fulfilled" ? sc.value : [];
-          s.serverDatabases[projectId] =
-            dbs.status === "fulfilled" && dbs.value ? dbs.value : [];
-          s.serverTablespaces[projectId] =
-            tsp.status === "fulfilled" && tsp.value ? tsp.value : [];
+          s.serverDatabases[projectId] = dbs.status === "fulfilled" && dbs.value ? dbs.value : [];
+          s.serverTablespaces[projectId] = tsp.status === "fulfilled" && tsp.value ? tsp.value : [];
         });
       }
     } catch (err: unknown) {
       const msg =
-        err instanceof Error
-          ? err.message
-          : typeof err === "string"
-            ? err
-            : "Connection failed";
+        err instanceof Error ? err.message : typeof err === "string" ? err : "Connection failed";
       set((s) => {
         s.status[projectId] = PCS.Failed;
         s.connectionErrors[projectId] = msg;
@@ -146,10 +134,8 @@ export const createConnectionSlice: StateCreator<
       ]);
       set((s) => {
         s.schemas[projectId] = sc.status === "fulfilled" ? sc.value : [];
-        s.serverDatabases[projectId] =
-          dbs.status === "fulfilled" && dbs.value ? dbs.value : [];
-        s.serverTablespaces[projectId] =
-          tsp.status === "fulfilled" && tsp.value ? tsp.value : [];
+        s.serverDatabases[projectId] = dbs.status === "fulfilled" && dbs.value ? dbs.value : [];
+        s.serverTablespaces[projectId] = tsp.status === "fulfilled" && tsp.value ? tsp.value : [];
       });
 
       await Promise.all(

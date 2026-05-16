@@ -1,11 +1,11 @@
+import { Download, Github, Menu, Moon, Sun, X } from "lucide-react";
 import { useEffect, useState } from "react";
-import { Hero } from "@/components/Hero";
-import { Features } from "@/components/Features";
-import { Comparison } from "@/components/Comparison";
 import { Benchmarks } from "@/components/Benchmarks";
-import { Demo } from "@/components/Demo";
+import { Comparison } from "@/components/Comparison";
 import { CTA } from "@/components/CTA";
-import { Github, Download, Moon, Sun, Menu, X } from "lucide-react";
+import { Demo } from "@/components/Demo";
+import { Features } from "@/components/Features";
+import { Hero } from "@/components/Hero";
 
 const THEME_KEY = "rsql-theme";
 type Theme = "dark" | "light";
@@ -86,6 +86,7 @@ export function App() {
 
           <div className="flex items-center gap-2">
             <button
+              type="button"
               onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
               aria-label="Theme"
               className="h-8 w-8 rounded-full flex items-center justify-center transition-colors hover:bg-[var(--accent-muted)]"
@@ -104,6 +105,7 @@ export function App() {
               Download
             </a>
             <button
+              type="button"
               onClick={() => setMenu(!menu)}
               className="h-8 w-8 rounded-full flex items-center justify-center md:hidden"
               style={{ color: "var(--fg-muted)" }}
@@ -155,9 +157,30 @@ export function App() {
               </span>
             </div>
             <div className="flex gap-4 text-sm" style={{ color: "var(--fg-subtle)" }}>
-              <a href="https://github.com/rust-dd/rust-sql" target="_blank" rel="noopener noreferrer" className="hover:underline">Source</a>
-              <a href="https://github.com/rust-dd/rust-sql/releases" target="_blank" rel="noopener noreferrer" className="hover:underline">Releases</a>
-              <a href="https://github.com/rust-dd/rust-sql/issues" target="_blank" rel="noopener noreferrer" className="hover:underline">Issues</a>
+              <a
+                href="https://github.com/rust-dd/rust-sql"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:underline"
+              >
+                Source
+              </a>
+              <a
+                href="https://github.com/rust-dd/rust-sql/releases"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:underline"
+              >
+                Releases
+              </a>
+              <a
+                href="https://github.com/rust-dd/rust-sql/issues"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:underline"
+              >
+                Issues
+              </a>
             </div>
           </div>
         </div>

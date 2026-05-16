@@ -1,10 +1,20 @@
 import { Command } from "cmdk";
+import {
+  AlignLeft,
+  Download,
+  GitBranch,
+  Moon,
+  Pin,
+  PinOff,
+  Play,
+  Plus,
+  Save,
+  Sun,
+  Terminal,
+  XCircle,
+} from "lucide-react";
 import { useTabStore } from "@/stores/tab-store";
 import { useUIStore } from "@/stores/ui-store";
-import {
-  Save, Plus, Play, GitBranch, AlignLeft, Moon, Sun, Terminal,
-  XCircle, Pin, PinOff, Download,
-} from "lucide-react";
 import type { Page } from "./types";
 
 type UIState = ReturnType<typeof useUIStore.getState>;
@@ -42,36 +52,77 @@ export function ActionsGroup({
 }) {
   return (
     <Command.Group heading="Actions">
-      <Command.Item value="New Connection" onSelect={() => { onClose(); setConnectionModalOpen(true); }}>
+      <Command.Item
+        value="New Connection"
+        onSelect={() => {
+          onClose();
+          setConnectionModalOpen(true);
+        }}
+      >
         <Plus className="h-4 w-4 text-muted-foreground" />
         <span>New Connection</span>
         <span className="cmdk-meta">Connection</span>
       </Command.Item>
-      <Command.Item value="New Query Tab" onSelect={() => { onClose(); useTabStore.getState().openTab(activeProject); }}>
+      <Command.Item
+        value="New Query Tab"
+        onSelect={() => {
+          onClose();
+          useTabStore.getState().openTab(activeProject);
+        }}
+      >
         <Plus className="h-4 w-4 text-muted-foreground" />
         <span>New Query Tab</span>
       </Command.Item>
-      <Command.Item value="Open Terminal" onSelect={() => { onClose(); useTabStore.getState().openTerminalTab(); }}>
+      <Command.Item
+        value="Open Terminal"
+        onSelect={() => {
+          onClose();
+          useTabStore.getState().openTerminalTab();
+        }}
+      >
         <Terminal className="h-4 w-4 text-muted-foreground" />
         <span>Open Terminal</span>
         <span className="cmdk-detail">{navigator.platform.includes("Mac") ? "⌘" : "Ctrl"}+`</span>
       </Command.Item>
       {activeProject && hasQuery && (
         <>
-          <Command.Item value="Execute Query" onSelect={() => { onClose(); onExecute(); }}>
+          <Command.Item
+            value="Execute Query"
+            onSelect={() => {
+              onClose();
+              onExecute();
+            }}
+          >
             <Play className="h-4 w-4 text-muted-foreground" />
             <span>Execute Query</span>
-            <span className="cmdk-detail">{navigator.platform.includes("Mac") ? "⌘" : "Ctrl"}+Enter</span>
+            <span className="cmdk-detail">
+              {navigator.platform.includes("Mac") ? "⌘" : "Ctrl"}+Enter
+            </span>
           </Command.Item>
-          <Command.Item value="Explain Query" onSelect={() => { onClose(); onExplain(); }}>
+          <Command.Item
+            value="Explain Query"
+            onSelect={() => {
+              onClose();
+              onExplain();
+            }}
+          >
             <GitBranch className="h-4 w-4 text-muted-foreground" />
             <span>Explain Query</span>
-            <span className="cmdk-detail">{navigator.platform.includes("Mac") ? "⌘" : "Ctrl"}+Shift+Enter</span>
+            <span className="cmdk-detail">
+              {navigator.platform.includes("Mac") ? "⌘" : "Ctrl"}+Shift+Enter
+            </span>
           </Command.Item>
-          <Command.Item value="Cancel Query" onSelect={() => { onClose(); }}>
+          <Command.Item
+            value="Cancel Query"
+            onSelect={() => {
+              onClose();
+            }}
+          >
             <XCircle className="h-4 w-4 text-muted-foreground" />
             <span>Cancel Query</span>
-            <span className="cmdk-detail">{navigator.platform.includes("Mac") ? "⌘" : "Ctrl"}+.</span>
+            <span className="cmdk-detail">
+              {navigator.platform.includes("Mac") ? "⌘" : "Ctrl"}+.
+            </span>
           </Command.Item>
         </>
       )}
@@ -87,31 +138,57 @@ export function ActionsGroup({
           </Command.Item>
         </>
       )}
-      <Command.Item value="Toggle Theme Dark Light" onSelect={() => { onClose(); toggleTheme(); }}>
-        {theme === "light"
-          ? <Moon className="h-4 w-4 text-muted-foreground" />
-          : <Sun className="h-4 w-4 text-muted-foreground" />}
+      <Command.Item
+        value="Toggle Theme Dark Light"
+        onSelect={() => {
+          onClose();
+          toggleTheme();
+        }}
+      >
+        {theme === "light" ? (
+          <Moon className="h-4 w-4 text-muted-foreground" />
+        ) : (
+          <Sun className="h-4 w-4 text-muted-foreground" />
+        )}
         <span>{theme === "light" ? "Dark Mode" : "Light Mode"}</span>
       </Command.Item>
-      <Command.Item value="Check For Updates" onSelect={() => { onClose(); onCheckUpdates(); }}>
+      <Command.Item
+        value="Check For Updates"
+        onSelect={() => {
+          onClose();
+          onCheckUpdates();
+        }}
+      >
         <Download className="h-4 w-4 text-muted-foreground" />
         <span>Check for Updates</span>
         <span className="cmdk-meta">App</span>
       </Command.Item>
       {pinnedResult ? (
-        <Command.Item value="Clear Pinned Result" onSelect={() => { onClose(); clearPinnedResult(); }}>
+        <Command.Item
+          value="Clear Pinned Result"
+          onSelect={() => {
+            onClose();
+            clearPinnedResult();
+          }}
+        >
           <PinOff className="h-4 w-4 text-muted-foreground" />
           <span>Clear Pinned Result</span>
         </Command.Item>
-      ) : activeTabResult && (
-        <Command.Item value="Pin Current Result" onSelect={() => {
-          onClose();
-          const tab = useTabStore.getState().tabs[useTabStore.getState().selectedTabIndex];
-          if (tab?.result) useUIStore.getState().pinResult(tab.result, tab.editorValue.slice(0, 60));
-        }}>
-          <Pin className="h-4 w-4 text-muted-foreground" />
-          <span>Pin Current Result</span>
-        </Command.Item>
+      ) : (
+        activeTabResult && (
+          <Command.Item
+            value="Pin Current Result"
+            onSelect={() => {
+              onClose();
+              const tab = useTabStore.getState().tabs[useTabStore.getState().selectedTabIndex];
+              if (tab?.result)
+                useUIStore.getState().pinResult(tab.result, tab.editorValue.slice(0, 60));
+            }}
+          >
+            <Pin className="h-4 w-4 text-muted-foreground" />
+            <span>Pin Current Result</span>
+          </Command.Item>
+        )
       )}
     </Command.Group>
   );

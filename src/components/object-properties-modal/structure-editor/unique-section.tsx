@@ -1,9 +1,6 @@
-import type {
-  DraftUniqueConstraint,
-  StructureEditorState,
-} from "@/lib/alter-table-sql";
-import { cn } from "@/lib/utils";
 import { Plus, Trash2 } from "lucide-react";
+import type { DraftUniqueConstraint, StructureEditorState } from "@/lib/alter-table-sql";
+import { cn } from "@/lib/utils";
 import { uid } from "./initialization";
 
 export function UniqueSection({
@@ -39,9 +36,7 @@ export function UniqueSection({
                   setDraft((prev) => ({
                     ...prev,
                     uniqueConstraints: prev.uniqueConstraints.map((u) =>
-                      u._id === uc._id
-                        ? { ...u, constraintName: e.target.value }
-                        : u,
+                      u._id === uc._id ? { ...u, constraintName: e.target.value } : u,
                     ),
                   }));
                 }}
@@ -49,6 +44,7 @@ export function UniqueSection({
                 placeholder="Constraint name"
               />
               <button
+                type="button"
                 onClick={() => {
                   setDraft((prev) => ({
                     ...prev,
@@ -77,18 +73,17 @@ export function UniqueSection({
                 return (
                   <button
                     key={colName}
+                    type="button"
                     onClick={() => {
                       setDraft((prev) => ({
                         ...prev,
-                        uniqueConstraints: prev.uniqueConstraints.map(
-                          (u) => {
-                            if (u._id !== uc._id) return u;
-                            const newCols = selected
-                              ? u.columns.filter((c) => c !== colName)
-                              : [...u.columns, colName];
-                            return { ...u, columns: newCols };
-                          },
-                        ),
+                        uniqueConstraints: prev.uniqueConstraints.map((u) => {
+                          if (u._id !== uc._id) return u;
+                          const newCols = selected
+                            ? u.columns.filter((c) => c !== colName)
+                            : [...u.columns, colName];
+                          return { ...u, columns: newCols };
+                        }),
                       }));
                     }}
                     className={cn(
@@ -112,17 +107,14 @@ export function UniqueSection({
             key={uc._id}
             className="flex items-center gap-2 px-3 py-2 rounded-lg border border-red-500/20 bg-red-500/5 opacity-60"
           >
-            <span className="text-xs font-mono line-through flex-1">
-              {uc.constraintName}
-            </span>
+            <span className="text-xs font-mono line-through flex-1">{uc.constraintName}</span>
             <button
+              type="button"
               onClick={() =>
                 setDraft((prev) => ({
                   ...prev,
                   uniqueConstraints: prev.uniqueConstraints.map((u) =>
-                    u._id === uc._id
-                      ? { ...u, _status: "existing" as const }
-                      : u,
+                    u._id === uc._id ? { ...u, _status: "existing" as const } : u,
                   ),
                 }))
               }
@@ -133,6 +125,7 @@ export function UniqueSection({
           </div>
         ))}
       <button
+        type="button"
         onClick={() => {
           setDraft((prev) => ({
             ...prev,

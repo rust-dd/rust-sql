@@ -1,6 +1,6 @@
 import type { StateCreator } from "zustand";
 import { DriverFactory } from "@/lib/database-driver";
-import type { TableInfo, ColumnDetail } from "@/types";
+import type { ColumnDetail, TableInfo } from "@/types";
 import type { ProjectState } from "./index";
 
 export type SchemaSlice = {
@@ -10,16 +10,8 @@ export type SchemaSlice = {
   columnDetails: Record<string, ColumnDetail[]>;
   loadSchemas: (projectId: string) => Promise<void>;
   loadTables: (projectId: string, schema: string) => Promise<void>;
-  loadColumns: (
-    projectId: string,
-    schema: string,
-    table: string,
-  ) => Promise<string[]>;
-  loadColumnDetails: (
-    projectId: string,
-    schema: string,
-    table: string,
-  ) => Promise<ColumnDetail[]>;
+  loadColumns: (projectId: string, schema: string, table: string) => Promise<string[]>;
+  loadColumnDetails: (projectId: string, schema: string, table: string) => Promise<ColumnDetail[]>;
   loadSchemaObjects: (projectId: string, schema: string) => Promise<void>;
 };
 
@@ -75,11 +67,7 @@ export const createSchemaSlice: StateCreator<
     return cols;
   },
 
-  loadColumnDetails: async (
-    projectId: string,
-    schema: string,
-    table: string,
-  ) => {
+  loadColumnDetails: async (projectId: string, schema: string, table: string) => {
     const key = `${projectId}::${schema}::${table}`;
     const { columnDetails, projects } = get();
     if (columnDetails[key]) return columnDetails[key];

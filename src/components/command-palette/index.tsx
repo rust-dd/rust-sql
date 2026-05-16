@@ -1,24 +1,23 @@
-import { useState, useEffect, useCallback, useRef } from "react";
-import { createPortal } from "react-dom";
 import { Command } from "cmdk";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import { format as formatSQL } from "sql-formatter";
 import { useProjectStore } from "@/stores/project-store";
-import { useTabStore, useActiveTab } from "@/stores/tab-store";
+import { useQueryStore } from "@/stores/query-store";
+import { useActiveTab, useTabStore } from "@/stores/tab-store";
 import { useUIStore } from "@/stores/ui-store";
 import { useWorkspaceStore } from "@/stores/workspace-store";
-import { useQueryStore } from "@/stores/query-store";
-import { format as formatSQL } from "sql-formatter";
-import type { Page } from "./types";
-import { ActionsGroup } from "./tools";
-import {
-  SaveWorkspacePage,
-  LoadOrDeleteWorkspacePage,
-  WorkspacesGroup,
-} from "./workspaces";
 import { SaveQueryPage } from "./queries";
 import { ConnectionsGroup, DatabaseObjectsGroups } from "./search";
+import { ActionsGroup } from "./tools";
+import type { Page } from "./types";
+import { LoadOrDeleteWorkspacePage, SaveWorkspacePage, WorkspacesGroup } from "./workspaces";
 
 export function CommandPalette({
-  open, onClose, onExecute, onExplain,
+  open,
+  onClose,
+  onExecute,
+  onExplain,
   onCheckUpdates,
 }: {
   open: boolean;
@@ -99,9 +98,15 @@ export function CommandPalette({
 
   const handleSaveWorkspace = useCallback(async () => {
     if (!workspaceName.trim()) return;
-    const tabs = useTabStore.getState().tabs
-      .filter((t) => t.type === "query")
-      .map((t) => ({ title: t.title, editorValue: t.editorValue, projectId: t.projectId, type: t.type }));
+    const tabs = useTabStore
+      .getState()
+      .tabs.filter((t) => t.type === "query")
+      .map((t) => ({
+        title: t.title,
+        editorValue: t.editorValue,
+        projectId: t.projectId,
+        type: t.type,
+      }));
     await saveWorkspace(workspaceName.trim(), JSON.stringify(tabs));
     onClose();
   }, [workspaceName, saveWorkspace, onClose]);
@@ -116,41 +121,66 @@ export function CommandPalette({
     onClose();
   }, [queryName, saveQueryAction, onClose]);
 
-  const handleLoadWorkspace = useCallback((tabsJson: string) => {
-    try {
-      const tabs = JSON.parse(tabsJson) as { title: string; editorValue: string; projectId?: string; type: string }[];
-      const store = useTabStore.getState();
-      for (const tab of tabs) {
-        store.openTab(tab.projectId, tab.editorValue);
+  const handleLoadWorkspace = useCallback(
+    (tabsJson: string) => {
+      try {
+        const tabs = JSON.parse(tabsJson) as {
+          title: string;
+          editorValue: string;
+          projectId?: string;
+          type: string;
+        }[];
+        const store = useTabStore.getState();
+        for (const tab of tabs) {
+          store.openTab(tab.projectId, tab.editorValue);
+        }
+      } catch {
+        /* ignore parse errors */
       }
-    } catch { /* ignore parse errors */ }
-    onClose();
-  }, [onClose]);
+      onClose();
+    },
+    [onClose],
+  );
 
-  const handleDeleteWorkspace = useCallback(async (name: string) => {
-    await removeWorkspace(name);
-    if (workspaces.length <= 1) setPage("root");
-  }, [removeWorkspace, workspaces.length]);
+  const handleDeleteWorkspace = useCallback(
+    async (name: string) => {
+      await removeWorkspace(name);
+      if (workspaces.length <= 1) setPage("root");
+    },
+    [removeWorkspace, workspaces.length],
+  );
 
-  const selectItem = useCallback((type: string, projectId: string, schema: string, name: string) => {
-    onClose();
-    if (type === "table" || type === "view" || type === "matview") {
-      openTab(projectId, `SELECT * FROM "${schema}"."${name}" LIMIT 100;`);
-    } else if (type === "function") {
-      openTab(projectId, `-- Function: ${schema}.${name}\nSELECT pg_get_functiondef(p.oid)\nFROM pg_proc p\nJOIN pg_namespace n ON n.oid = p.pronamespace\nWHERE n.nspname = '${schema}' AND p.proname = '${name}'\nLIMIT 1;`);
-    } else if (type === "schema") {
-      openTab(projectId, `-- Schema: ${name}\n`);
-    }
-  }, [openTab, onClose]);
+  const selectItem = useCallback(
+    (type: string, projectId: string, schema: string, name: string) => {
+      onClose();
+      if (type === "table" || type === "view" || type === "matview") {
+        openTab(projectId, `SELECT * FROM "${schema}"."${name}" LIMIT 100;`);
+      } else if (type === "function") {
+        openTab(
+          projectId,
+          `-- Function: ${schema}.${name}\nSELECT pg_get_functiondef(p.oid)\nFROM pg_proc p\nJOIN pg_namespace n ON n.oid = p.pronamespace\nWHERE n.nspname = '${schema}' AND p.proname = '${name}'\nLIMIT 1;`,
+        );
+      } else if (type === "schema") {
+        openTab(projectId, `-- Schema: ${name}\n`);
+      }
+    },
+    [openTab, onClose],
+  );
 
   const formatQuery = useCallback(() => {
     const { tabs, selectedTabIndex: idx } = useTabStore.getState();
     const tab = tabs[idx];
     if (!tab?.editorValue?.trim()) return;
     try {
-      const formatted = formatSQL(tab.editorValue, { language: "postgresql", tabWidth: 2, keywordCase: "upper" });
+      const formatted = formatSQL(tab.editorValue, {
+        language: "postgresql",
+        tabWidth: 2,
+        keywordCase: "upper",
+      });
       useTabStore.getState().updateContent(idx, formatted);
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
     onClose();
   }, [onClose]);
 
@@ -167,7 +197,9 @@ export function CommandPalette({
           label="Command palette"
           onKeyDown={(e) => {
             if (e.key === "Backspace" && page !== "root") {
-              const input = e.currentTarget.querySelector("[cmdk-input]") as HTMLInputElement | null;
+              const input = e.currentTarget.querySelector(
+                "[cmdk-input]",
+              ) as HTMLInputElement | null;
               if (input && input.value === "") {
                 e.preventDefault();
                 setPage("root");
@@ -230,10 +262,7 @@ export function CommandPalette({
                   connectProject={connectProject}
                 />
 
-                <WorkspacesGroup
-                  setPage={setPage}
-                  workspaces={workspaces}
-                />
+                <WorkspacesGroup setPage={setPage} workspaces={workspaces} />
 
                 <DatabaseObjectsGroups
                   tables={tables}
@@ -249,6 +278,6 @@ export function CommandPalette({
         </Command>
       </div>
     </>,
-    document.body
+    document.body,
   );
 }

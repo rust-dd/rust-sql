@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useRef } from "react";
-import { useTabStore } from "@/stores/tab-store";
-import { useProjectStore } from "@/stores/project-store";
 import { DriverFactory } from "@/lib/database-driver";
 import * as virtualCache from "@/lib/virtual-cache";
+import { useProjectStore } from "@/stores/project-store";
+import { useTabStore } from "@/stores/tab-store";
 import {
   CACHE_WINDOW_PAGES,
   CELL_SEP,
@@ -38,43 +38,53 @@ export function useVirtualPaging({ vq, projectId }: UseVirtualPagingArgs) {
     queuedPages.current = [];
     queuedPageSet.current.clear();
     activeFetches.current = 0;
-  }, [vq?.queryId, projectId]);
+  }, []);
 
-  const handleViewportRowChange = useCallback((rowIndex: number) => {
-    if (!vq?.queryId) return;
-    virtualViewportRows.current.set(vq.queryId, rowIndex);
-  }, [vq?.queryId]);
+  const handleViewportRowChange = useCallback(
+    (rowIndex: number) => {
+      if (!vq?.queryId) return;
+      virtualViewportRows.current.set(vq.queryId, rowIndex);
+    },
+    [vq?.queryId],
+  );
 
-  const restoreRowIndex = vq?.queryId
-    ? (virtualViewportRows.current.get(vq.queryId) ?? 0)
-    : 0;
+  const restoreRowIndex = vq?.queryId ? (virtualViewportRows.current.get(vq.queryId) ?? 0) : 0;
 
-  const fetchPage = useCallback(async (pageIndex: number) => {
-    if (!vq || !projectId) return;
-    const d = useProjectStore.getState().projects[projectId];
-    if (!d) return;
-    const driver = DriverFactory.getDriver(d.driver);
-    if (!driver.fetchPage) return;
+  const fetchPage = useCallback(
+    async (pageIndex: number) => {
+      if (!vq || !projectId) return;
+      const d = useProjectStore.getState().projects[projectId];
+      if (!d) return;
+      const driver = DriverFactory.getDriver(d.driver);
+      if (!driver.fetchPage) return;
 
-    const offset = pageIndex * vq.pageSize;
-    const packed = await driver.fetchPage(projectId, vq.queryId, vq.colCount, offset, vq.pageSize);
+      const offset = pageIndex * vq.pageSize;
+      const packed = await driver.fetchPage(
+        projectId,
+        vq.queryId,
+        vq.colCount,
+        offset,
+        vq.pageSize,
+      );
 
-    // Drop stale page responses after tab/query switches.
-    const selectedIdx = useTabStore.getState().selectedTabIndex;
-    const selectedTab = useTabStore.getState().tabs[selectedIdx];
-    if (selectedTab?.virtualQuery?.queryId !== vq.queryId) return;
+      // Drop stale page responses after tab/query switches.
+      const selectedIdx = useTabStore.getState().selectedTabIndex;
+      const selectedTab = useTabStore.getState().tabs[selectedIdx];
+      if (selectedTab?.virtualQuery?.queryId !== vq.queryId) return;
 
-    const rows = packed ? packed.split(ROW_SEP).map((r) => r.split(CELL_SEP)) : [];
-    const expectedRows = Math.max(0, Math.min(vq.pageSize, vq.totalRows - offset));
-    if (expectedRows > 0 && rows.length === 0) {
-      // Keep page as "missing" so viewport observer can retry instead of caching a permanent empty page.
-      return;
-    }
-    virtualCache.setPage(vq.queryId, pageIndex, rows);
-    // Evict around the user's latest viewport, not the page that happened to resolve last.
-    virtualCache.evictDistant(vq.queryId, latestRequestedPage.current, CACHE_WINDOW_PAGES);
-    gridRef.current?.invalidatePage(pageIndex);
-  }, [vq, projectId]);
+      const rows = packed ? packed.split(ROW_SEP).map((r) => r.split(CELL_SEP)) : [];
+      const expectedRows = Math.max(0, Math.min(vq.pageSize, vq.totalRows - offset));
+      if (expectedRows > 0 && rows.length === 0) {
+        // Keep page as "missing" so viewport observer can retry instead of caching a permanent empty page.
+        return;
+      }
+      virtualCache.setPage(vq.queryId, pageIndex, rows);
+      // Evict around the user's latest viewport, not the page that happened to resolve last.
+      virtualCache.evictDistant(vq.queryId, latestRequestedPage.current, CACHE_WINDOW_PAGES);
+      gridRef.current?.invalidatePage(pageIndex);
+    },
+    [vq, projectId],
+  );
 
   const pumpQueue = useCallback(() => {
     if (!vq || !projectId) return;
@@ -103,26 +113,29 @@ export function useVirtualPaging({ vq, projectId }: UseVirtualPagingArgs) {
     }
   }, [vq, projectId, fetchPage]);
 
-  const handlePageNeeded = useCallback((pageIndex: number) => {
-    if (!vq || !projectId) return;
-    latestRequestedPage.current = pageIndex;
-    if (
-      loadingPages.current.has(pageIndex)
-      || virtualCache.hasPage(vq.queryId, pageIndex)
-      || queuedPageSet.current.has(pageIndex)
-    ) {
-      return;
-    }
+  const handlePageNeeded = useCallback(
+    (pageIndex: number) => {
+      if (!vq || !projectId) return;
+      latestRequestedPage.current = pageIndex;
+      if (
+        loadingPages.current.has(pageIndex) ||
+        virtualCache.hasPage(vq.queryId, pageIndex) ||
+        queuedPageSet.current.has(pageIndex)
+      ) {
+        return;
+      }
 
-    if (queuedPages.current.length >= MAX_QUEUED_PAGE_FETCHES) {
-      queuedPages.current = queuedPages.current.filter((p) => Math.abs(p - pageIndex) <= 8);
-      queuedPageSet.current = new Set(queuedPages.current);
-    }
+      if (queuedPages.current.length >= MAX_QUEUED_PAGE_FETCHES) {
+        queuedPages.current = queuedPages.current.filter((p) => Math.abs(p - pageIndex) <= 8);
+        queuedPageSet.current = new Set(queuedPages.current);
+      }
 
-    queuedPages.current.push(pageIndex);
-    queuedPageSet.current.add(pageIndex);
-    pumpQueue();
-  }, [vq, projectId, pumpQueue]);
+      queuedPages.current.push(pageIndex);
+      queuedPageSet.current.add(pageIndex);
+      pumpQueue();
+    },
+    [vq, projectId, pumpQueue],
+  );
 
   useEffect(() => {
     if (!vq) return;
@@ -132,7 +145,7 @@ export function useVirtualPaging({ vq, projectId }: UseVirtualPagingArgs) {
     for (let p = startPage; p <= endPage; p++) {
       handlePageNeeded(p);
     }
-  }, [vq?.queryId, vq?.totalRows, vq?.pageSize, restoreRowIndex, handlePageNeeded]);
+  }, [vq?.queryId, vq?.totalRows, vq?.pageSize, restoreRowIndex, handlePageNeeded, vq]);
 
   return {
     gridRef,

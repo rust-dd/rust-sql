@@ -1,31 +1,31 @@
-import { useState, useCallback } from "react";
+import { useCallback, useState } from "react";
 import { Toaster } from "sonner";
+import { CommandPalette } from "@/components/command-palette";
 import { ConnectionModal } from "@/components/connection-modal";
-import { ResizeHandle } from "@/components/resize-handle";
-import { ServerSidebar } from "@/components/server-sidebar";
-import { QueryEditor } from "@/components/query-editor";
-import { ResultsPanel } from "@/components/results-panel";
-import { PerformanceMonitor } from "@/components/performance-monitor";
+import { EditorToolbar } from "@/components/editor-toolbar";
+import { EnumsPanel } from "@/components/enums-panel";
 import { ERDDiagram } from "@/components/erd-diagram";
-import { TerminalPanel } from "@/components/terminal-panel";
+import { ExtensionsPanel } from "@/components/extensions-panel";
 import { NotifyPanel } from "@/components/notify-panel";
+import { PerformanceMonitor } from "@/components/performance-monitor";
+import { PgSettingsPanel } from "@/components/pg-settings-panel";
+import { QueryEditor } from "@/components/query-editor";
+import { ResizeHandle } from "@/components/resize-handle";
+import { ResultsGrid } from "@/components/results-grid";
+import { ResultsPanel } from "@/components/results-panel";
 import { RolesPanel } from "@/components/roles-panel";
 import { SchemaDiffPanel } from "@/components/schema-diff-panel";
-import { ExtensionsPanel } from "@/components/extensions-panel";
-import { EnumsPanel } from "@/components/enums-panel";
-import { PgSettingsPanel } from "@/components/pg-settings-panel";
-import { TabBar } from "@/components/tab-bar";
-import { TopBar } from "@/components/top-bar";
-import { EditorToolbar } from "@/components/editor-toolbar";
+import { ServerSidebar } from "@/components/server-sidebar";
 import { StatusBar } from "@/components/status-bar";
-import { CommandPalette } from "@/components/command-palette";
-import { checkForUpdates } from "@/lib/updater";
-import { useProjectStore } from "@/stores/project-store";
-import { useTabStore, useActiveTab } from "@/stores/tab-store";
-import { useUIStore } from "@/stores/ui-store";
-import { ResultsGrid } from "@/components/results-grid";
+import { TabBar } from "@/components/tab-bar";
+import { TerminalPanel } from "@/components/terminal-panel";
+import { TopBar } from "@/components/top-bar";
 import { useAppStartup } from "@/hooks/use-app-startup";
 import { useQueryLifecycle } from "@/hooks/use-query-lifecycle";
+import { checkForUpdates } from "@/lib/updater";
+import { useProjectStore } from "@/stores/project-store";
+import { useActiveTab, useTabStore } from "@/stores/tab-store";
+import { useUIStore } from "@/stores/ui-store";
 import type { ProjectDetails } from "@/types";
 import "@/monaco/setup";
 
@@ -45,14 +45,34 @@ export default function App() {
   const activeTab = useActiveTab();
   const updateContent = useTabStore((s) => s.updateContent);
 
-  const [editingConnection, setEditingConnection] = useState<{ name: string; details: ProjectDetails } | null>(null);
+  const [editingConnection, setEditingConnection] = useState<{
+    name: string;
+    details: ProjectDetails;
+  } | null>(null);
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
 
   useAppStartup();
-  const { runQuery, runExplain, cancelQuery, runSplitQuery } = useQueryLifecycle({ setCommandPaletteOpen });
+  const { runQuery, runExplain, cancelQuery, runSplitQuery } = useQueryLifecycle({
+    setCommandPaletteOpen,
+  });
 
   const handleSaveConnection = useCallback(
-    async (connection: { name: string; driver: string; username: string; password: string; database: string; host: string; port: string; ssl: boolean; sshEnabled?: boolean; sshHost?: string; sshPort?: string; sshUser?: string; sshPassword?: string; sshKeyPath?: string }) => {
+    async (connection: {
+      name: string;
+      driver: string;
+      username: string;
+      password: string;
+      database: string;
+      host: string;
+      port: string;
+      ssl: boolean;
+      sshEnabled?: boolean;
+      sshHost?: string;
+      sshPort?: string;
+      sshUser?: string;
+      sshPassword?: string;
+      sshKeyPath?: string;
+    }) => {
       const details = {
         driver: connection.driver as "PGSQL",
         username: connection.username,
@@ -98,14 +118,20 @@ export default function App() {
   );
 
   return (
-    <div className="flex h-screen flex-col bg-background text-foreground" onContextMenu={(e) => e.preventDefault()}>
+    <div
+      className="flex h-screen flex-col bg-background text-foreground"
+      onContextMenu={(e) => e.preventDefault()}
+    >
       <TopBar
         onCheckUpdates={() => void checkForUpdates()}
         onOpenCommandPalette={() => setCommandPaletteOpen(true)}
       />
 
       <div className="flex flex-1 overflow-hidden">
-        <div style={{ width: `${sidebarWidth}px`, minWidth: "180px" }} className="flex-shrink-0 overflow-hidden">
+        <div
+          style={{ width: `${sidebarWidth}px`, minWidth: "180px" }}
+          className="flex-shrink-0 overflow-hidden"
+        >
           <ServerSidebar onEditConnection={handleEditConnection} />
         </div>
         <ResizeHandle direction="horizontal" onResize={setSidebarWidth} />
@@ -115,9 +141,12 @@ export default function App() {
           {!activeTab ? (
             <div className="flex-1 flex items-center justify-center">
               <div className="text-center space-y-4">
-                <div className="text-muted-foreground/40 text-6xl font-mono font-bold select-none">RSQL</div>
+                <div className="text-muted-foreground/40 text-6xl font-mono font-bold select-none">
+                  RSQL
+                </div>
                 <p className="text-muted-foreground/60 text-sm">No tabs open</p>
                 <button
+                  type="button"
                   onClick={() => useTabStore.getState().openTab()}
                   className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-colors text-sm font-medium"
                 >
@@ -171,7 +200,10 @@ export default function App() {
               <div className="flex flex-1 min-h-0 overflow-hidden">
                 {/* Left pane */}
                 <div className="flex flex-1 flex-col overflow-hidden border-r border-border/30">
-                  <div style={{ height: `${editorHeight}%` }} className="flex flex-col overflow-hidden">
+                  <div
+                    style={{ height: `${editorHeight}%` }}
+                    className="flex flex-col overflow-hidden"
+                  >
                     <QueryEditor
                       value={activeTab.editorValue}
                       onChange={(v) => updateContent(selectedTabIndex, v)}
@@ -186,10 +218,15 @@ export default function App() {
                 </div>
                 {/* Right pane */}
                 <div className="flex flex-1 flex-col overflow-hidden">
-                  <div style={{ height: `${editorHeight}%` }} className="flex flex-col overflow-hidden">
+                  <div
+                    style={{ height: `${editorHeight}%` }}
+                    className="flex flex-col overflow-hidden"
+                  >
                     <QueryEditor
                       value={activeTab.splitEditorValue ?? ""}
-                      onChange={(v) => useTabStore.getState().updateSplitContent(selectedTabIndex, v)}
+                      onChange={(v) =>
+                        useTabStore.getState().updateSplitContent(selectedTabIndex, v)
+                      }
                       onExecute={() => void runSplitQuery()}
                     />
                   </div>
@@ -203,7 +240,9 @@ export default function App() {
                       <div className="flex-1 flex flex-col overflow-hidden">
                         <div className="flex items-center gap-2 px-3 py-1 border-b border-border/30 text-xs font-mono text-muted-foreground">
                           <span>{activeTab.splitResult.rows.length} rows</span>
-                          {activeTab.splitResult.time > 0 && <span>· {activeTab.splitResult.time.toFixed(1)}ms</span>}
+                          {activeTab.splitResult.time > 0 && (
+                            <span>· {activeTab.splitResult.time.toFixed(1)}ms</span>
+                          )}
                         </div>
                         <div className="flex-1 min-h-0">
                           <ResultsGrid

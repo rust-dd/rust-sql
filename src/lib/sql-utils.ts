@@ -3,7 +3,10 @@
  * Returns null for complex queries (JOINs, subqueries, UNIONs, CTEs).
  */
 export function parseSelectTable(sql: string): { schema: string; table: string } | null {
-  const normalized = sql.trim().replace(/;+\s*$/, "").replace(/\s+/g, " ");
+  const normalized = sql
+    .trim()
+    .replace(/;+\s*$/, "")
+    .replace(/\s+/g, " ");
 
   if (/\b(join|union|intersect|except)\b/i.test(normalized)) return null;
   if (/\bwith\s+\w+\s+as\s*\(/i.test(normalized)) return null;

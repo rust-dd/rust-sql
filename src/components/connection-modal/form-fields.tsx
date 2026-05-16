@@ -1,12 +1,12 @@
-import { Input } from "../ui/input"
-import { Label } from "../ui/label"
-import { DRIVER_CONFIGS } from "@/lib/database-driver"
-import type { DriverType } from "@/types"
+import { DRIVER_CONFIGS } from "@/lib/database-driver";
+import type { DriverType } from "@/types";
+import { Input } from "../ui/input";
+import { Label } from "../ui/label";
 
 interface ConnStringFieldProps {
-  value: string
-  onChange: (value: string) => void
-  error: boolean
+  value: string;
+  onChange: (value: string) => void;
+  error: boolean;
 }
 
 export function ConnStringField({ value, onChange, error }: ConnStringFieldProps) {
@@ -26,15 +26,19 @@ export function ConnStringField({ value, onChange, error }: ConnStringFieldProps
         <p className="text-destructive text-[11px] font-mono">Invalid connection URL format</p>
       )}
       <div className="relative">
-        <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-border/30" /></div>
-        <div className="relative flex justify-center text-[10px]"><span className="bg-card px-2 text-muted-foreground">or fill in manually</span></div>
+        <div className="absolute inset-0 flex items-center">
+          <span className="w-full border-t border-border/30" />
+        </div>
+        <div className="relative flex justify-center text-[10px]">
+          <span className="bg-card px-2 text-muted-foreground">or fill in manually</span>
+        </div>
       </div>
     </div>
-  )
+  );
 }
 
 interface DriverDisplayProps {
-  driver: DriverType
+  driver: DriverType;
 }
 
 export function DriverDisplay({ driver }: DriverDisplayProps) {
@@ -47,13 +51,13 @@ export function DriverDisplay({ driver }: DriverDisplayProps) {
         {DRIVER_CONFIGS[driver].name}
       </div>
     </div>
-  )
+  );
 }
 
 interface NameFieldProps {
-  value: string
-  onChange: (value: string) => void
-  disabled: boolean
+  value: string;
+  onChange: (value: string) => void;
+  disabled: boolean;
 }
 
 export function NameField({ value, onChange, disabled }: NameFieldProps) {
@@ -72,14 +76,14 @@ export function NameField({ value, onChange, disabled }: NameFieldProps) {
         className="bg-input/80 border-border/50 text-foreground font-mono text-sm rounded-lg"
       />
     </div>
-  )
+  );
 }
 
 interface HostPortFieldsProps {
-  host: string
-  port: string
-  onHostChange: (value: string) => void
-  onPortChange: (value: string) => void
+  host: string;
+  port: string;
+  onHostChange: (value: string) => void;
+  onPortChange: (value: string) => void;
 }
 
 export function HostPortFields({ host, port, onHostChange, onPortChange }: HostPortFieldsProps) {
@@ -112,12 +116,12 @@ export function HostPortFields({ host, port, onHostChange, onPortChange }: HostP
         />
       </div>
     </div>
-  )
+  );
 }
 
 interface DatabaseFieldProps {
-  value: string
-  onChange: (value: string) => void
+  value: string;
+  onChange: (value: string) => void;
 }
 
 export function DatabaseField({ value, onChange }: DatabaseFieldProps) {
@@ -135,12 +139,12 @@ export function DatabaseField({ value, onChange }: DatabaseFieldProps) {
         className="bg-input/80 border-border/50 text-foreground font-mono text-sm rounded-lg"
       />
     </div>
-  )
+  );
 }
 
 interface UsernameFieldProps {
-  value: string
-  onChange: (value: string) => void
+  value: string;
+  onChange: (value: string) => void;
 }
 
 export function UsernameField({ value, onChange }: UsernameFieldProps) {
@@ -158,12 +162,12 @@ export function UsernameField({ value, onChange }: UsernameFieldProps) {
         className="bg-input/80 border-border/50 text-foreground font-mono text-sm rounded-lg"
       />
     </div>
-  )
+  );
 }
 
 interface PasswordFieldProps {
-  value: string
-  onChange: (value: string) => void
+  value: string;
+  onChange: (value: string) => void;
 }
 
 export function PasswordField({ value, onChange }: PasswordFieldProps) {
@@ -181,12 +185,12 @@ export function PasswordField({ value, onChange }: PasswordFieldProps) {
         className="bg-input/80 border-border/50 text-foreground font-mono text-sm rounded-lg"
       />
     </div>
-  )
+  );
 }
 
 interface SslCheckboxProps {
-  checked: boolean
-  onChange: (checked: boolean) => void
+  checked: boolean;
+  onChange: (checked: boolean) => void;
 }
 
 export function SslCheckbox({ checked, onChange }: SslCheckboxProps) {
@@ -203,5 +207,5 @@ export function SslCheckbox({ checked, onChange }: SslCheckboxProps) {
         Use SSL
       </Label>
     </div>
-  )
+  );
 }

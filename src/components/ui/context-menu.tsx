@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useCallback } from "react";
+import React, { useCallback, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { cn } from "@/lib/utils";
 
@@ -77,7 +77,10 @@ export function ContextMenu({ x, y, items, onClose }: ContextMenuProps) {
         }
         if (isHeader(entry)) {
           return (
-            <div key={i} className="px-3 pt-1.5 pb-0.5 text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-wider">
+            <div
+              key={i}
+              className="px-3 pt-1.5 pb-0.5 text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-wider"
+            >
               {entry.header}
             </div>
           );
@@ -85,6 +88,7 @@ export function ContextMenu({ x, y, items, onClose }: ContextMenuProps) {
         return (
           <button
             key={i}
+            type="button"
             onClick={() => {
               entry.onClick();
               onClose();
@@ -121,7 +125,11 @@ export function ContextMenu({ x, y, items, onClose }: ContextMenuProps) {
 }
 
 export function useContextMenu() {
-  const [menu, setMenu] = React.useState<{ x: number; y: number; items: ContextMenuEntry[] } | null>(null);
+  const [menu, setMenu] = React.useState<{
+    x: number;
+    y: number;
+    items: ContextMenuEntry[];
+  } | null>(null);
 
   const showMenu = useCallback((e: React.MouseEvent, items: ContextMenuEntry[]) => {
     e.preventDefault();

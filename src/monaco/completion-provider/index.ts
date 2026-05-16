@@ -2,8 +2,8 @@ import type * as Monaco from "monaco-editor";
 import { useProjectStore } from "@/stores/project-store";
 import { useTabStore } from "@/stores/tab-store";
 import { extractAliasMap, genAlias, stripQuotes } from "./alias-parser";
-import { ensureColumns, ensureTables, resolveTableRef } from "./resolver";
 import { SQL_KEYWORDS } from "./keywords";
+import { ensureColumns, ensureTables, resolveTableRef } from "./resolver";
 import { SQL_SNIPPETS } from "./snippets";
 
 let registered = false;
@@ -32,8 +32,7 @@ export function registerContextAwareCompletions(monaco: typeof Monaco) {
           range: undefined,
         };
         if (snippet) {
-          item.insertTextRules =
-            monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet;
+          item.insertTextRules = monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet;
         }
         suggestions.push(item);
       };
@@ -54,9 +53,7 @@ export function registerContextAwareCompletions(monaco: typeof Monaco) {
 
       if (projectId && d) {
         const aliasMap = extractAliasMap(context);
-        const tableCtx = /([A-Za-z0-9_"]+)\s*\.\s*([A-Za-z0-9_"]*)$/i.exec(
-          context,
-        );
+        const tableCtx = /([A-Za-z0-9_"]+)\s*\.\s*([A-Za-z0-9_"]*)$/i.exec(context);
 
         if (tableCtx) {
           const left = stripQuotes(tableCtx[1]);
@@ -66,25 +63,18 @@ export function registerContextAwareCompletions(monaco: typeof Monaco) {
             (k) => k.toLowerCase() === left.toLowerCase(),
           );
           if (aliasKey && aliasMap[aliasKey]) {
-            const resolved = await resolveTableRef(
-              projectId,
-              aliasMap[aliasKey],
-            );
+            const resolved = await resolveTableRef(projectId, aliasMap[aliasKey]);
             if (resolved) {
-              const cols = await ensureColumns(
-                projectId,
-                resolved.schema,
-                resolved.table,
-              );
-              cols.forEach((c) =>
+              const cols = await ensureColumns(projectId, resolved.schema, resolved.table);
+              cols.forEach((c) => {
                 add(
                   c,
                   monaco.languages.CompletionItemKind.Property,
                   `"${c}"`,
                   false,
                   `${resolved.table}.${c}`,
-                ),
-              );
+                );
+              });
               return { suggestions };
             }
           }
@@ -105,15 +95,9 @@ export function registerContextAwareCompletions(monaco: typeof Monaco) {
           }
 
           const cols = await ensureColumns(projectId, left, right);
-          cols.forEach((c) =>
-            add(
-              c,
-              monaco.languages.CompletionItemKind.Property,
-              `"${c}"`,
-              false,
-              `${right}.${c}`,
-            ),
-          );
+          cols.forEach((c) => {
+            add(c, monaco.languages.CompletionItemKind.Property, `"${c}"`, false, `${right}.${c}`);
+          });
           return { suggestions };
         }
 
@@ -137,15 +121,9 @@ export function registerContextAwareCompletions(monaco: typeof Monaco) {
         }
 
         const projSchemas = state.schemas[projectId] || [];
-        projSchemas.forEach((s) =>
-          add(
-            s,
-            monaco.languages.CompletionItemKind.Module,
-            `"${s}"`,
-            false,
-            "schema",
-          ),
-        );
+        projSchemas.forEach((s) => {
+          add(s, monaco.languages.CompletionItemKind.Module, `"${s}"`, false, "schema");
+        });
       }
 
       for (const kw of SQL_KEYWORDS) {

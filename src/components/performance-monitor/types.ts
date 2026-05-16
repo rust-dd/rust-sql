@@ -66,4 +66,11 @@ export interface BloatRow {
   lastAutoanalyze: string;
 }
 
-export type MonitorTab = "overview" | "activity" | "tables" | "history" | "locks" | "indexes" | "bloat";
+export type MonitorTab =
+  | "overview"
+  | "activity"
+  | "tables"
+  | "history"
+  | "locks"
+  | "indexes"
+  | "bloat";

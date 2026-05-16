@@ -1,25 +1,19 @@
-import { useState, useRef, useEffect, useCallback } from "react";
 import {
-  Play,
-  Loader2,
   ChevronDown,
   ChevronRight,
-  Database,
-  Table,
   Columns3,
+  Database,
+  FolderOpen,
   Key,
+  Loader2,
+  Play,
   RotateCcw,
   Server,
-  FolderOpen,
+  Table,
 } from "lucide-react";
-import {
-  useDBReady,
-  useTables,
-  useColumns,
-  useExecuteSQL,
-  useResetDB,
-} from "@/hooks/use-sql";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { QueryResult } from "@/hooks/use-sql";
+import { useColumns, useDBReady, useExecuteSQL, useResetDB, useTables } from "@/hooks/use-sql";
 
 const SAMPLE_QUERIES: { label: string; sql: string }[] = [
   {
@@ -93,7 +87,7 @@ export function Demo() {
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready]);
+  }, [ready, result, executeMutation.mutate]);
 
   if (!ready) {
     return (
@@ -101,7 +95,9 @@ export function Demo() {
         <div className="mx-auto max-w-[1080px]">
           <Loader2 className="h-6 w-6 animate-spin text-[var(--accent)] mx-auto mb-3" />
           <p className="text-sm text-[var(--fg-muted)]">Starting PostgreSQL…</p>
-          <p className="text-xs text-[var(--fg-subtle)] mt-1 font-[var(--font-mono)]">PGlite WebAssembly engine</p>
+          <p className="text-xs text-[var(--fg-subtle)] mt-1 font-[var(--font-mono)]">
+            PGlite WebAssembly engine
+          </p>
         </div>
       </section>
     );
@@ -114,9 +110,7 @@ export function Demo() {
 
         <div className="mb-10 max-w-lg">
           <span className="section-label">Sandbox</span>
-          <h2 className="font-display text-[clamp(1.8rem,4vw,2.8rem)] mt-3">
-            Try it right here
-          </h2>
+          <h2 className="font-display text-[clamp(1.8rem,4vw,2.8rem)] mt-3">Try it right here</h2>
           <p className="text-[var(--fg-muted)] mt-3 text-[15px] leading-relaxed">
             Full PostgreSQL running in WebAssembly. Real SQL, seeded data, no install.
           </p>
@@ -127,6 +121,7 @@ export function Demo() {
           {SAMPLE_QUERIES.map((q) => (
             <button
               key={q.label}
+              type="button"
               onClick={() => {
                 setSql(q.sql);
                 executeMutation.mutate(q.sql, {
@@ -154,6 +149,7 @@ export function Demo() {
               RSQL — browser sandbox
             </span>
             <button
+              type="button"
               onClick={() => resetMutation.mutate()}
               className="text-[var(--fg-subtle)] hover:text-[var(--fg-muted)] transition-colors"
               title="Reset database"
@@ -177,6 +173,7 @@ export function Demo() {
               {/* Toolbar */}
               <div className="flex items-center gap-2 px-3 py-2 border-b border-[var(--border-subtle)] bg-[var(--surface-raised)]">
                 <button
+                  type="button"
                   onClick={execute}
                   disabled={executeMutation.isPending}
                   className="flex items-center gap-1.5 rounded-lg bg-[var(--accent)] px-3 py-1 text-xs font-semibold text-white disabled:opacity-50"
@@ -239,10 +236,15 @@ function DemoSidebar({ onTableClick }: { onTableClick: (table: string) => void }
       </div>
 
       <button
+        type="button"
         onClick={() => setServerOpen(!serverOpen)}
         className="surface-hover flex items-center gap-1.5 w-full px-3 py-1.5 text-left"
       >
-        {serverOpen ? <ChevronDown className="h-3 w-3 text-[var(--fg-subtle)]" /> : <ChevronRight className="h-3 w-3 text-[var(--fg-subtle)]" />}
+        {serverOpen ? (
+          <ChevronDown className="h-3 w-3 text-[var(--fg-subtle)]" />
+        ) : (
+          <ChevronRight className="h-3 w-3 text-[var(--fg-subtle)]" />
+        )}
         <Server className="h-3 w-3 text-[var(--accent)]" />
         <span className="font-[var(--font-mono)] font-semibold text-xs">local</span>
         <span className="ml-auto h-1.5 w-1.5 rounded-full bg-[var(--success)]" />
@@ -257,10 +259,15 @@ function DemoSidebar({ onTableClick }: { onTableClick: (table: string) => void }
           </div>
 
           <button
+            type="button"
             onClick={() => setSchemaOpen(!schemaOpen)}
             className="surface-hover flex items-center gap-1.5 w-full px-3 py-1 pl-9 text-left"
           >
-            {schemaOpen ? <ChevronDown className="h-3 w-3 text-[var(--fg-subtle)]" /> : <ChevronRight className="h-3 w-3 text-[var(--fg-subtle)]" />}
+            {schemaOpen ? (
+              <ChevronDown className="h-3 w-3 text-[var(--fg-subtle)]" />
+            ) : (
+              <ChevronRight className="h-3 w-3 text-[var(--fg-subtle)]" />
+            )}
             <Database className="h-3 w-3 text-[var(--fg-subtle)]" />
             <span className="font-[var(--font-mono)] text-[11px]">demo</span>
             <span className="ml-auto h-1.5 w-1.5 rounded-full bg-[var(--success)]" />
@@ -307,11 +314,16 @@ function TableNode({
   return (
     <div>
       <button
+        type="button"
         className="surface-hover flex items-center gap-1.5 w-full px-3 py-0.5 pl-[56px] text-left"
         onClick={onToggle}
         onDoubleClick={onClick}
       >
-        {expanded ? <ChevronDown className="h-3 w-3 text-[var(--fg-subtle)]" /> : <ChevronRight className="h-3 w-3 text-[var(--fg-subtle)]" />}
+        {expanded ? (
+          <ChevronDown className="h-3 w-3 text-[var(--fg-subtle)]" />
+        ) : (
+          <ChevronRight className="h-3 w-3 text-[var(--fg-subtle)]" />
+        )}
         <Table className="h-3 w-3 text-[var(--fg-subtle)]" />
         <span className="font-[var(--font-mono)] text-[11px]">{table}</span>
       </button>
@@ -341,7 +353,9 @@ function DemoResults({ result }: { result: QueryResult }) {
   if (result.error) {
     return (
       <div className="p-4">
-        <pre className="font-[var(--font-mono)] text-xs text-[var(--destructive)] whitespace-pre-wrap">{result.error}</pre>
+        <pre className="font-[var(--font-mono)] text-xs text-[var(--destructive)] whitespace-pre-wrap">
+          {result.error}
+        </pre>
       </div>
     );
   }

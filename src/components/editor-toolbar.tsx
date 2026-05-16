@@ -1,12 +1,18 @@
-import { useState, useRef, useEffect } from "react";
+import { AlignLeft, Columns2, GitBranch, Play, Save, Square, Timer } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { format as formatSQL } from "sql-formatter";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { useProjectStore } from "@/stores/project-store";
-import { useTabStore, useActiveTab } from "@/stores/tab-store";
 import { useQueryStore } from "@/stores/query-store";
-import { AlignLeft, Columns2, GitBranch, Play, Save, Square, Timer } from "lucide-react";
-import { format as formatSQL } from "sql-formatter";
+import { useActiveTab, useTabStore } from "@/stores/tab-store";
 
 const TIMEOUT_OPTIONS = [
   { label: "No limit", value: 0 },
@@ -49,7 +55,13 @@ export function EditorToolbar({
 
   const handleSaveSubmit = async () => {
     if (!activeProject || !activeProjectDetails || !saveTitle.trim()) return;
-    await saveQueryAction(activeProject, activeProjectDetails.database, activeProjectDetails.driver, saveTitle.trim(), activeTab?.editorValue ?? "");
+    await saveQueryAction(
+      activeProject,
+      activeProjectDetails.database,
+      activeProjectDetails.driver,
+      saveTitle.trim(),
+      activeTab?.editorValue ?? "",
+    );
     setSaveTitle("");
     setSaveDialogOpen(false);
   };
@@ -58,7 +70,11 @@ export function EditorToolbar({
     const sql = activeTab?.editorValue;
     if (!sql?.trim()) return;
     try {
-      const formatted = formatSQL(sql, { language: "postgresql", tabWidth: 2, keywordCase: "upper" });
+      const formatted = formatSQL(sql, {
+        language: "postgresql",
+        tabWidth: 2,
+        keywordCase: "upper",
+      });
       updateContent(selectedTabIndex, formatted);
     } catch {
       // silently ignore formatting errors
@@ -180,8 +196,11 @@ export function EditorToolbar({
             className="space-y-4 mt-2"
           >
             <div className="space-y-2">
-              <label className="font-mono text-xs text-muted-foreground">Query Name</label>
+              <label htmlFor="save-query-title" className="font-mono text-xs text-muted-foreground">
+                Query Name
+              </label>
               <Input
+                id="save-query-title"
                 ref={saveInputRef}
                 value={saveTitle}
                 onChange={(e) => setSaveTitle(e.target.value)}
@@ -190,13 +209,26 @@ export function EditorToolbar({
               />
             </div>
             <div className="rounded-lg bg-muted/50 p-2 max-h-24 overflow-auto">
-              <pre className="font-mono text-[11px] text-muted-foreground whitespace-pre-wrap">{activeTab?.editorValue?.slice(0, 300)}{(activeTab?.editorValue?.length ?? 0) > 300 ? "..." : ""}</pre>
+              <pre className="font-mono text-[11px] text-muted-foreground whitespace-pre-wrap">
+                {activeTab?.editorValue?.slice(0, 300)}
+                {(activeTab?.editorValue?.length ?? 0) > 300 ? "..." : ""}
+              </pre>
             </div>
             <div className="flex justify-end gap-2">
-              <Button type="button" variant="ghost" onClick={() => setSaveDialogOpen(false)} className="text-xs">
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => setSaveDialogOpen(false)}
+                className="text-xs"
+              >
                 Cancel
               </Button>
-              <Button type="submit" variant="gradient" className="text-xs" disabled={!saveTitle.trim()}>
+              <Button
+                type="submit"
+                variant="gradient"
+                className="text-xs"
+                disabled={!saveTitle.trim()}
+              >
                 <Save className="h-3.5 w-3.5 mr-1" />
                 Save Query
               </Button>

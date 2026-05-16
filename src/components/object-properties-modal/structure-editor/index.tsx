@@ -1,30 +1,18 @@
-import { Button } from "@/components/ui/button";
-import type { StructureEditorState } from "@/lib/alter-table-sql";
-import {
-  countChanges,
-  generateAlterTableSQL,
-} from "@/lib/alter-table-sql";
-import { DriverFactory } from "@/lib/database-driver";
-import { cn } from "@/lib/utils";
-import { useProjectStore } from "@/stores/project-store";
-import {
-  AlertTriangle,
-  Copy,
-  FileCode,
-  Loader2,
-  Play,
-} from "lucide-react";
+import { AlertTriangle, Copy, FileCode, Loader2, Play } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import type { StructureEditorState } from "@/lib/alter-table-sql";
+import { countChanges, generateAlterTableSQL } from "@/lib/alter-table-sql";
+import type { DriverFactory } from "@/lib/database-driver";
+import { cn } from "@/lib/utils";
+import { useProjectStore } from "@/stores/project-store";
 import { LoadingPlaceholder } from "../shared";
 import type { FKInfo } from "../types";
 import { ColumnsSection } from "./columns-section";
 import { FkeysSection } from "./fkeys-section";
 import { IndexesSection } from "./indexes-section";
-import {
-  initStructureState,
-  type StructureSubTab,
-} from "./initialization";
+import { initStructureState, type StructureSubTab } from "./initialization";
 import { PkSection } from "./pk-section";
 import { UniqueSection } from "./unique-section";
 
@@ -72,16 +60,13 @@ export function StructureEditorContent({
   }, [initialState]);
 
   const changes = countChanges(draft);
-  const activeColNames = draft.columns
-    .filter((c) => c._status !== "removed")
-    .map((c) => c.name);
+  const activeColNames = draft.columns.filter((c) => c._status !== "removed").map((c) => c.name);
 
   const tables = useProjectStore((s) => s.tables);
   const schemas = useProjectStore((s) => s.schemas);
   const loadTables = useProjectStore((s) => s.loadTables);
   const availableSchemas = schemas[projectId] ?? [];
-  const getTablesForSchema = (s: string) =>
-    (tables[`${projectId}::${s}`] ?? []).map((t) => t.name);
+  const getTablesForSchema = (s: string) => (tables[`${projectId}::${s}`] ?? []).map((t) => t.name);
 
   const sqlStatements = useMemo(
     () => generateAlterTableSQL(schema, tableName, initialState, draft),
@@ -130,6 +115,7 @@ export function StructureEditorContent({
         {subTabs.map((t) => (
           <button
             key={t.key}
+            type="button"
             onClick={() => setSubTab(t.key)}
             className={cn(
               "px-2.5 py-1 text-[10px] font-medium rounded-md transition-all",
@@ -144,9 +130,7 @@ export function StructureEditorContent({
       </div>
 
       <div className="flex-1 min-h-0 overflow-y-auto">
-        {subTab === "columns" && (
-          <ColumnsSection draft={draft} setDraft={setDraft} />
-        )}
+        {subTab === "columns" && <ColumnsSection draft={draft} setDraft={setDraft} />}
 
         {subTab === "pk" && (
           <PkSection
@@ -194,9 +178,7 @@ export function StructureEditorContent({
       {showSql && sqlStatements.length > 0 && (
         <div className="shrink-0 mt-2 rounded-xl border border-border/40 overflow-hidden bg-[hsl(var(--background))]">
           <div className="flex items-center justify-between px-3 py-1.5 bg-muted/30 border-b border-border/30">
-            <span className="text-[10px] font-mono text-muted-foreground/60">
-              SQL Preview
-            </span>
+            <span className="text-[10px] font-mono text-muted-foreground/60">SQL Preview</span>
             <div className="flex items-center gap-1">
               <Button
                 variant="ghost"
@@ -265,9 +247,7 @@ export function StructureEditorContent({
             disabled={applying || sqlStatements.length === 0}
             onClick={() => void applyChanges()}
           >
-            {applying ? (
-              <Loader2 className="h-3 w-3 animate-spin mr-1" />
-            ) : null}
+            {applying ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : null}
             Apply
           </Button>
         </div>

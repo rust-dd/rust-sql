@@ -96,9 +96,10 @@ async function runUpdateFlow(silent: boolean): Promise<void> {
       }
     });
 
-    const sizeText = totalBytes > 0
-      ? `\n\nDownloaded ${formatBytes(downloadedBytes)} of ${formatBytes(totalBytes)}.`
-      : "";
+    const sizeText =
+      totalBytes > 0
+        ? `\n\nDownloaded ${formatBytes(downloadedBytes)} of ${formatBytes(totalBytes)}.`
+        : "";
 
     const restartNow = await confirm(
       `Version ${update.version} has been installed.${sizeText}\n\nRestart now to finish applying the update?`,

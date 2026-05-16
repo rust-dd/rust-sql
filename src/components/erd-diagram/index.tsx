@@ -1,33 +1,32 @@
-import { useState, useEffect, useRef, useMemo, useCallback } from "react";
-import { useProjectStore } from "@/stores/project-store";
-import { DriverFactory } from "@/lib/database-driver";
-import type { ColumnDetail, IndexDetail } from "@/types";
 import { Loader2 } from "lucide-react";
-import type { ERDProps, ERDColumn, ForeignKey } from "./types";
-import { layoutTables } from "./layout";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { DriverFactory } from "@/lib/database-driver";
+import { useProjectStore } from "@/stores/project-store";
+import type { ColumnDetail, IndexDetail } from "@/types";
 import {
-  createHandleWheel,
   createHandleMouseDown,
   createHandleMouseMove,
   createHandleMouseUp,
-  ERDToolbar,
+  createHandleWheel,
   ERDStatusBar,
+  ERDToolbar,
 } from "./interactions";
+import { layoutTables } from "./layout";
+import { ERDDefs, ERDFKLines, ERDGridBackground, ERDTableBoxes } from "./rendering";
 import { useTableDetails } from "./table-details";
-import {
-  ERDDefs,
-  ERDGridBackground,
-  ERDFKLines,
-  ERDTableBoxes,
-} from "./rendering";
+import type { ERDColumn, ERDProps, ForeignKey } from "./types";
 
 export function ERDDiagram({ projectId, schema }: ERDProps) {
   const [fks, setFks] = useState<ForeignKey[]>([]);
   const [loading, setLoading] = useState(true);
-  const [tablePositions, setTablePositions] = useState<Map<string, { x: number; y: number }>>(new Map());
+  const [tablePositions, setTablePositions] = useState<Map<string, { x: number; y: number }>>(
+    new Map(),
+  );
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
-  const [dragging, setDragging] = useState<{ type: "pan" | "table"; tableName?: string } | null>(null);
+  const [dragging, setDragging] = useState<{ type: "pan" | "table"; tableName?: string } | null>(
+    null,
+  );
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [hoveredTable, setHoveredTable] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -105,14 +104,18 @@ export function ERDDiagram({ projectId, schema }: ERDProps) {
     }
 
     load();
-    return () => { cancelled = true; };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [projectId, schema]);
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [projectId, schema, loadColumnDetails, loadTables, loadIndexes]);
 
-  const detailsReady = schemaTables.length === 0 || schemaTables.some((t) => {
-    const detailKey = `${projectId}::${schema}::${t.name}`;
-    return columnDetails[detailKey] != null;
-  });
+  const detailsReady =
+    schemaTables.length === 0 ||
+    schemaTables.some((t) => {
+      const detailKey = `${projectId}::${schema}::${t.name}`;
+      return columnDetails[detailKey] != null;
+    });
 
   const tableData = useMemo(() => {
     if (!detailsReady) return [];
@@ -162,12 +165,12 @@ export function ERDDiagram({ projectId, schema }: ERDProps) {
 
   const handleMouseDown = useCallback(
     createHandleMouseDown(pan, zoom, boxMap, setDragging, setDragStart),
-    [pan, zoom, boxMap],
+    [],
   );
 
   const handleMouseMove = useCallback(
     createHandleMouseMove(dragging, dragStart, zoom, setPan, setTablePositions),
-    [dragging, dragStart, zoom],
+    [],
   );
 
   const handleMouseUp = useCallback(createHandleMouseUp(setDragging), []);

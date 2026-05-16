@@ -1,15 +1,24 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useTabStore } from "@/stores/tab-store";
-import { useProjectStore } from "@/stores/project-store";
-import { DriverFactory } from "@/lib/database-driver";
-import { parseSelectTable, generateUpdate, generateDelete, quoteIdent, quoteLiteral } from "@/lib/sql-utils";
 import type { ForeignKey } from "@/lib/database-driver";
+import { DriverFactory } from "@/lib/database-driver";
+import {
+  generateDelete,
+  generateUpdate,
+  parseSelectTable,
+  quoteIdent,
+  quoteLiteral,
+} from "@/lib/sql-utils";
+import { useProjectStore } from "@/stores/project-store";
+import { useTabStore } from "@/stores/tab-store";
 import type { EditState } from "./types";
 
 interface UseEditModeArgs {
   projectId: string | undefined;
   editorValue: string | undefined;
-  result: { columns: string[]; rows: string[][]; time: number; capped?: boolean } | null | undefined;
+  result:
+    | { columns: string[]; rows: string[][]; time: number; capped?: boolean }
+    | null
+    | undefined;
 }
 
 export function useEditMode({ projectId, editorValue, result }: UseEditModeArgs) {
@@ -24,7 +33,9 @@ export function useEditMode({ projectId, editorValue, result }: UseEditModeArgs)
     return parseSelectTable(editorValue);
   }, [editorValue]);
 
-  const [fkMap, setFkMap] = useState<Map<string, { schema: string; table: string; column: string }>>(new Map());
+  const [fkMap, setFkMap] = useState<
+    Map<string, { schema: string; table: string; column: string }>
+  >(new Map());
 
   useEffect(() => {
     if (!editableTable || !projectId) {
@@ -36,19 +47,22 @@ export function useEditMode({ projectId, editorValue, result }: UseEditModeArgs)
     if (!d) return;
 
     const driver = DriverFactory.getDriver(d.driver);
-    driver.loadForeignKeys(pid, editableTable.schema).then((fks: ForeignKey[]) => {
-      const map = new Map<string, { schema: string; table: string; column: string }>();
-      for (const fk of fks) {
-        if (fk.sourceTable === editableTable.table) {
-          map.set(fk.sourceColumn, {
-            schema: editableTable.schema,
-            table: fk.targetTable,
-            column: fk.targetColumn,
-          });
+    driver
+      .loadForeignKeys(pid, editableTable.schema)
+      .then((fks: ForeignKey[]) => {
+        const map = new Map<string, { schema: string; table: string; column: string }>();
+        for (const fk of fks) {
+          if (fk.sourceTable === editableTable.table) {
+            map.set(fk.sourceColumn, {
+              schema: editableTable.schema,
+              table: fk.targetTable,
+              column: fk.targetColumn,
+            });
+          }
         }
-      }
-      setFkMap(map);
-    }).catch(() => setFkMap(new Map()));
+        setFkMap(map);
+      })
+      .catch(() => setFkMap(new Map()));
   }, [editableTable, projectId]);
 
   const handleFKNavigate = useCallback(
@@ -65,11 +79,14 @@ export function useEditMode({ projectId, editorValue, result }: UseEditModeArgs)
       const newTabIdx = useTabStore.getState().tabs.length - 1;
       useTabStore.getState().setExecuting(newTabIdx, true);
       const driver = DriverFactory.getDriver(d.driver);
-      driver.runQuery(pid, sql).then(([cols, rows, time]) => {
-        useTabStore.getState().updateResult(newTabIdx, { columns: cols, rows, time });
-      }).catch(() => {
-        useTabStore.getState().setExecuting(newTabIdx, false);
-      });
+      driver
+        .runQuery(pid, sql)
+        .then(([cols, rows, time]) => {
+          useTabStore.getState().updateResult(newTabIdx, { columns: cols, rows, time });
+        })
+        .catch(() => {
+          useTabStore.getState().setExecuting(newTabIdx, false);
+        });
     },
     [fkMap, projectId],
   );
@@ -97,7 +114,9 @@ export function useEditMode({ projectId, editorValue, result }: UseEditModeArgs)
       const resultCols = result?.columns ?? [];
       const missingPKs = pkColumns.filter((pk) => !resultCols.includes(pk));
       if (missingPKs.length > 0) {
-        setEditError(`Primary key column(s) ${missingPKs.join(", ")} not in query results. Select all PK columns to edit.`);
+        setEditError(
+          `Primary key column(s) ${missingPKs.join(", ")} not in query results. Select all PK columns to edit.`,
+        );
         return;
       }
 
@@ -120,32 +139,35 @@ export function useEditMode({ projectId, editorValue, result }: UseEditModeArgs)
     setEditError(null);
   }, []);
 
-  const runAndRefresh = useCallback(async (statements: string[]) => {
-    if (!projectId || statements.length === 0) return;
-    setIsCommitting(true);
-    setEditError(null);
+  const runAndRefresh = useCallback(
+    async (statements: string[]) => {
+      if (!projectId || statements.length === 0) return;
+      setIsCommitting(true);
+      setEditError(null);
 
-    try {
-      const d = useProjectStore.getState().projects[projectId];
-      if (!d) throw new Error("Project not found");
-      const driver = DriverFactory.getDriver(d.driver);
+      try {
+        const d = useProjectStore.getState().projects[projectId];
+        if (!d) throw new Error("Project not found");
+        const driver = DriverFactory.getDriver(d.driver);
 
-      const txnSql = ["BEGIN", ...statements, "COMMIT"].join(";\n");
-      await driver.runQuery(projectId, txnSql, 30000);
+        const txnSql = ["BEGIN", ...statements, "COMMIT"].join(";\n");
+        await driver.runQuery(projectId, txnSql, 30000);
 
-      const [cols, rows, time] = await driver.runQuery(projectId, editorValue ?? "");
-      const tabIdx = useTabStore.getState().selectedTabIndex;
-      useTabStore.getState().updateResult(tabIdx, { columns: cols, rows, time });
+        const [cols, rows, time] = await driver.runQuery(projectId, editorValue ?? "");
+        const tabIdx = useTabStore.getState().selectedTabIndex;
+        useTabStore.getState().updateResult(tabIdx, { columns: cols, rows, time });
 
-      setIsEditing(false);
-      setEditState(null);
-      setPendingDeleteCount(0);
-    } catch (err: any) {
-      setEditError(err?.message ?? "Commit failed");
-    } finally {
-      setIsCommitting(false);
-    }
-  }, [projectId, editorValue]);
+        setIsEditing(false);
+        setEditState(null);
+        setPendingDeleteCount(0);
+      } catch (err: any) {
+        setEditError(err?.message ?? "Commit failed");
+      } finally {
+        setIsCommitting(false);
+      }
+    },
+    [projectId, editorValue],
+  );
 
   const handleCommit = useCallback(() => {
     if (!editState || !result) return;
@@ -156,16 +178,18 @@ export function useEditMode({ projectId, editorValue, result }: UseEditModeArgs)
     const editsByRow = new Map<number, Map<number, string>>();
     for (const [key, value] of cellEdits) {
       const [rowStr, colStr] = key.split(":");
-      const rowIdx = parseInt(rowStr);
-      const colIdx = parseInt(colStr);
+      const rowIdx = parseInt(rowStr, 10);
+      const colIdx = parseInt(colStr, 10);
       if (deletedRows.has(rowIdx)) continue;
       if (!editsByRow.has(rowIdx)) editsByRow.set(rowIdx, new Map());
-      editsByRow.get(rowIdx)!.set(colIdx, value);
+      editsByRow.get(rowIdx)?.set(colIdx, value);
     }
 
     const statements: string[] = [];
     for (const [rowIdx, changes] of editsByRow) {
-      statements.push(generateUpdate(schema, table, columns, originalRows[rowIdx], changes, pkColumns));
+      statements.push(
+        generateUpdate(schema, table, columns, originalRows[rowIdx], changes, pkColumns),
+      );
     }
 
     if (statements.length === 0) {

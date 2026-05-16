@@ -1,7 +1,7 @@
 import { Copy, FileText, Trash2 } from "lucide-react";
+import type { SavedQuery } from "@/stores/query-store";
 import { I } from "./constants";
 import { TreeRow } from "./tree-row";
-import type { SavedQuery } from "@/stores/query-store";
 import type { SidebarRenderCtx } from "./types";
 
 export function renderSavedQueries(
@@ -13,7 +13,9 @@ export function renderSavedQueries(
   return (
     <div className="border-t border-sidebar-border">
       <div className="flex h-8 items-center justify-between px-3">
-        <span className="tracking-widest uppercase text-[10px] font-semibold text-sidebar-foreground">SAVED QUERIES</span>
+        <span className="tracking-widest uppercase text-[10px] font-semibold text-sidebar-foreground">
+          SAVED QUERIES
+        </span>
         {savedQueries.length > 0 && (
           <span className="text-[10px] text-muted-foreground">{savedQueries.length}</span>
         )}
@@ -27,15 +29,36 @@ export function renderSavedQueries(
               icon={<FileText className="h-3.5 w-3.5 text-primary/60" />}
               label={q.title}
               selected={selectedItem === `query::${q.id}`}
-              onClick={() => { setSelectedItem(`query::${q.id}`); openTab(q.projectId, q.sql); }}
-              onContextMenu={(e) => { setSelectedItem(`query::${q.id}`); showMenu(e, [
-                { label: "Open in Tab", icon: <FileText className="h-3 w-3" />, onClick: () => openTab(q.projectId, q.sql) },
-                { label: "Copy SQL", icon: <Copy className="h-3 w-3" />, onClick: () => copy(q.sql) },
-                { separator: true as const },
-                { label: "Delete", icon: <Trash2 className="h-3 w-3" />, onClick: () => void removeQuery(q.id), destructive: true },
-              ]); }}
+              onClick={() => {
+                setSelectedItem(`query::${q.id}`);
+                openTab(q.projectId, q.sql);
+              }}
+              onContextMenu={(e) => {
+                setSelectedItem(`query::${q.id}`);
+                showMenu(e, [
+                  {
+                    label: "Open in Tab",
+                    icon: <FileText className="h-3 w-3" />,
+                    onClick: () => openTab(q.projectId, q.sql),
+                  },
+                  {
+                    label: "Copy SQL",
+                    icon: <Copy className="h-3 w-3" />,
+                    onClick: () => copy(q.sql),
+                  },
+                  { separator: true as const },
+                  {
+                    label: "Delete",
+                    icon: <Trash2 className="h-3 w-3" />,
+                    onClick: () => void removeQuery(q.id),
+                    destructive: true,
+                  },
+                ]);
+              }}
               trailing={
-                <span className="font-mono text-[10px] text-muted-foreground shrink-0">{q.projectId}</span>
+                <span className="font-mono text-[10px] text-muted-foreground shrink-0">
+                  {q.projectId}
+                </span>
               }
             />
           ))}

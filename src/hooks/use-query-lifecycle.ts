@@ -1,17 +1,17 @@
-import { useEffect, useCallback } from "react";
+import { useCallback, useEffect } from "react";
 import { DriverFactory } from "@/lib/database-driver";
-import * as virtualCache from "@/lib/virtual-cache";
 import {
   CELL_SEP,
-  PAGE_SIZE,
-  ROW_SEP,
   isQueryCancelledError,
   notifyQueryComplete,
+  PAGE_SIZE,
+  ROW_SEP,
 } from "@/lib/query-helpers";
+import * as virtualCache from "@/lib/virtual-cache";
+import { useHistoryStore } from "@/stores/history-store";
 import { useProjectStore } from "@/stores/project-store";
 import { useTabStore } from "@/stores/tab-store";
 import { useUIStore } from "@/stores/ui-store";
-import { useHistoryStore } from "@/stores/history-store";
 
 interface UseQueryLifecycleArgs {
   setCommandPaletteOpen: (updater: (v: boolean) => boolean) => void;
@@ -60,8 +60,13 @@ export function useQueryLifecycle({ setCommandPaletteOpen }: UseQueryLifecycleAr
       if (driver.executeVirtual) {
         const sql = tab.editorValue;
         const queryId = crypto.randomUUID().replace(/-/g, "").slice(0, 12);
-        const [colsPacked, totalRows, pagePacked, elapsed] =
-          await driver.executeVirtual(tab.projectId, sql, queryId, PAGE_SIZE, timeoutMs);
+        const [colsPacked, totalRows, pagePacked, elapsed] = await driver.executeVirtual(
+          tab.projectId,
+          sql,
+          queryId,
+          PAGE_SIZE,
+          timeoutMs,
+        );
 
         if (!colsPacked) {
           const parts = pagePacked ? pagePacked.split(ROW_SEP) : [];
@@ -93,7 +98,14 @@ export function useQueryLifecycle({ setCommandPaletteOpen }: UseQueryLifecycleAr
             notifyQueryComplete(tab.editorValue, elapsed, true, firstPage.length);
           } else {
             virtualCache.setPage(queryId, 0, firstPage);
-            setVirtualQuery(idx, { queryId, columns, totalRows, pageSize: PAGE_SIZE, colCount: columns.length, time: elapsed });
+            setVirtualQuery(idx, {
+              queryId,
+              columns,
+              totalRows,
+              pageSize: PAGE_SIZE,
+              colCount: columns.length,
+              time: elapsed,
+            });
             updateResult(idx, { columns, rows: firstPage, time: elapsed });
             notifyQueryComplete(tab.editorValue, elapsed, true, totalRows);
           }
@@ -256,7 +268,10 @@ export function useQueryLifecycle({ setCommandPaletteOpen }: UseQueryLifecycleAr
           const closingTab = t[idx];
           if (closingTab?.virtualQuery?.queryId && closingTab.projectId) {
             const dd = useProjectStore.getState().projects[closingTab.projectId];
-            if (dd) DriverFactory.getDriver(dd.driver).closeVirtual?.(closingTab.projectId, closingTab.virtualQuery.queryId).catch(() => {});
+            if (dd)
+              DriverFactory.getDriver(dd.driver)
+                .closeVirtual?.(closingTab.projectId, closingTab.virtualQuery.queryId)
+                .catch(() => {});
             virtualCache.clearQuery(closingTab.virtualQuery.queryId);
           }
           closeTab(idx);
@@ -281,7 +296,7 @@ export function useQueryLifecycle({ setCommandPaletteOpen }: UseQueryLifecycleAr
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [cancelQuery, closeTab, runExplain]);
+  }, [cancelQuery, closeTab, runExplain, setCommandPaletteOpen]);
 
   return { runQuery, runExplain, cancelQuery, runSplitQuery };
 }

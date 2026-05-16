@@ -1,16 +1,5 @@
-import {
-  Check,
-  Database,
-  Eye,
-  FileCode,
-  HardDrive,
-  Shield,
-} from "lucide-react";
-import {
-  LoadingPlaceholder,
-  PropertySection,
-  StatCard,
-} from "./shared";
+import { Check, Database, Eye, FileCode, HardDrive, Shield } from "lucide-react";
+import { LoadingPlaceholder, PropertySection, StatCard } from "./shared";
 import type { MatViewStats, ViewInfo } from "./types";
 
 export function ViewOverview({
@@ -36,10 +25,7 @@ export function ViewOverview({
             icon={<Shield className="h-3.5 w-3.5" />}
           />
         </div>
-        <PropertySection
-          title="View Definition"
-          icon={<FileCode className="h-3.5 w-3.5" />}
-        >
+        <PropertySection title="View Definition" icon={<FileCode className="h-3.5 w-3.5" />}>
           <pre className="rounded-xl bg-[hsl(var(--background))] border border-border/30 p-4 text-[11px] font-mono text-foreground/90 overflow-x-auto whitespace-pre-wrap leading-relaxed max-h-[200px] selection:bg-primary/20">
             {viewInfo.definition}
           </pre>
@@ -69,10 +55,7 @@ export function ViewOverview({
             icon={<Check className="h-3.5 w-3.5" />}
           />
         </div>
-        <PropertySection
-          title="Definition"
-          icon={<FileCode className="h-3.5 w-3.5" />}
-        >
+        <PropertySection title="Definition" icon={<FileCode className="h-3.5 w-3.5" />}>
           <pre className="rounded-xl bg-[hsl(var(--background))] border border-border/30 p-4 text-[11px] font-mono text-foreground/90 overflow-x-auto whitespace-pre-wrap leading-relaxed max-h-[200px] selection:bg-primary/20">
             {matViewStats.definition}
           </pre>

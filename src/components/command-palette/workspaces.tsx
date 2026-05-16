@@ -1,6 +1,6 @@
 import { Command } from "cmdk";
-import { useWorkspaceStore } from "@/stores/workspace-store";
-import { Save, FolderOpen, Trash2 } from "lucide-react";
+import { FolderOpen, Save, Trash2 } from "lucide-react";
+import type { useWorkspaceStore } from "@/stores/workspace-store";
 import type { Page } from "./types";
 
 type WorkspaceStateWorkspaces = ReturnType<typeof useWorkspaceStore.getState>["workspaces"];
@@ -21,14 +21,17 @@ export function SaveWorkspacePage({
       <div className="flex items-center gap-2 border-b border-border px-4 py-3">
         <Save className="h-4 w-4 text-muted-foreground shrink-0" />
         <input
-          autoFocus
           type="text"
           placeholder="Workspace name..."
           value={workspaceName}
           onChange={(e) => setWorkspaceName(e.target.value)}
           onKeyDown={(e) => {
             if (e.key === "Enter") void handleSaveWorkspace();
-            else if (e.key === "Escape") { e.stopPropagation(); setPage("root"); setWorkspaceName(""); }
+            else if (e.key === "Escape") {
+              e.stopPropagation();
+              setPage("root");
+              setWorkspaceName("");
+            }
           }}
           className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground outline-none font-mono"
         />
@@ -54,9 +57,11 @@ export function LoadOrDeleteWorkspacePage({
   return (
     <>
       <div className="flex items-center gap-2 border-b border-border px-4 py-3">
-        {page === "delete-workspace"
-          ? <Trash2 className="h-4 w-4 text-muted-foreground shrink-0" />
-          : <FolderOpen className="h-4 w-4 text-muted-foreground shrink-0" />}
+        {page === "delete-workspace" ? (
+          <Trash2 className="h-4 w-4 text-muted-foreground shrink-0" />
+        ) : (
+          <FolderOpen className="h-4 w-4 text-muted-foreground shrink-0" />
+        )}
         <span className="text-sm text-foreground font-mono">
           {page === "delete-workspace" ? "Delete Workspace" : "Load Workspace"}
         </span>
@@ -78,10 +83,18 @@ export function LoadOrDeleteWorkspacePage({
               <div className="flex-1 min-w-0">
                 <span className="font-mono text-sm font-medium text-foreground">{ws.name}</span>
                 <div className="font-mono text-xs text-muted-foreground">
-                  {(() => { try { return `${JSON.parse(ws.tabs).length} tabs`; } catch { return ""; } })()}
+                  {(() => {
+                    try {
+                      return `${JSON.parse(ws.tabs).length} tabs`;
+                    } catch {
+                      return "";
+                    }
+                  })()}
                 </div>
               </div>
-              {page === "delete-workspace" && <Trash2 className="h-4 w-4 text-destructive shrink-0" />}
+              {page === "delete-workspace" && (
+                <Trash2 className="h-4 w-4 text-destructive shrink-0" />
+              )}
             </Command.Item>
           ))
         )}

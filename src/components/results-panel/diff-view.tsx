@@ -1,6 +1,6 @@
-import { useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { Diff, Loader2 } from "lucide-react";
+import { useRef, useState } from "react";
 
 export function DiffView({
   pinnedColumns,
@@ -21,7 +21,8 @@ export function DiffView({
   const [computing, setComputing] = useState(false);
 
   const colsMatch =
-    pinnedColumns.length === currentColumns.length && pinnedColumns.every((c, i) => c === currentColumns[i]);
+    pinnedColumns.length === currentColumns.length &&
+    pinnedColumns.every((c, i) => c === currentColumns[i]);
 
   // Compute diff in Rust backend for performance
   const prevKeyRef = useRef("");
@@ -46,30 +47,32 @@ export function DiffView({
     invoke<[string, string, number]>("compute_diff", {
       pinned_packed: pinnedPacked,
       current_packed: currentPacked,
-    }).then(([addedPacked, removedPacked, unchangedCount]) => {
-      const unpackRows = (packed: string): string[][] => {
-        if (!packed) return [];
-        const parts = packed.split(ROW_SEP);
-        // Skip header (index 0)
-        return parts.slice(1).map((r) => r.split(CELL_SEP));
-      };
-      setDiffResult({
-        added: unpackRows(addedPacked),
-        removed: unpackRows(removedPacked),
-        unchangedCount,
+    })
+      .then(([addedPacked, removedPacked, unchangedCount]) => {
+        const unpackRows = (packed: string): string[][] => {
+          if (!packed) return [];
+          const parts = packed.split(ROW_SEP);
+          // Skip header (index 0)
+          return parts.slice(1).map((r) => r.split(CELL_SEP));
+        };
+        setDiffResult({
+          added: unpackRows(addedPacked),
+          removed: unpackRows(removedPacked),
+          unchangedCount,
+        });
+        setComputing(false);
+      })
+      .catch(() => {
+        // Fallback: compute in JS if Rust command fails
+        const pinnedSet = new Set(pinnedRows.map((r) => r.join(CELL_SEP)));
+        const currentSet = new Set(currentRows.map((r) => r.join(CELL_SEP)));
+        setDiffResult({
+          added: currentRows.filter((r) => !pinnedSet.has(r.join(CELL_SEP))),
+          removed: pinnedRows.filter((r) => !currentSet.has(r.join(CELL_SEP))),
+          unchangedCount: currentRows.filter((r) => pinnedSet.has(r.join(CELL_SEP))).length,
+        });
+        setComputing(false);
       });
-      setComputing(false);
-    }).catch(() => {
-      // Fallback: compute in JS if Rust command fails
-      const pinnedSet = new Set(pinnedRows.map((r) => r.join(CELL_SEP)));
-      const currentSet = new Set(currentRows.map((r) => r.join(CELL_SEP)));
-      setDiffResult({
-        added: currentRows.filter((r) => !pinnedSet.has(r.join(CELL_SEP))),
-        removed: pinnedRows.filter((r) => !currentSet.has(r.join(CELL_SEP))),
-        unchangedCount: currentRows.filter((r) => pinnedSet.has(r.join(CELL_SEP))).length,
-      });
-      setComputing(false);
-    });
   }
 
   if (!colsMatch) {
@@ -103,7 +106,9 @@ export function DiffView({
         <span className="flex items-center gap-1 text-destructive">
           <span className="h-2 w-2 rounded-full bg-destructive" /> -{removed.length} removed
         </span>
-        <span className="flex items-center gap-1 text-muted-foreground">={unchangedCount} unchanged</span>
+        <span className="flex items-center gap-1 text-muted-foreground">
+          ={unchangedCount} unchanged
+        </span>
       </div>
 
       <table className="w-full border-collapse">
@@ -111,7 +116,10 @@ export function DiffView({
           <tr>
             <th className="border border-border px-2 py-1 text-left bg-secondary text-[10px] w-8" />
             {pinnedColumns.map((col) => (
-              <th key={col} className="border border-border px-2 py-1 text-left bg-secondary text-[10px]">
+              <th
+                key={col}
+                className="border border-border px-2 py-1 text-left bg-secondary text-[10px]"
+              >
                 {col}
               </th>
             ))}

@@ -1,4 +1,4 @@
-import type { ForeignKey, ERDColumn, TableBox } from "./types";
+import type { ERDColumn, ForeignKey, TableBox } from "./types";
 
 export const COL_HEIGHT = 22;
 export const HEADER_HEIGHT = 32;

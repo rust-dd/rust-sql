@@ -1,17 +1,5 @@
-import {
-  ArrowRight,
-  Check,
-  Columns3,
-  Copy,
-  FileCode,
-  RefreshCw,
-} from "lucide-react";
-import {
-  InfoRow,
-  LoadingPlaceholder,
-  PropertySection,
-  StatCard,
-} from "./shared";
+import { ArrowRight, Check, Columns3, Copy, FileCode, RefreshCw } from "lucide-react";
+import { InfoRow, LoadingPlaceholder, PropertySection, StatCard } from "./shared";
 import type { FunctionMeta } from "./types";
 
 export function FunctionOverview({
@@ -46,37 +34,26 @@ export function FunctionOverview({
       <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs font-mono px-1">
         <InfoRow
           label="Security"
-          value={
-            functionMeta.securityDefiner
-              ? "SECURITY DEFINER"
-              : "SECURITY INVOKER"
-          }
+          value={functionMeta.securityDefiner ? "SECURITY DEFINER" : "SECURITY INVOKER"}
         />
         <InfoRow
           label="Strict"
-          value={
-            functionMeta.isStrict ? "YES (RETURNS NULL ON NULL INPUT)" : "NO"
-          }
+          value={functionMeta.isStrict ? "YES (RETURNS NULL ON NULL INPUT)" : "NO"}
         />
         <InfoRow label="Est. Cost" value={functionMeta.estimatedCost} />
         <InfoRow label="Est. Rows" value={functionMeta.estimatedRows} />
       </div>
       {functionMeta.arguments && (
-        <PropertySection
-          title="Arguments"
-          icon={<Columns3 className="h-3.5 w-3.5" />}
-        >
+        <PropertySection title="Arguments" icon={<Columns3 className="h-3.5 w-3.5" />}>
           <div className="rounded-xl bg-[hsl(var(--background))] border border-border/30 px-3 py-2 text-[11px] font-mono text-foreground/90">
             {functionMeta.arguments}
           </div>
         </PropertySection>
       )}
-      <PropertySection
-        title="Source Code"
-        icon={<FileCode className="h-3.5 w-3.5" />}
-      >
+      <PropertySection title="Source Code" icon={<FileCode className="h-3.5 w-3.5" />}>
         <div className="relative">
           <button
+            type="button"
             onClick={() => copyText(functionMeta.source, "source")}
             className="absolute top-2 right-2 text-muted-foreground hover:text-foreground z-10"
             title="Copy source"

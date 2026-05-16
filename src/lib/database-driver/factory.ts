@@ -8,7 +8,7 @@ export class DriverFactory {
   ]);
 
   static getDriver(driverType: DriverType): DatabaseDriver {
-    const driver = this.drivers.get(driverType);
+    const driver = DriverFactory.drivers.get(driverType);
     if (!driver) {
       throw new Error(`Driver ${driverType} not found`);
     }
@@ -16,7 +16,7 @@ export class DriverFactory {
   }
 
   static getSupportedDrivers(): DriverType[] {
-    return Array.from(this.drivers.keys());
+    return Array.from(DriverFactory.drivers.keys());
   }
 }
 

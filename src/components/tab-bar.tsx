@@ -1,12 +1,27 @@
+import {
+  Activity,
+  Bell,
+  Columns3,
+  Copy,
+  Database,
+  List,
+  Package,
+  Plus,
+  Settings,
+  Shield,
+  Terminal,
+  Trash2,
+  X,
+  XCircle,
+} from "lucide-react";
 import { useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { ContextMenu, useContextMenu } from "@/components/ui/context-menu";
-import { cn } from "@/lib/utils";
-import { useTabStore } from "@/stores/tab-store";
-import { useProjectStore } from "@/stores/project-store";
 import { DriverFactory } from "@/lib/database-driver";
+import { cn } from "@/lib/utils";
 import * as virtualCache from "@/lib/virtual-cache";
-import { Activity, Bell, Columns3, Copy, Database, List, Package, Plus, Settings, Shield, Terminal, Trash2, X, XCircle } from "lucide-react";
+import { useProjectStore } from "@/stores/project-store";
+import { useTabStore } from "@/stores/tab-store";
 
 export function TabBar() {
   const tabs = useTabStore((s) => s.tabs);
@@ -18,31 +33,43 @@ export function TabBar() {
   const openTab = useTabStore((s) => s.openTab);
   const { menu, showMenu, closeMenu } = useContextMenu();
 
-  const cleanupVirtual = useCallback((idx: number) => {
-    const tab = tabs[idx];
-    if (tab?.virtualQuery?.queryId && tab.projectId) {
-      const d = useProjectStore.getState().projects[tab.projectId];
-      if (d) DriverFactory.getDriver(d.driver).closeVirtual?.(tab.projectId, tab.virtualQuery.queryId).catch(() => {});
-      virtualCache.clearQuery(tab.virtualQuery.queryId);
-    }
-  }, [tabs]);
+  const cleanupVirtual = useCallback(
+    (idx: number) => {
+      const tab = tabs[idx];
+      if (tab?.virtualQuery?.queryId && tab.projectId) {
+        const d = useProjectStore.getState().projects[tab.projectId];
+        if (d)
+          DriverFactory.getDriver(d.driver)
+            .closeVirtual?.(tab.projectId, tab.virtualQuery.queryId)
+            .catch(() => {});
+        virtualCache.clearQuery(tab.virtualQuery.queryId);
+      }
+    },
+    [tabs],
+  );
 
-  const handleCloseTab = useCallback((idx: number) => {
-    cleanupVirtual(idx);
-    closeTab(idx);
-  }, [cleanupVirtual, closeTab]);
+  const handleCloseTab = useCallback(
+    (idx: number) => {
+      cleanupVirtual(idx);
+      closeTab(idx);
+    },
+    [cleanupVirtual, closeTab],
+  );
 
   const handleCloseAll = useCallback(() => {
     for (let i = 0; i < tabs.length; i++) cleanupVirtual(i);
     closeAllTabs();
   }, [tabs, cleanupVirtual, closeAllTabs]);
 
-  const handleCloseOthers = useCallback((idx: number) => {
-    for (let i = 0; i < tabs.length; i++) {
-      if (i !== idx) cleanupVirtual(i);
-    }
-    closeOtherTabs(idx);
-  }, [tabs, cleanupVirtual, closeOtherTabs]);
+  const handleCloseOthers = useCallback(
+    (idx: number) => {
+      for (let i = 0; i < tabs.length; i++) {
+        if (i !== idx) cleanupVirtual(i);
+      }
+      closeOtherTabs(idx);
+    },
+    [tabs, cleanupVirtual, closeOtherTabs],
+  );
 
   const openTerminalTab = useTabStore((s) => s.openTerminalTab);
   const projects = useProjectStore((s) => s.projects);
@@ -53,26 +80,46 @@ export function TabBar() {
         {tabs.map((tab, idx) => {
           if (!tab) return null;
           const projectName = tab.projectId;
-          const projectDb = tab.projectId
-            ? projects[tab.projectId]?.database
-            : undefined;
+          const projectDb = tab.projectId ? projects[tab.projectId]?.database : undefined;
           const isActive = selectedTabIndex === idx;
 
           return (
             <div
               key={tab.id}
               onClick={() => selectTab(idx)}
-              onContextMenu={(e) => showMenu(e, [
-                { label: "Close", icon: <X className="h-3 w-3" />, onClick: () => handleCloseTab(idx) },
-                ...(tabs.length > 1 ? [
-                  { label: "Close Others", icon: <XCircle className="h-3 w-3" />, onClick: () => handleCloseOthers(idx) },
-                ] : []),
-                { label: "Close All", icon: <Trash2 className="h-3 w-3" />, onClick: handleCloseAll },
-                ...(tab.editorValue ? [
-                  { separator: true as const },
-                  { label: "Copy SQL", icon: <Copy className="h-3 w-3" />, onClick: () => navigator.clipboard.writeText(tab.editorValue) },
-                ] : []),
-              ])}
+              onContextMenu={(e) =>
+                showMenu(e, [
+                  {
+                    label: "Close",
+                    icon: <X className="h-3 w-3" />,
+                    onClick: () => handleCloseTab(idx),
+                  },
+                  ...(tabs.length > 1
+                    ? [
+                        {
+                          label: "Close Others",
+                          icon: <XCircle className="h-3 w-3" />,
+                          onClick: () => handleCloseOthers(idx),
+                        },
+                      ]
+                    : []),
+                  {
+                    label: "Close All",
+                    icon: <Trash2 className="h-3 w-3" />,
+                    onClick: handleCloseAll,
+                  },
+                  ...(tab.editorValue
+                    ? [
+                        { separator: true as const },
+                        {
+                          label: "Copy SQL",
+                          icon: <Copy className="h-3 w-3" />,
+                          onClick: () => navigator.clipboard.writeText(tab.editorValue),
+                        },
+                      ]
+                    : []),
+                ])
+              }
               className={cn(
                 "group flex shrink-0 items-center gap-2 px-3 py-1.5 rounded-lg transition-all duration-150 cursor-pointer select-none",
                 isActive
@@ -82,23 +129,44 @@ export function TabBar() {
             >
               <div className="flex items-center gap-1.5 font-mono text-xs">
                 {tab.type === "terminal" ? (
-                  <Terminal className={cn("h-3 w-3", isActive ? "text-primary" : "text-muted-foreground")} />
+                  <Terminal
+                    className={cn("h-3 w-3", isActive ? "text-primary" : "text-muted-foreground")}
+                  />
                 ) : tab.type === "monitor" ? (
-                  <Activity className={cn("h-3 w-3", isActive ? "text-primary" : "text-muted-foreground")} />
+                  <Activity
+                    className={cn("h-3 w-3", isActive ? "text-primary" : "text-muted-foreground")}
+                  />
                 ) : tab.type === "notify" ? (
-                  <Bell className={cn("h-3 w-3", isActive ? "text-primary" : "text-muted-foreground")} />
+                  <Bell
+                    className={cn("h-3 w-3", isActive ? "text-primary" : "text-muted-foreground")}
+                  />
                 ) : tab.type === "roles" ? (
-                  <Shield className={cn("h-3 w-3", isActive ? "text-primary" : "text-muted-foreground")} />
+                  <Shield
+                    className={cn("h-3 w-3", isActive ? "text-primary" : "text-muted-foreground")}
+                  />
                 ) : tab.type === "schema-diff" ? (
-                  <Columns3 className={cn("h-3 w-3", isActive ? "text-primary" : "text-muted-foreground")} />
+                  <Columns3
+                    className={cn("h-3 w-3", isActive ? "text-primary" : "text-muted-foreground")}
+                  />
                 ) : tab.type === "extensions" ? (
-                  <Package className={cn("h-3 w-3", isActive ? "text-primary" : "text-muted-foreground")} />
+                  <Package
+                    className={cn("h-3 w-3", isActive ? "text-primary" : "text-muted-foreground")}
+                  />
                 ) : tab.type === "enums" ? (
-                  <List className={cn("h-3 w-3", isActive ? "text-primary" : "text-muted-foreground")} />
+                  <List
+                    className={cn("h-3 w-3", isActive ? "text-primary" : "text-muted-foreground")}
+                  />
                 ) : tab.type === "pg-settings" ? (
-                  <Settings className={cn("h-3 w-3", isActive ? "text-primary" : "text-muted-foreground")} />
+                  <Settings
+                    className={cn("h-3 w-3", isActive ? "text-primary" : "text-muted-foreground")}
+                  />
                 ) : projectDb ? (
-                  <Database className={cn("h-3 w-3", isActive ? "text-primary/70" : "text-muted-foreground/60")} />
+                  <Database
+                    className={cn(
+                      "h-3 w-3",
+                      isActive ? "text-primary/70" : "text-muted-foreground/60",
+                    )}
+                  />
                 ) : null}
                 {projectDb && tab.type !== "monitor" && (
                   <span className="text-muted-foreground/70">{projectName}:</span>
@@ -106,6 +174,7 @@ export function TabBar() {
                 <span className={cn(isActive && "font-medium")}>{tab.title}</span>
               </div>
               <button
+                type="button"
                 onClick={(e) => {
                   e.stopPropagation();
                   handleCloseTab(idx);

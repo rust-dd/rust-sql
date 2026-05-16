@@ -1,9 +1,7 @@
 import { Command } from "cmdk";
+import { Activity, Database, Eye, FileCode, Layers, Network, Table } from "lucide-react";
+import type { useProjectStore } from "@/stores/project-store";
 import { useTabStore } from "@/stores/tab-store";
-import { useProjectStore } from "@/stores/project-store";
-import {
-  Table, Eye, FileCode, Layers, Database, Activity, Network,
-} from "lucide-react";
 
 type ProjectState = ReturnType<typeof useProjectStore.getState>;
 
@@ -36,7 +34,9 @@ export function ConnectionsGroup({
           >
             <Database className="h-4 w-4 text-muted-foreground" />
             <span>{id}</span>
-            <span className="cmdk-detail">{details.host}:{details.port}/{details.database}</span>
+            <span className="cmdk-detail">
+              {details.host}:{details.port}/{details.database}
+            </span>
             <span className={`cmdk-meta ${connected ? "!bg-success/20 !text-success" : ""}`}>
               {connected ? "Connected" : "Connect"}
             </span>
@@ -50,7 +50,10 @@ export function ConnectionsGroup({
           <Command.Item
             key={`monitor-${id}`}
             value={`${id} performance monitor`}
-            onSelect={() => { onClose(); useTabStore.getState().openMonitorTab(id); }}
+            onSelect={() => {
+              onClose();
+              useTabStore.getState().openMonitorTab(id);
+            }}
           >
             <Activity className="h-4 w-4 text-muted-foreground" />
             <span>Monitor {id}</span>
@@ -63,13 +66,18 @@ export function ConnectionsGroup({
           <Command.Item
             key={`erd-${projectId}-${s}`}
             value={`${projectId} ${s} ERD diagram`}
-            onSelect={() => { onClose(); useTabStore.getState().openERDTab(projectId, s); }}
+            onSelect={() => {
+              onClose();
+              useTabStore.getState().openERDTab(projectId, s);
+            }}
           >
             <Network className="h-4 w-4 text-muted-foreground" />
-            <span>ERD {projectId}/{s}</span>
+            <span>
+              ERD {projectId}/{s}
+            </span>
             <span className="cmdk-meta">Diagram</span>
           </Command.Item>
-        ))
+        )),
       )}
     </Command.Group>
   );
@@ -167,7 +175,9 @@ export function DatabaseObjectsGroups({
                 <FileCode className="h-4 w-4 text-muted-foreground" />
                 <span>{fn.name}</span>
                 <span className="cmdk-meta">Function</span>
-                <span className="cmdk-detail">({fn.arguments || ""}) → {fn.returnType}</span>
+                <span className="cmdk-detail">
+                  ({fn.arguments || ""}) → {fn.returnType}
+                </span>
               </Command.Item>
             ))}
           </Command.Group>

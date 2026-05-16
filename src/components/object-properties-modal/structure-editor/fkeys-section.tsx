@@ -1,9 +1,6 @@
-import type {
-  DraftForeignKey,
-  StructureEditorState,
-} from "@/lib/alter-table-sql";
-import { DriverFactory } from "@/lib/database-driver";
 import { Plus } from "lucide-react";
+import type { DraftForeignKey, StructureEditorState } from "@/lib/alter-table-sql";
+import type { DriverFactory } from "@/lib/database-driver";
 import { FKCard } from "./fk-card";
 import { uid } from "./initialization";
 
@@ -52,10 +49,7 @@ export function FkeysSection({
                     ? {
                         ...f,
                         ...updates,
-                        _status:
-                          f._status === "existing"
-                            ? "existing"
-                            : f._status,
+                        _status: f._status === "existing" ? "existing" : f._status,
                       }
                     : f,
                 ),
@@ -84,17 +78,14 @@ export function FkeysSection({
             key={fk._id}
             className="flex items-center gap-2 px-3 py-2 rounded-lg border border-red-500/20 bg-red-500/5 opacity-60"
           >
-            <span className="text-xs font-mono line-through flex-1">
-              {fk.constraintName}
-            </span>
+            <span className="text-xs font-mono line-through flex-1">{fk.constraintName}</span>
             <button
+              type="button"
               onClick={() =>
                 setDraft((prev) => ({
                   ...prev,
                   foreignKeys: prev.foreignKeys.map((f) =>
-                    f._id === fk._id
-                      ? { ...f, _status: "existing" as const }
-                      : f,
+                    f._id === fk._id ? { ...f, _status: "existing" as const } : f,
                   ),
                 }))
               }
@@ -105,6 +96,7 @@ export function FkeysSection({
           </div>
         ))}
       <button
+        type="button"
         onClick={() => {
           setDraft((prev) => ({
             ...prev,

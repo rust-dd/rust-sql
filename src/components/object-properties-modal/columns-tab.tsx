@@ -42,9 +42,7 @@ export function ColumnsContent({
                 key={c.name}
                 className="border-t border-border/15 hover:bg-primary/[0.04] transition-colors"
               >
-                <td className="px-3 py-1.5 text-muted-foreground/30">
-                  {i + 1}
-                </td>
+                <td className="px-3 py-1.5 text-muted-foreground/30">{i + 1}</td>
                 <td className="px-3 py-1.5">
                   {pkCols.has(c.name) ? (
                     <Key className="h-3 w-3 text-warning" />
@@ -52,9 +50,7 @@ export function ColumnsContent({
                     <Columns3 className="h-3 w-3 text-muted-foreground/20" />
                   )}
                 </td>
-                <td className="px-3 py-1.5 text-foreground font-medium">
-                  {c.name}
-                </td>
+                <td className="px-3 py-1.5 text-foreground font-medium">{c.name}</td>
                 <td className="px-3 py-1.5">
                   <span className="text-primary/70 bg-primary/[0.06] px-1.5 py-0.5 rounded">
                     {c.dataType}
@@ -64,18 +60,14 @@ export function ColumnsContent({
                   {c.nullable ? (
                     <span className="text-muted-foreground/40">YES</span>
                   ) : (
-                    <span className="text-orange-400/80 text-[10px] font-semibold">
-                      NOT NULL
-                    </span>
+                    <span className="text-orange-400/80 text-[10px] font-semibold">NOT NULL</span>
                   )}
                 </td>
                 <td
                   className="px-3 py-1.5 text-muted-foreground/60 max-w-[150px] truncate"
                   title={c.defaultValue ?? ""}
                 >
-                  {c.defaultValue ?? (
-                    <span className="text-muted-foreground/20">-</span>
-                  )}
+                  {c.defaultValue ?? <span className="text-muted-foreground/20">-</span>}
                 </td>
               </tr>
             ))}

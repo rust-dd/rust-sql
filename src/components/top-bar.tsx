@@ -1,9 +1,9 @@
-import { useProjectStore } from "@/stores/project-store";
-import { useTabStore, useActiveTab } from "@/stores/tab-store";
-import { useUIStore } from "@/stores/ui-store";
-import { ProjectConnectionStatus } from "@/types";
 import { Database, Download, Moon, Search, Sun } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useProjectStore } from "@/stores/project-store";
+import { useActiveTab, useTabStore } from "@/stores/tab-store";
+import { useUIStore } from "@/stores/ui-store";
+import { ProjectConnectionStatus } from "@/types";
 
 export function TopBar({
   onCheckUpdates,
@@ -30,7 +30,9 @@ export function TopBar({
           <span className="font-mono text-sm font-semibold">RSQL</span>
         </div>
         <div className="h-4 w-px bg-border/50" />
-        {activeProject && activeProjectDetails && status[activeProject] === ProjectConnectionStatus.Connected ? (
+        {activeProject &&
+        activeProjectDetails &&
+        status[activeProject] === ProjectConnectionStatus.Connected ? (
           <div className="flex items-center gap-1.5 bg-accent rounded-full px-2.5 py-0.5 text-xs text-muted-foreground">
             <div className="h-2 w-2 rounded-full bg-success shadow-[0_0_6px_oklch(0.65_0.18_150)]" />
             <span className="font-mono">{activeProject}</span>
@@ -54,7 +56,8 @@ export function TopBar({
                 <option value="">Select connection...</option>
                 {Object.entries(projects).map(([id, details]) => (
                   <option key={id} value={id}>
-                    {id} ({details.database}){status[id] === ProjectConnectionStatus.Connected ? "" : " \u2022 disconnected"}
+                    {id} ({details.database})
+                    {status[id] === ProjectConnectionStatus.Connected ? "" : " \u2022 disconnected"}
                   </option>
                 ))}
               </select>
@@ -68,6 +71,7 @@ export function TopBar({
       <div className="flex items-center gap-2">
         {/* Command palette trigger */}
         <button
+          type="button"
           onClick={onOpenCommandPalette}
           className="flex items-center gap-2 h-7 px-3 rounded-lg border border-border/50 bg-muted/50 text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors"
         >
@@ -80,12 +84,7 @@ export function TopBar({
 
         <div className="h-4 w-px bg-border/50" />
 
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-8 gap-2"
-          onClick={onCheckUpdates}
-        >
+        <Button variant="ghost" size="sm" className="h-8 gap-2" onClick={onCheckUpdates}>
           <Download className="h-4 w-4" />
           <span className="text-xs">Updates</span>
         </Button>
@@ -95,11 +94,7 @@ export function TopBar({
           className="h-8 w-8 hover:rotate-12 transition-all duration-200"
           onClick={toggleTheme}
         >
-          {theme === "light" ? (
-            <Moon className="h-4 w-4" />
-          ) : (
-            <Sun className="h-4 w-4" />
-          )}
+          {theme === "light" ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
         </Button>
       </div>
     </div>

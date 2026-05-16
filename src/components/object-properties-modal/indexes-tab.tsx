@@ -1,11 +1,7 @@
 import { Key, Shield } from "lucide-react";
 import { LoadingPlaceholder } from "./shared";
 
-export function IndexesContent({
-  idxs,
-}: {
-  idxs?: import("@/types").IndexDetail[];
-}) {
+export function IndexesContent({ idxs }: { idxs?: import("@/types").IndexDetail[] }) {
   if (!idxs) {
     return <LoadingPlaceholder />;
   }
@@ -22,7 +18,7 @@ export function IndexesContent({
   const grouped = new Map<string, import("@/types").IndexDetail[]>();
   for (const idx of idxs) {
     if (!grouped.has(idx.indexName)) grouped.set(idx.indexName, []);
-    grouped.get(idx.indexName)!.push(idx);
+    grouped.get(idx.indexName)?.push(idx);
   }
 
   return (
@@ -60,9 +56,7 @@ export function IndexesContent({
                       <Key className="h-3 w-3 text-muted-foreground/25" />
                     )}
                   </td>
-                  <td className="px-3 py-2 text-foreground font-medium">
-                    {idxName}
-                  </td>
+                  <td className="px-3 py-2 text-foreground font-medium">{idxName}</td>
                   <td className="px-3 py-2 text-muted-foreground/70">
                     {entries.map((e) => e.columnName).join(", ")}
                   </td>

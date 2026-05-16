@@ -57,14 +57,11 @@ export function ForeignKeysContent({
                     key={i}
                     className="border-t border-border/15 hover:bg-primary/[0.04] transition-colors"
                   >
-                    <td className="px-2 py-1.5 text-foreground">
-                      {fk.constraintName}
-                    </td>
-                    <td className="px-2 py-1.5 text-primary/80">
-                      {fk.sourceColumn}
-                    </td>
+                    <td className="px-2 py-1.5 text-foreground">{fk.constraintName}</td>
+                    <td className="px-2 py-1.5 text-primary/80">{fk.sourceColumn}</td>
                     <td className="px-2 py-1.5">
                       <button
+                        type="button"
                         className="text-blue-500 hover:underline"
                         onClick={() => {
                           openTab(
@@ -77,12 +74,8 @@ export function ForeignKeysContent({
                         {fk.targetSchema}.{fk.targetTable}.{fk.targetColumn}
                       </button>
                     </td>
-                    <td className="px-2 py-1.5 text-muted-foreground">
-                      {fk.onDelete}
-                    </td>
-                    <td className="px-2 py-1.5 text-muted-foreground">
-                      {fk.onUpdate}
-                    </td>
+                    <td className="px-2 py-1.5 text-muted-foreground">{fk.onDelete}</td>
+                    <td className="px-2 py-1.5 text-muted-foreground">{fk.onUpdate}</td>
                   </tr>
                 ))}
               </tbody>
@@ -120,11 +113,10 @@ export function ForeignKeysContent({
                     key={i}
                     className="border-t border-border/15 hover:bg-primary/[0.04] transition-colors"
                   >
-                    <td className="px-2 py-1.5 text-foreground">
-                      {fk.constraintName}
-                    </td>
+                    <td className="px-2 py-1.5 text-foreground">{fk.constraintName}</td>
                     <td className="px-2 py-1.5">
                       <button
+                        type="button"
                         className="text-blue-500 hover:underline"
                         onClick={() => {
                           openTab(
@@ -140,9 +132,7 @@ export function ForeignKeysContent({
                     <td className="px-2 py-1.5 text-primary/80">
                       {fk.sourceColumn} &rarr; {fk.targetColumn}
                     </td>
-                    <td className="px-2 py-1.5 text-muted-foreground">
-                      {fk.onDelete}
-                    </td>
+                    <td className="px-2 py-1.5 text-muted-foreground">{fk.onDelete}</td>
                   </tr>
                 ))}
               </tbody>

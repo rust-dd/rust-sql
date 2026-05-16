@@ -1,8 +1,17 @@
-import { ProjectConnectionStatus } from "@/types";
 import type {
-  ColumnDetail, IndexDetail, ConstraintDetail,
-  TriggerDetail, RuleDetail, PolicyDetail, FunctionInfo, TriggerFunctionInfo,
-  PgRole, TableGrant, DbGrant, SchemaObject,
+  ColumnDetail,
+  ConstraintDetail,
+  DbGrant,
+  FunctionInfo,
+  IndexDetail,
+  PgRole,
+  PolicyDetail,
+  ProjectConnectionStatus,
+  RuleDetail,
+  SchemaObject,
+  TableGrant,
+  TriggerDetail,
+  TriggerFunctionInfo,
 } from "@/types";
 
 // Wire types from Rust (tuples)
@@ -49,7 +58,11 @@ export interface StreamCallbacks {
 }
 
 export interface DatabaseDriver {
-  connect(projectId: string, key: [string, string, string, string, string, string], ssh?: string[]): Promise<ProjectConnectionStatus>;
+  connect(
+    projectId: string,
+    key: [string, string, string, string, string, string],
+    ssh?: string[],
+  ): Promise<ProjectConnectionStatus>;
   cancelQuery?(projectId: string): Promise<boolean>;
   loadSchemas(projectId: string): Promise<string[]>;
   loadTables(projectId: string, schema: string): Promise<WireTableInfo[]>;
@@ -65,22 +78,63 @@ export interface DatabaseDriver {
   loadFunctions(projectId: string, schema: string): Promise<FunctionInfo[]>;
   loadTriggerFunctions(projectId: string, schema: string): Promise<TriggerFunctionInfo[]>;
   runQuery(projectId: string, sql: string, timeoutMs?: number): Promise<WireQueryResult>;
-  runQueryStreamed?(projectId: string, sql: string, streamId: string, callbacks: StreamCallbacks): Promise<void>;
-  executeVirtual?(projectId: string, sql: string, queryId: string, pageSize: number, timeoutMs?: number): Promise<[string, number, string, number]>;
-  fetchPage?(projectId: string, queryId: string, colCount: number, offset: number, limit: number): Promise<string>;
+  runQueryStreamed?(
+    projectId: string,
+    sql: string,
+    streamId: string,
+    callbacks: StreamCallbacks,
+  ): Promise<void>;
+  executeVirtual?(
+    projectId: string,
+    sql: string,
+    queryId: string,
+    pageSize: number,
+    timeoutMs?: number,
+  ): Promise<[string, number, string, number]>;
+  fetchPage?(
+    projectId: string,
+    queryId: string,
+    colCount: number,
+    offset: number,
+    limit: number,
+  ): Promise<string>;
   closeVirtual?(projectId: string, queryId: string): Promise<void>;
   loadActivity(projectId: string): Promise<string[][]>;
   loadDatabaseStats(projectId: string): Promise<[string, string][]>;
   loadTableStats(projectId: string): Promise<string[][]>;
   loadForeignKeys(projectId: string, schema: string): Promise<ForeignKey[]>;
-  loadTableStatistics?(projectId: string, schema: string, table: string): Promise<[string, string][]>;
-  loadFKDetails?(projectId: string, schema: string, table: string, direction: string): Promise<[string, string, string, string, string, string, string, string, string][]>;
+  loadTableStatistics?(
+    projectId: string,
+    schema: string,
+    table: string,
+  ): Promise<[string, string][]>;
+  loadFKDetails?(
+    projectId: string,
+    schema: string,
+    table: string,
+    direction: string,
+  ): Promise<[string, string, string, string, string, string, string, string, string][]>;
   loadViewInfo?(projectId: string, schema: string, view: string): Promise<[string, string][]>;
   loadMatviewInfo?(projectId: string, schema: string, matview: string): Promise<[string, string][]>;
-  loadFunctionInfo?(projectId: string, schema: string, funcName: string): Promise<[string, string][]>;
-  generateDDL?(projectId: string, schema: string, name: string, objectType: string): Promise<string>;
+  loadFunctionInfo?(
+    projectId: string,
+    schema: string,
+    funcName: string,
+  ): Promise<[string, string][]>;
+  generateDDL?(
+    projectId: string,
+    schema: string,
+    name: string,
+    objectType: string,
+  ): Promise<string>;
   csvPreview?(filePath: string): Promise<[string[], string[][]]>;
-  csvImport?(projectId: string, filePath: string, schema: string, table: string, columnMapping: [number, string][]): Promise<number>;
+  csvImport?(
+    projectId: string,
+    filePath: string,
+    schema: string,
+    table: string,
+    columnMapping: [number, string][],
+  ): Promise<number>;
   listenStart?(projectId: string, channel: string): Promise<boolean>;
   listenStop?(projectId: string, channel: string): Promise<boolean>;
   notifySend?(projectId: string, channel: string, payload: string): Promise<boolean>;
@@ -98,30 +152,46 @@ export interface DatabaseDriver {
   loadAvailableExtensions?(projectId: string): Promise<string[][]>;
   loadEnumTypes?(projectId: string): Promise<string[][]>;
   loadPgSettings?(projectId: string): Promise<string[][]>;
-  tableAction?(projectId: string, action: string, schema: string, table: string, objectType: string): Promise<string>;
+  tableAction?(
+    projectId: string,
+    action: string,
+    schema: string,
+    table: string,
+    objectType: string,
+  ): Promise<string>;
 }
 
 export function parseColumnDetails(wire: WireColumnDetail[]): ColumnDetail[] {
   return wire.map(([name, dataType, nullable, defaultValue]) => ({
-    name, dataType, nullable, defaultValue,
+    name,
+    dataType,
+    nullable,
+    defaultValue,
   }));
 }
 
 export function parseIndexDetails(wire: WireIndexDetail[]): IndexDetail[] {
   return wire.map(([indexName, columnName, isUnique, isPrimary]) => ({
-    indexName, columnName, isUnique, isPrimary,
+    indexName,
+    columnName,
+    isUnique,
+    isPrimary,
   }));
 }
 
 export function parseConstraintDetails(wire: WireConstraintDetail[]): ConstraintDetail[] {
   return wire.map(([constraintName, constraintType, columnName]) => ({
-    constraintName, constraintType, columnName,
+    constraintName,
+    constraintType,
+    columnName,
   }));
 }
 
 export function parseTriggerDetails(wire: WireTriggerDetail[]): TriggerDetail[] {
   return wire.map(([triggerName, event, timing]) => ({
-    triggerName, event, timing,
+    triggerName,
+    event,
+    timing,
   }));
 }
 
@@ -131,21 +201,26 @@ export function parseRuleDetails(wire: WireRuleDetail[]): RuleDetail[] {
 
 export function parsePolicyDetails(wire: WirePolicyDetail[]): PolicyDetail[] {
   return wire.map(([policyName, permissive, command]) => ({
-    policyName, permissive, command,
+    policyName,
+    permissive,
+    command,
   }));
 }
 
 export function parseFunctionInfo(wire: WireFunctionInfo[]): FunctionInfo[] {
   return wire.map(([name, returnType, arguments_]) => ({
-    name, returnType, arguments: arguments_,
+    name,
+    returnType,
+    arguments: arguments_,
   }));
 }
 
 export function parseTriggerFunctionInfo(wire: WireTriggerFunctionInfo[]): TriggerFunctionInfo[] {
   return wire.map(([name, arguments_]) => ({
-    name, arguments: arguments_,
+    name,
+    arguments: arguments_,
   }));
 }
 
-export { DriverFactory, DRIVER_CONFIGS } from "./factory";
 export type { DriverConfig, DriverType } from "./factory";
+export { DRIVER_CONFIGS, DriverFactory } from "./factory";

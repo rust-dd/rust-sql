@@ -1,12 +1,11 @@
-import { useState, useEffect, useRef, useCallback } from "react";
 import { listen } from "@tauri-apps/api/event";
+import { Bell, BellOff, Radio, Send, Trash2 } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { DriverFactory } from "@/lib/database-driver";
+import { cn } from "@/lib/utils";
 import { useProjectStore } from "@/stores/project-store";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
-import { Bell, BellOff, Send, Trash2, Radio } from "lucide-react";
-import { cn } from "@/lib/utils";
-
 
 interface Notification {
   channel: string;
@@ -35,7 +34,10 @@ export function NotifyPanel({ projectId }: NotifyPanelProps) {
   // Discover available channels from trigger functions
   useEffect(() => {
     if (!driver) return;
-    driver.discoverChannels?.(projectId).then(setKnownChannels).catch(() => {});
+    driver
+      .discoverChannels?.(projectId)
+      .then(setKnownChannels)
+      .catch(() => {});
   }, [driver, projectId]);
 
   useEffect(() => {
@@ -64,7 +66,7 @@ export function NotifyPanel({ projectId }: NotifyPanelProps) {
     if (listRef.current) {
       listRef.current.scrollTop = listRef.current.scrollHeight;
     }
-  }, [notifications]);
+  }, []);
 
   const subscribe = useCallback(async () => {
     const ch = newChannel.trim();
@@ -95,7 +97,7 @@ export function NotifyPanel({ projectId }: NotifyPanelProps) {
         driver?.listenStop?.(projectId, ch).catch(() => {});
       });
     };
-  }, []); // eslint-disable-line
+  }, [projectId, driver?.listenStop]); // eslint-disable-line
 
   return (
     <div className="flex flex-col h-full bg-background">
@@ -111,12 +113,19 @@ export function NotifyPanel({ projectId }: NotifyPanelProps) {
         />
         {knownChannels.length > 0 && (
           <datalist id="known-channels">
-            {knownChannels.filter((c) => !channels.includes(c)).map((c) => (
-              <option key={c} value={c} />
-            ))}
+            {knownChannels
+              .filter((c) => !channels.includes(c))
+              .map((c) => (
+                <option key={c} value={c} />
+              ))}
           </datalist>
         )}
-        <Button variant="outline" size="sm" onClick={subscribe} className="h-7 text-xs font-mono gap-1">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={subscribe}
+          className="h-7 text-xs font-mono gap-1"
+        >
           <Bell className="h-3 w-3" /> Subscribe
         </Button>
       </div>
@@ -125,12 +134,15 @@ export function NotifyPanel({ projectId }: NotifyPanelProps) {
       {knownChannels.length > 0 && (
         <div className="flex items-center gap-1 px-3 py-1.5 border-b border-border/20 flex-wrap">
           <Radio className="h-3 w-3 text-muted-foreground/50 mr-0.5" />
-          <span className="text-[10px] text-muted-foreground uppercase tracking-wider mr-1">Available:</span>
+          <span className="text-[10px] text-muted-foreground uppercase tracking-wider mr-1">
+            Available:
+          </span>
           {knownChannels.map((ch) => {
             const isActive = channels.includes(ch);
             return (
               <button
                 key={ch}
+                type="button"
                 onClick={async () => {
                   if (isActive) return;
                   await driver?.listenStart?.(projectId, ch);
@@ -154,10 +166,13 @@ export function NotifyPanel({ projectId }: NotifyPanelProps) {
 
       {channels.length > 0 && (
         <div className="flex items-center gap-1 px-3 py-1.5 border-b border-border/20 flex-wrap">
-          <span className="text-[10px] text-muted-foreground uppercase tracking-wider mr-1">Listening:</span>
+          <span className="text-[10px] text-muted-foreground uppercase tracking-wider mr-1">
+            Listening:
+          </span>
           {channels.map((ch) => (
             <button
               key={ch}
+              type="button"
               onClick={() => unsubscribe(ch)}
               className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[11px] font-mono hover:bg-destructive/10 hover:text-destructive transition-colors"
               title="Click to unsubscribe"
@@ -171,12 +186,19 @@ export function NotifyPanel({ projectId }: NotifyPanelProps) {
       <div ref={listRef} className="flex-1 overflow-auto p-3 space-y-1">
         {notifications.length === 0 ? (
           <div className="flex items-center justify-center h-full text-muted-foreground/40 text-sm font-mono">
-            {channels.length === 0 ? "Subscribe to a channel to start" : "Waiting for notifications..."}
+            {channels.length === 0
+              ? "Subscribe to a channel to start"
+              : "Waiting for notifications..."}
           </div>
         ) : (
           notifications.map((n, i) => (
-            <div key={i} className="flex items-start gap-2 text-xs font-mono px-2 py-1.5 rounded-lg hover:bg-muted/30">
-              <span className="text-muted-foreground/50 shrink-0">{new Date(n.timestamp).toLocaleTimeString()}</span>
+            <div
+              key={i}
+              className="flex items-start gap-2 text-xs font-mono px-2 py-1.5 rounded-lg hover:bg-muted/30"
+            >
+              <span className="text-muted-foreground/50 shrink-0">
+                {new Date(n.timestamp).toLocaleTimeString()}
+              </span>
               <span className="text-primary font-medium shrink-0">{n.channel}</span>
               <span className="text-foreground break-all">
                 {n.payload || <span className="text-muted-foreground/40 italic">empty</span>}
@@ -200,10 +222,21 @@ export function NotifyPanel({ projectId }: NotifyPanelProps) {
           placeholder="Payload..."
           className="h-7 text-xs font-mono flex-1 bg-input/50"
         />
-        <Button variant="outline" size="sm" onClick={sendNotify} className="h-7 text-xs font-mono gap-1">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={sendNotify}
+          className="h-7 text-xs font-mono gap-1"
+        >
           <Send className="h-3 w-3" /> Send
         </Button>
-        <Button variant="ghost" size="sm" onClick={() => setNotifications([])} className="h-7 text-xs" title="Clear">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => setNotifications([])}
+          className="h-7 text-xs"
+          title="Clear"
+        >
           <Trash2 className="h-3 w-3" />
         </Button>
       </div>

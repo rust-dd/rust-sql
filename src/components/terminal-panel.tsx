@@ -1,8 +1,8 @@
-import { useEffect, useRef, useCallback } from "react";
-import { Terminal } from "@xterm/xterm";
-import { FitAddon } from "@xterm/addon-fit";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
+import { FitAddon } from "@xterm/addon-fit";
+import { Terminal } from "@xterm/xterm";
+import { useCallback, useEffect, useRef } from "react";
 import { useUIStore } from "@/stores/ui-store";
 import "@xterm/xterm/css/xterm.css";
 
@@ -129,8 +129,8 @@ export function TerminalPanel({ terminalId }: TerminalPanelProps) {
       terminalRef.current = null;
       fitAddonRef.current = null;
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [terminalId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [terminalId, getTermTheme]);
 
   useEffect(() => {
     if (terminalRef.current) {

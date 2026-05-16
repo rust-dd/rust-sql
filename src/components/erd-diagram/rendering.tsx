@@ -1,5 +1,5 @@
-import type { ForeignKey, TableBox } from "./types";
 import { COL_HEIGHT, HEADER_HEIGHT, SHADOW_FILTER_ID } from "./layout";
+import type { ForeignKey, TableBox } from "./types";
 
 export function ERDDefs() {
   return (
@@ -15,7 +15,13 @@ export function ERDDefs() {
   );
 }
 
-export function ERDGridBackground({ totalWidth, totalHeight }: { totalWidth: number; totalHeight: number }) {
+export function ERDGridBackground({
+  totalWidth,
+  totalHeight,
+}: {
+  totalWidth: number;
+  totalHeight: number;
+}) {
   return (
     <>
       <pattern id="erd-grid" width="20" height="20" patternUnits="userSpaceOnUse">
@@ -43,8 +49,10 @@ export function ERDFKLines({ fks, boxMap, hoveredTable, connectedFKs }: FKLinesP
 
         const srcIdx = src.columns.findIndex((c) => c.name === fk.sourceColumn);
         const tgtIdx = tgt.columns.findIndex((c) => c.name === fk.targetColumn);
-        const srcY = src.y + HEADER_HEIGHT + (srcIdx >= 0 ? srcIdx : 0) * COL_HEIGHT + COL_HEIGHT / 2;
-        const tgtY = tgt.y + HEADER_HEIGHT + (tgtIdx >= 0 ? tgtIdx : 0) * COL_HEIGHT + COL_HEIGHT / 2;
+        const srcY =
+          src.y + HEADER_HEIGHT + (srcIdx >= 0 ? srcIdx : 0) * COL_HEIGHT + COL_HEIGHT / 2;
+        const tgtY =
+          tgt.y + HEADER_HEIGHT + (tgtIdx >= 0 ? tgtIdx : 0) * COL_HEIGHT + COL_HEIGHT / 2;
 
         const srcRight = src.x + src.width;
         const tgtLeft = tgt.x;
@@ -77,7 +85,12 @@ export function ERDFKLines({ fks, boxMap, hoveredTable, connectedFKs }: FKLinesP
               markerEnd="url(#erd-arrow)"
             />
             {/* One-to-many indicator: diamond at source, circle at target */}
-            <circle cx={x1} cy={srcY} r={3} fill={isHighlighted ? "var(--color-primary)" : "var(--color-muted-foreground)"} />
+            <circle
+              cx={x1}
+              cy={srcY}
+              r={3}
+              fill={isHighlighted ? "var(--color-primary)" : "var(--color-muted-foreground)"}
+            />
             {/* Label */}
             {isHighlighted && (
               <text
@@ -170,7 +183,7 @@ export function ERDTableBoxes({
               fontWeight="bold"
               fill="var(--color-primary-foreground)"
             >
-              {box.name.length > 28 ? box.name.slice(0, 26) + ".." : box.name}
+              {box.name.length > 28 ? `${box.name.slice(0, 26)}..` : box.name}
             </text>
 
             {/* Column separator line */}

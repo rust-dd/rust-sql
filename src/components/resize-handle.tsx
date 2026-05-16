@@ -1,51 +1,53 @@
-import type React from "react"
+import type React from "react";
 
 interface ResizeHandleProps {
-  direction: "horizontal" | "vertical"
-  onResize: (delta: number) => void
+  direction: "horizontal" | "vertical";
+  onResize: (delta: number) => void;
 }
 
 export function ResizeHandle({ direction, onResize }: ResizeHandleProps) {
   const handleMouseDown = (e: React.MouseEvent) => {
-    e.preventDefault()
-    let lastPos = direction === "horizontal" ? e.clientX : e.clientY
-    let animationFrameId: number | null = null
+    e.preventDefault();
+    let lastPos = direction === "horizontal" ? e.clientX : e.clientY;
+    let animationFrameId: number | null = null;
 
     const handleMouseMove = (moveEvent: MouseEvent) => {
       if (animationFrameId !== null) {
-        return
+        return;
       }
 
       animationFrameId = requestAnimationFrame(() => {
-        const currentPos = direction === "horizontal" ? moveEvent.clientX : moveEvent.clientY
-        const delta = currentPos - lastPos
-        lastPos = currentPos
-        onResize(delta)
-        animationFrameId = null
-      })
-    }
+        const currentPos = direction === "horizontal" ? moveEvent.clientX : moveEvent.clientY;
+        const delta = currentPos - lastPos;
+        lastPos = currentPos;
+        onResize(delta);
+        animationFrameId = null;
+      });
+    };
 
     const handleMouseUp = () => {
       if (animationFrameId !== null) {
-        cancelAnimationFrame(animationFrameId)
+        cancelAnimationFrame(animationFrameId);
       }
-      document.removeEventListener("mousemove", handleMouseMove)
-      document.removeEventListener("mouseup", handleMouseUp)
-      document.body.style.cursor = ""
-      document.body.style.userSelect = ""
-    }
+      document.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("mouseup", handleMouseUp);
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+    };
 
-    document.addEventListener("mousemove", handleMouseMove)
-    document.addEventListener("mouseup", handleMouseUp)
-    document.body.style.cursor = direction === "horizontal" ? "col-resize" : "row-resize"
-    document.body.style.userSelect = "none"
-  }
+    document.addEventListener("mousemove", handleMouseMove);
+    document.addEventListener("mouseup", handleMouseUp);
+    document.body.style.cursor = direction === "horizontal" ? "col-resize" : "row-resize";
+    document.body.style.userSelect = "none";
+  };
 
   return (
     <div
       onMouseDown={handleMouseDown}
       className={`group relative flex-shrink-0 ${
-        direction === "horizontal" ? "w-px cursor-col-resize hover:w-1 hover:bg-primary/50" : "h-px cursor-row-resize hover:h-1 hover:bg-primary/50"
+        direction === "horizontal"
+          ? "w-px cursor-col-resize hover:w-1 hover:bg-primary/50"
+          : "h-px cursor-row-resize hover:h-1 hover:bg-primary/50"
       } bg-border transition-all duration-150`}
     >
       <div
@@ -56,5 +58,5 @@ export function ResizeHandle({ direction, onResize }: ResizeHandleProps) {
         } rounded-full bg-primary opacity-0 transition-opacity group-hover:opacity-50`}
       />
     </div>
-  )
+  );
 }

@@ -1,11 +1,11 @@
 import type { StateCreator } from "zustand";
 import { DriverFactory } from "@/lib/database-driver";
 import type {
-  IndexDetail,
   ConstraintDetail,
-  TriggerDetail,
-  RuleDetail,
+  IndexDetail,
   PolicyDetail,
+  RuleDetail,
+  TriggerDetail,
 } from "@/types";
 import type { ProjectState } from "./index";
 
@@ -15,11 +15,7 @@ export type IndexesSlice = {
   triggers: Record<string, TriggerDetail[]>;
   rules: Record<string, RuleDetail[]>;
   policies: Record<string, PolicyDetail[]>;
-  loadIndexes: (
-    projectId: string,
-    schema: string,
-    table: string,
-  ) => Promise<IndexDetail[]>;
+  loadIndexes: (projectId: string, schema: string, table: string) => Promise<IndexDetail[]>;
   loadConstraints: (
     projectId: string,
     schema: string,
@@ -54,11 +50,7 @@ export const createIndexesSlice: StateCreator<
     return idx;
   },
 
-  loadConstraints: async (
-    projectId: string,
-    schema: string,
-    table: string,
-  ) => {
+  loadConstraints: async (projectId: string, schema: string, table: string) => {
     const key = `${projectId}::${schema}::${table}`;
     const { constraints, projects } = get();
     if (constraints[key]) return constraints[key];

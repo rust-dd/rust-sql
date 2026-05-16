@@ -10,23 +10,17 @@ import {
   ScrollText,
   Zap,
 } from "lucide-react";
+import { FunctionOverview } from "./overview-function";
+import { ViewOverview } from "./overview-view";
 import {
   ConstraintIcon,
+  formatTimestamp,
   InfoRow,
   LoadingPlaceholder,
   PropertySection,
   StatCard,
-  formatTimestamp,
 } from "./shared";
-import type {
-  FunctionMeta,
-  MatViewStats,
-  ObjectType,
-  TableStats,
-  ViewInfo,
-} from "./types";
-import { FunctionOverview } from "./overview-function";
-import { ViewOverview } from "./overview-view";
+import type { FunctionMeta, MatViewStats, ObjectType, TableStats, ViewInfo } from "./types";
 
 export function OverviewContent({
   objectType,
@@ -94,48 +88,27 @@ export function OverviewContent({
         </div>
 
         {/* Scan stats */}
-        <PropertySection
-          title="Scan Statistics"
-          icon={<RefreshCw className="h-3.5 w-3.5" />}
-        >
+        <PropertySection title="Scan Statistics" icon={<RefreshCw className="h-3.5 w-3.5" />}>
           <div className="grid grid-cols-2 gap-2">
             <div className="px-3 py-2 rounded-md bg-muted/30 text-xs font-mono">
               <div className="text-muted-foreground text-[10px] uppercase mb-0.5">
                 Sequential Scans
               </div>
-              <div className="text-foreground">
-                {Number(tableStats.seqScan).toLocaleString()}
-              </div>
+              <div className="text-foreground">{Number(tableStats.seqScan).toLocaleString()}</div>
             </div>
             <div className="px-3 py-2 rounded-md bg-muted/30 text-xs font-mono">
-              <div className="text-muted-foreground text-[10px] uppercase mb-0.5">
-                Index Scans
-              </div>
-              <div className="text-foreground">
-                {Number(tableStats.idxScan).toLocaleString()}
-              </div>
+              <div className="text-muted-foreground text-[10px] uppercase mb-0.5">Index Scans</div>
+              <div className="text-foreground">{Number(tableStats.idxScan).toLocaleString()}</div>
             </div>
           </div>
         </PropertySection>
 
         {/* Maintenance */}
-        <PropertySection
-          title="Maintenance"
-          icon={<RefreshCw className="h-3.5 w-3.5" />}
-        >
+        <PropertySection title="Maintenance" icon={<RefreshCw className="h-3.5 w-3.5" />}>
           <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs font-mono px-1">
-            <InfoRow
-              label="Last Vacuum"
-              value={formatTimestamp(tableStats.lastVacuum)}
-            />
-            <InfoRow
-              label="Last Auto Vacuum"
-              value={formatTimestamp(tableStats.lastAutoVacuum)}
-            />
-            <InfoRow
-              label="Last Analyze"
-              value={formatTimestamp(tableStats.lastAnalyze)}
-            />
+            <InfoRow label="Last Vacuum" value={formatTimestamp(tableStats.lastVacuum)} />
+            <InfoRow label="Last Auto Vacuum" value={formatTimestamp(tableStats.lastAutoVacuum)} />
+            <InfoRow label="Last Analyze" value={formatTimestamp(tableStats.lastAnalyze)} />
             <InfoRow
               label="Last Auto Analyze"
               value={formatTimestamp(tableStats.lastAutoAnalyze)}
@@ -145,44 +118,34 @@ export function OverviewContent({
 
         {/* Constraints summary */}
         {cons && cons.length > 0 && (
-          <PropertySection
-            title="Constraints"
-            icon={<Link2 className="h-3.5 w-3.5" />}
-          >
+          <PropertySection title="Constraints" icon={<Link2 className="h-3.5 w-3.5" />}>
             <div className="space-y-1">
-              {Array.from(new Set(cons.map((c) => c.constraintName))).map(
-                (cName) => {
-                  const f = cons.find((c) => c.constraintName === cName)!;
-                  const entries = cons.filter(
-                    (c) => c.constraintName === cName,
-                  );
-                  return (
-                    <div
-                      key={cName}
-                      className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-muted/20 border border-border/20 text-xs font-mono"
-                    >
-                      <ConstraintIcon type={f.constraintType} />
-                      <span className="text-foreground">{cName}</span>
-                      <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded-md bg-muted/50 text-muted-foreground/70">
-                        {f.constraintType}
-                      </span>
-                      <span className="text-muted-foreground">
-                        ({entries.map((e) => e.columnName).join(", ")})
-                      </span>
-                    </div>
-                  );
-                },
-              )}
+              {Array.from(new Set(cons.map((c) => c.constraintName))).map((cName) => {
+                const f = cons.find((c) => c.constraintName === cName)!;
+                const entries = cons.filter((c) => c.constraintName === cName);
+                return (
+                  <div
+                    key={cName}
+                    className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-muted/20 border border-border/20 text-xs font-mono"
+                  >
+                    <ConstraintIcon type={f.constraintType} />
+                    <span className="text-foreground">{cName}</span>
+                    <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded-md bg-muted/50 text-muted-foreground/70">
+                      {f.constraintType}
+                    </span>
+                    <span className="text-muted-foreground">
+                      ({entries.map((e) => e.columnName).join(", ")})
+                    </span>
+                  </div>
+                );
+              })}
             </div>
           </PropertySection>
         )}
 
         {/* Triggers */}
         {trigs && trigs.length > 0 && (
-          <PropertySection
-            title="Triggers"
-            icon={<Zap className="h-3.5 w-3.5" />}
-          >
+          <PropertySection title="Triggers" icon={<Zap className="h-3.5 w-3.5" />}>
             <div className="space-y-1">
               {trigs.map((t) => (
                 <div
@@ -202,10 +165,7 @@ export function OverviewContent({
 
         {/* RLS */}
         {pols && pols.length > 0 && (
-          <PropertySection
-            title="RLS Policies"
-            icon={<Lock className="h-3.5 w-3.5" />}
-          >
+          <PropertySection title="RLS Policies" icon={<Lock className="h-3.5 w-3.5" />}>
             <div className="space-y-1">
               {pols.map((p) => (
                 <div
@@ -225,10 +185,7 @@ export function OverviewContent({
 
         {/* Rules */}
         {rls && rls.length > 0 && (
-          <PropertySection
-            title="Rules"
-            icon={<ScrollText className="h-3.5 w-3.5" />}
-          >
+          <PropertySection title="Rules" icon={<ScrollText className="h-3.5 w-3.5" />}>
             <div className="space-y-1">
               {rls.map((r) => (
                 <div
@@ -256,13 +213,7 @@ export function OverviewContent({
   }
 
   if (objectType === "function" || objectType === "trigger-function") {
-    return (
-      <FunctionOverview
-        functionMeta={functionMeta}
-        copyText={copyText}
-        copied={copied}
-      />
-    );
+    return <FunctionOverview functionMeta={functionMeta} copyText={copyText} copied={copied} />;
   }
 
   return <LoadingPlaceholder />;

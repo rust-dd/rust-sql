@@ -1,4 +1,4 @@
-import { ZoomIn, ZoomOut, Maximize, Download } from "lucide-react";
+import { Download, Maximize, ZoomIn, ZoomOut } from "lucide-react";
 import type { TableBox } from "./types";
 
 export type DragState = { type: "pan" | "table"; tableName?: string } | null;
@@ -14,6 +14,7 @@ export function ERDToolbar({ setZoom, fitToView, exportSVG }: ERDToolbarProps) {
   return (
     <div className="absolute top-3 right-3 z-20 flex flex-col gap-1">
       <button
+        type="button"
         onClick={() => setZoom((z) => Math.min(3, z * 1.2))}
         className="p-1.5 rounded bg-card border border-border hover:bg-accent transition-colors shadow-sm"
         title="Zoom in"
@@ -21,6 +22,7 @@ export function ERDToolbar({ setZoom, fitToView, exportSVG }: ERDToolbarProps) {
         <ZoomIn className="h-4 w-4" />
       </button>
       <button
+        type="button"
         onClick={() => setZoom((z) => Math.max(0.1, z * 0.8))}
         className="p-1.5 rounded bg-card border border-border hover:bg-accent transition-colors shadow-sm"
         title="Zoom out"
@@ -28,6 +30,7 @@ export function ERDToolbar({ setZoom, fitToView, exportSVG }: ERDToolbarProps) {
         <ZoomOut className="h-4 w-4" />
       </button>
       <button
+        type="button"
         onClick={fitToView}
         className="p-1.5 rounded bg-card border border-border hover:bg-accent transition-colors shadow-sm"
         title="Fit to view"
@@ -35,6 +38,7 @@ export function ERDToolbar({ setZoom, fitToView, exportSVG }: ERDToolbarProps) {
         <Maximize className="h-4 w-4" />
       </button>
       <button
+        type="button"
         onClick={exportSVG}
         className="p-1.5 rounded bg-card border border-border hover:bg-accent transition-colors shadow-sm"
         title="Export SVG"
@@ -64,9 +68,7 @@ export function ERDStatusBar({ boxCount, fkCount, zoom }: ERDStatusBarProps) {
 // Pure handler factories — invoked inside useCallback in index.tsx so the
 // hook order in the parent component is preserved exactly.
 
-export function createHandleWheel(
-  setZoom: React.Dispatch<React.SetStateAction<number>>,
-) {
+export function createHandleWheel(setZoom: React.Dispatch<React.SetStateAction<number>>) {
   return (e: React.WheelEvent) => {
     e.preventDefault();
     const delta = e.deltaY > 0 ? 0.9 : 1.1;
@@ -119,9 +121,7 @@ export function createHandleMouseMove(
   };
 }
 
-export function createHandleMouseUp(
-  setDragging: React.Dispatch<React.SetStateAction<DragState>>,
-) {
+export function createHandleMouseUp(setDragging: React.Dispatch<React.SetStateAction<DragState>>) {
   return () => {
     setDragging(null);
   };

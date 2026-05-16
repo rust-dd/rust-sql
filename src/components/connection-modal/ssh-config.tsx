@@ -1,19 +1,19 @@
-import { Input } from "../ui/input"
-import { Label } from "../ui/label"
+import { Input } from "../ui/input";
+import { Label } from "../ui/label";
 
 interface SshConfigProps {
-  enabled: boolean
-  sshHost: string
-  sshPort: string
-  sshUser: string
-  sshPassword: string
-  sshKeyPath: string
-  onEnabledChange: (enabled: boolean) => void
-  onSshHostChange: (value: string) => void
-  onSshPortChange: (value: string) => void
-  onSshUserChange: (value: string) => void
-  onSshPasswordChange: (value: string) => void
-  onSshKeyPathChange: (value: string) => void
+  enabled: boolean;
+  sshHost: string;
+  sshPort: string;
+  sshUser: string;
+  sshPassword: string;
+  sshKeyPath: string;
+  onEnabledChange: (enabled: boolean) => void;
+  onSshHostChange: (value: string) => void;
+  onSshPortChange: (value: string) => void;
+  onSshUserChange: (value: string) => void;
+  onSshPasswordChange: (value: string) => void;
+  onSshKeyPathChange: (value: string) => void;
 }
 
 export function SshConfig({
@@ -48,7 +48,9 @@ export function SshConfig({
         <div className="space-y-3 rounded-lg border border-border/50 p-3 bg-muted/20">
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
-              <Label htmlFor="sshHost" className="font-mono text-[11px] text-muted-foreground">SSH Host</Label>
+              <Label htmlFor="sshHost" className="font-mono text-[11px] text-muted-foreground">
+                SSH Host
+              </Label>
               <Input
                 id="sshHost"
                 value={sshHost}
@@ -58,7 +60,9 @@ export function SshConfig({
               />
             </div>
             <div className="space-y-1">
-              <Label htmlFor="sshPort" className="font-mono text-[11px] text-muted-foreground">SSH Port</Label>
+              <Label htmlFor="sshPort" className="font-mono text-[11px] text-muted-foreground">
+                SSH Port
+              </Label>
               <Input
                 id="sshPort"
                 value={sshPort}
@@ -69,7 +73,9 @@ export function SshConfig({
             </div>
           </div>
           <div className="space-y-1">
-            <Label htmlFor="sshUser" className="font-mono text-[11px] text-muted-foreground">SSH User</Label>
+            <Label htmlFor="sshUser" className="font-mono text-[11px] text-muted-foreground">
+              SSH User
+            </Label>
             <Input
               id="sshUser"
               value={sshUser}
@@ -79,7 +85,9 @@ export function SshConfig({
             />
           </div>
           <div className="space-y-1">
-            <Label htmlFor="sshPassword" className="font-mono text-[11px] text-muted-foreground">SSH Password</Label>
+            <Label htmlFor="sshPassword" className="font-mono text-[11px] text-muted-foreground">
+              SSH Password
+            </Label>
             <Input
               id="sshPassword"
               type="password"
@@ -90,7 +98,9 @@ export function SshConfig({
             />
           </div>
           <div className="space-y-1">
-            <Label htmlFor="sshKeyPath" className="font-mono text-[11px] text-muted-foreground">Private Key Path</Label>
+            <Label htmlFor="sshKeyPath" className="font-mono text-[11px] text-muted-foreground">
+              Private Key Path
+            </Label>
             <Input
               id="sshKeyPath"
               value={sshKeyPath}
@@ -102,5 +112,5 @@ export function SshConfig({
         </div>
       )}
     </div>
-  )
+  );
 }

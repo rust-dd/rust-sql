@@ -2,8 +2,7 @@ export const SQL_SNIPPETS = [
   {
     label: "sel",
     detail: "SELECT ... FROM ... WHERE",
-    insert:
-      "SELECT ${1:*}\nFROM ${2:table_name}\nWHERE ${3:condition}\nLIMIT ${4:100};",
+    insert: "SELECT ${1:*}\nFROM ${2:table_name}\nWHERE ${3:condition}\nLIMIT ${4:100};",
   },
   {
     label: "selc",
@@ -23,8 +22,7 @@ export const SQL_SNIPPETS = [
   {
     label: "upd",
     detail: "UPDATE ... SET ... WHERE",
-    insert:
-      "UPDATE ${1:table_name}\nSET ${2:column} = ${3:value}\nWHERE ${4:condition};",
+    insert: "UPDATE ${1:table_name}\nSET ${2:column} = ${3:value}\nWHERE ${4:condition};",
   },
   {
     label: "del",
@@ -40,8 +38,7 @@ export const SQL_SNIPPETS = [
   {
     label: "alt",
     detail: "ALTER TABLE ADD COLUMN",
-    insert:
-      "ALTER TABLE ${1:table_name}\nADD COLUMN ${2:column_name} ${3:TEXT};",
+    insert: "ALTER TABLE ${1:table_name}\nADD COLUMN ${2:column_name} ${3:TEXT};",
   },
   {
     label: "idx",

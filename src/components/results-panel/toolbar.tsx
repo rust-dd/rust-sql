@@ -13,8 +13,8 @@ import {
 } from "lucide-react";
 import { useUIStore } from "@/stores/ui-store";
 import { hasGeometryColumn } from "../results-map";
-import { ToolbarExport } from "./toolbar-export";
 import { ToolbarEdit } from "./toolbar-edit";
+import { ToolbarExport } from "./toolbar-export";
 import type { ToolbarProps } from "./types";
 
 export function ResultsToolbar(props: ToolbarProps) {
@@ -57,6 +57,7 @@ export function ResultsToolbar(props: ToolbarProps) {
         {/* Panel tabs — segment control */}
         <div className="inline-flex rounded-lg bg-muted p-0.5">
           <button
+            type="button"
             onClick={() => {
               setPanelView("grid");
               setViewMode("grid");
@@ -70,6 +71,7 @@ export function ResultsToolbar(props: ToolbarProps) {
             Grid
           </button>
           <button
+            type="button"
             onClick={() => {
               setPanelView("record");
               setViewMode("record");
@@ -85,6 +87,7 @@ export function ResultsToolbar(props: ToolbarProps) {
           </button>
           {hasExplain && (
             <button
+              type="button"
               onClick={() => setPanelView("explain")}
               className={`px-2 py-0.5 rounded-md text-xs font-mono transition-all duration-150 flex items-center gap-1 ${
                 panelView === "explain"
@@ -97,6 +100,7 @@ export function ResultsToolbar(props: ToolbarProps) {
             </button>
           )}
           <button
+            type="button"
             onClick={() => setPanelView("history")}
             className={`px-2 py-0.5 rounded-md text-xs font-mono transition-all duration-150 flex items-center gap-1 ${
               panelView === "history"
@@ -109,6 +113,7 @@ export function ResultsToolbar(props: ToolbarProps) {
           </button>
           {result && hasGeometryColumn(columns, filteredRows) && (
             <button
+              type="button"
               onClick={() => setPanelView("map")}
               className={`px-2 py-0.5 rounded-md text-xs font-mono transition-all duration-150 flex items-center gap-1 ${
                 panelView === "map"
@@ -145,13 +150,17 @@ export function ResultsToolbar(props: ToolbarProps) {
             {isEditing && editState?.cellEdits.size ? (
               <>
                 <span className="text-muted-foreground/50">&bull;</span>
-                <span className="text-amber-500 font-medium">{editState.cellEdits.size} edit{editState.cellEdits.size !== 1 ? "s" : ""}</span>
+                <span className="text-amber-500 font-medium">
+                  {editState.cellEdits.size} edit{editState.cellEdits.size !== 1 ? "s" : ""}
+                </span>
               </>
             ) : null}
             {isEditing && editState?.deletedRows.size ? (
               <>
                 <span className="text-muted-foreground/50">&bull;</span>
-                <span className="text-destructive font-medium">{editState.deletedRows.size} delete{editState.deletedRows.size !== 1 ? "s" : ""}</span>
+                <span className="text-destructive font-medium">
+                  {editState.deletedRows.size} delete{editState.deletedRows.size !== 1 ? "s" : ""}
+                </span>
               </>
             ) : null}
           </div>
@@ -160,6 +169,7 @@ export function ResultsToolbar(props: ToolbarProps) {
         {/* Stop button — visible while executing */}
         {isExecuting && onCancel && (
           <button
+            type="button"
             onClick={onCancel}
             className="flex items-center gap-1 px-2.5 py-1 rounded text-xs font-mono border border-destructive/50 text-destructive hover:bg-destructive/10 transition-colors"
           >
@@ -188,6 +198,7 @@ export function ResultsToolbar(props: ToolbarProps) {
             {/* Edit button */}
             {panelView !== "history" && editableTable && result && result.rows.length > 0 && (
               <button
+                type="button"
                 onClick={onEnterEdit}
                 className="flex items-center gap-1 px-2 py-0.5 rounded text-xs font-mono text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
                 title="Edit table data inline"
@@ -205,6 +216,7 @@ export function ResultsToolbar(props: ToolbarProps) {
                     <Pin className="h-3 w-3" />
                     <span>Pinned: {pinnedResult.label}</span>
                     <button
+                      type="button"
                       onClick={clearPinnedResult}
                       className="hover:text-destructive ml-1"
                       title="Clear pinned result"
@@ -214,6 +226,7 @@ export function ResultsToolbar(props: ToolbarProps) {
                   </div>
                 ) : (
                   <button
+                    type="button"
                     onClick={() =>
                       pinResult(
                         { columns, rows: filteredRows, time: result.time },
@@ -229,6 +242,7 @@ export function ResultsToolbar(props: ToolbarProps) {
                 )}
                 {pinnedResult && (
                   <button
+                    type="button"
                     onClick={() => setPanelView(panelView === "diff" ? "grid" : "diff")}
                     className={`flex items-center gap-1 px-2 py-0.5 rounded text-xs font-mono transition-colors ${
                       panelView === "diff"
@@ -261,6 +275,7 @@ export function ResultsToolbar(props: ToolbarProps) {
                 />
                 {searchTerm && (
                   <button
+                    type="button"
                     onClick={() => setSearchTerm("")}
                     className="absolute right-2 text-muted-foreground hover:text-foreground"
                   >

@@ -1,18 +1,18 @@
-import React from "react";
+import type React from "react";
+import type { ContextMenuEntry } from "@/components/ui/context-menu";
 import type {
-  ProjectMap,
-  ProjectConnectionStatus,
-  TableInfo,
   ColumnDetail,
-  IndexDetail,
   ConstraintDetail,
-  TriggerDetail,
-  RuleDetail,
-  PolicyDetail,
   FunctionInfo,
+  IndexDetail,
+  PolicyDetail,
+  ProjectConnectionStatus,
+  ProjectMap,
+  RuleDetail,
+  TableInfo,
+  TriggerDetail,
   TriggerFunctionInfo,
 } from "@/types";
-import type { ContextMenuEntry } from "@/components/ui/context-menu";
 
 export type ObjectKind = "table" | "view" | "matview" | "function" | "trigger-function";
 

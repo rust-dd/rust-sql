@@ -96,13 +96,7 @@ export const PG_COMMON_TYPES = [
   "jsonb[]",
 ];
 
-export const FK_ACTIONS = [
-  "NO ACTION",
-  "RESTRICT",
-  "CASCADE",
-  "SET NULL",
-  "SET DEFAULT",
-];
+export const FK_ACTIONS = ["NO ACTION", "RESTRICT", "CASCADE", "SET NULL", "SET DEFAULT"];
 
 export function generateAlterTableSQL(
   schema: string,
@@ -117,25 +111,19 @@ export function generateAlterTableSQL(
   // and drop everything before adding new objects, otherwise PG errors out.
   for (const fk of draft.foreignKeys) {
     if (fk._status === "removed") {
-      stmts.push(
-        `ALTER TABLE ${target} DROP CONSTRAINT ${quoteIdent(fk.constraintName)};`,
-      );
+      stmts.push(`ALTER TABLE ${target} DROP CONSTRAINT ${quoteIdent(fk.constraintName)};`);
     }
   }
 
   for (const uc of draft.uniqueConstraints) {
     if (uc._status === "removed") {
-      stmts.push(
-        `ALTER TABLE ${target} DROP CONSTRAINT ${quoteIdent(uc.constraintName)};`,
-      );
+      stmts.push(`ALTER TABLE ${target} DROP CONSTRAINT ${quoteIdent(uc.constraintName)};`);
     }
   }
 
   for (const idx of draft.indexes) {
     if (idx._status === "removed") {
-      stmts.push(
-        `DROP INDEX ${quoteIdent(schema)}.${quoteIdent(idx.indexName)};`,
-      );
+      stmts.push(`DROP INDEX ${quoteIdent(schema)}.${quoteIdent(idx.indexName)};`);
     }
   }
 
@@ -160,7 +148,7 @@ export function generateAlterTableSQL(
       let stmt = `ALTER TABLE ${target} ADD COLUMN ${quoteIdent(col.name)} ${col.dataType}`;
       if (!col.nullable) stmt += " NOT NULL";
       if (col.defaultValue) stmt += ` DEFAULT ${col.defaultValue}`;
-      stmts.push(stmt + ";");
+      stmts.push(`${stmt};`);
     }
   }
 
@@ -180,10 +168,7 @@ export function generateAlterTableSQL(
         );
       }
 
-      if (
-        col.originalNullable !== undefined &&
-        col.originalNullable !== col.nullable
-      ) {
+      if (col.originalNullable !== undefined && col.originalNullable !== col.nullable) {
         if (col.nullable) {
           stmts.push(
             `ALTER TABLE ${target} ALTER COLUMN ${quoteIdent(effectiveName)} DROP NOT NULL;`,
@@ -195,10 +180,7 @@ export function generateAlterTableSQL(
         }
       }
 
-      if (
-        col.originalDefault !== undefined &&
-        col.originalDefault !== col.defaultValue
-      ) {
+      if (col.originalDefault !== undefined && col.originalDefault !== col.defaultValue) {
         if (col.defaultValue) {
           stmts.push(
             `ALTER TABLE ${target} ALTER COLUMN ${quoteIdent(effectiveName)} SET DEFAULT ${col.defaultValue};`,
@@ -214,8 +196,7 @@ export function generateAlterTableSQL(
 
   if (
     draft.primaryKey &&
-    (draft.primaryKey._status === "added" ||
-      draft.primaryKey._status === "modified")
+    (draft.primaryKey._status === "added" || draft.primaryKey._status === "modified")
   ) {
     const pkCols = draft.primaryKey.columns.map(quoteIdent).join(", ");
     stmts.push(
@@ -236,9 +217,7 @@ export function generateAlterTableSQL(
     if (idx._status === "added") {
       const idxCols = idx.columns.map(quoteIdent).join(", ");
       const unique = idx.isUnique ? "UNIQUE " : "";
-      stmts.push(
-        `CREATE ${unique}INDEX ${quoteIdent(idx.indexName)} ON ${target} (${idxCols});`,
-      );
+      stmts.push(`CREATE ${unique}INDEX ${quoteIdent(idx.indexName)} ON ${target} (${idxCols});`);
     }
   }
 

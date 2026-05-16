@@ -68,10 +68,7 @@ export const useUIStore = create<UIState>()(
       const containerHeight = window.innerHeight - 48 - 24;
       const deltaPercent = (delta / containerHeight) * 100;
       set((s) => {
-        s.editorHeight = Math.max(
-          20,
-          Math.min(80, s.editorHeight + deltaPercent),
-        );
+        s.editorHeight = Math.max(20, Math.min(80, s.editorHeight + deltaPercent));
       });
     },
 

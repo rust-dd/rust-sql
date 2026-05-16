@@ -1,7 +1,7 @@
+import { Plus, RefreshCw, Trash2 } from "lucide-react";
 import type { DraftColumn, StructureEditorState } from "@/lib/alter-table-sql";
 import { PG_COMMON_TYPES } from "@/lib/alter-table-sql";
 import { cn } from "@/lib/utils";
-import { Plus, RefreshCw, Trash2 } from "lucide-react";
 import { uid } from "./initialization";
 
 export function ColumnsSection({
@@ -53,11 +53,7 @@ export function ColumnsSection({
       ...prev,
       columns: prev.columns
         .map((c) =>
-          c._id === id
-            ? c._status === "added"
-              ? null
-              : { ...c, _status: "removed" as const }
-            : c,
+          c._id === id ? (c._status === "added" ? null : { ...c, _status: "removed" as const }) : c,
         )
         .filter(Boolean) as DraftColumn[],
     }));
@@ -66,9 +62,7 @@ export function ColumnsSection({
   const restoreColumn = (id: string) => {
     setDraft((prev) => ({
       ...prev,
-      columns: prev.columns.map((c) =>
-        c._id === id ? { ...c, _status: "existing" as const } : c,
-      ),
+      columns: prev.columns.map((c) => (c._id === id ? { ...c, _status: "existing" as const } : c)),
     }));
   };
 
@@ -99,18 +93,14 @@ export function ColumnsSection({
             type="text"
             value={col.name}
             disabled={col._status === "removed"}
-            onChange={(e) =>
-              updateColumn(col._id, { name: e.target.value })
-            }
+            onChange={(e) => updateColumn(col._id, { name: e.target.value })}
             className="h-7 px-2 text-xs font-mono bg-background border border-border/30 rounded-md outline-none focus:border-primary/50 disabled:opacity-40"
           />
           <input
             type="text"
             value={col.dataType}
             disabled={col._status === "removed"}
-            onChange={(e) =>
-              updateColumn(col._id, { dataType: e.target.value })
-            }
+            onChange={(e) => updateColumn(col._id, { dataType: e.target.value })}
             list="pg-types"
             className="h-7 px-2 text-xs font-mono bg-background border border-border/30 rounded-md outline-none focus:border-primary/50 disabled:opacity-40"
           />
@@ -119,9 +109,7 @@ export function ColumnsSection({
               type="checkbox"
               checked={col.nullable}
               disabled={col._status === "removed"}
-              onChange={(e) =>
-                updateColumn(col._id, { nullable: e.target.checked })
-              }
+              onChange={(e) => updateColumn(col._id, { nullable: e.target.checked })}
               className="h-3.5 w-3.5 rounded border-border accent-primary"
             />
           </div>
@@ -140,6 +128,7 @@ export function ColumnsSection({
           <div className="flex justify-center">
             {col._status === "removed" ? (
               <button
+                type="button"
                 onClick={() => restoreColumn(col._id)}
                 className="p-1 rounded hover:bg-muted/50 text-muted-foreground hover:text-foreground"
                 title="Restore"
@@ -148,6 +137,7 @@ export function ColumnsSection({
               </button>
             ) : (
               <button
+                type="button"
                 onClick={() => removeColumn(col._id)}
                 className="p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive"
                 title="Remove"
@@ -159,6 +149,7 @@ export function ColumnsSection({
         </div>
       ))}
       <button
+        type="button"
         onClick={addColumn}
         className="flex items-center gap-1.5 px-2 py-1.5 text-xs text-muted-foreground hover:text-foreground hover:bg-muted/30 rounded-lg transition-colors w-full"
       >

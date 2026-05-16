@@ -1,18 +1,6 @@
-export type ObjectType =
-  | "table"
-  | "view"
-  | "matview"
-  | "function"
-  | "trigger-function";
+export type ObjectType = "table" | "view" | "matview" | "function" | "trigger-function";
 
-export type Tab =
-  | "overview"
-  | "columns"
-  | "indexes"
-  | "fkeys"
-  | "ddl"
-  | "actions"
-  | "structure";
+export type Tab = "overview" | "columns" | "indexes" | "fkeys" | "ddl" | "actions" | "structure";
 
 export interface ObjectPropertiesModalProps {
   open: boolean;

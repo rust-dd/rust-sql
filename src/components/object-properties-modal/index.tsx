@@ -1,8 +1,8 @@
+import { useCallback, useEffect, useState } from "react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { useProjectStore } from "@/stores/project-store";
 import { useTabStore } from "@/stores/tab-store";
-import { useCallback, useEffect, useState } from "react";
 import { ActionsContent } from "./actions-tab";
 import { ColumnsContent } from "./columns-tab";
 import { DDLContent } from "./ddl-tab";
@@ -69,9 +69,7 @@ export function ObjectPropertiesModal({
   const trigs = triggers[metaKey];
   const rls = rules[metaKey];
   const pols = policies[metaKey];
-  const pkCols = new Set(
-    (idxs ?? []).filter((i) => i.isPrimary).map((i) => i.columnName),
-  );
+  const pkCols = new Set((idxs ?? []).filter((i) => i.isPrimary).map((i) => i.columnName));
 
   useEffect(() => {
     if (!open) return;
@@ -79,7 +77,7 @@ export function ObjectPropertiesModal({
     setCopied(null);
     setActionResult(null);
     setConfirmAction(null);
-  }, [open, objectType, projectId, schema, name]);
+  }, [open, objectType]);
 
   useEffect(() => {
     if (open && activeTab === "ddl" && !ddl && !ddlLoading) {
@@ -194,9 +192,7 @@ export function ObjectPropertiesModal({
               copied={copied}
             />
           )}
-          {activeTab === "columns" && (
-            <ColumnsContent cols={cols} pkCols={pkCols} />
-          )}
+          {activeTab === "columns" && <ColumnsContent cols={cols} pkCols={pkCols} />}
           {activeTab === "indexes" && <IndexesContent idxs={idxs} />}
           {activeTab === "fkeys" && (
             <ForeignKeysContent

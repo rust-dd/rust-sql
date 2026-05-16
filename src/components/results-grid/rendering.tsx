@@ -1,7 +1,7 @@
 import {
-  type GridColumn,
   type GridCell,
   GridCellKind,
+  type GridColumn,
   type Item,
   type Theme,
 } from "@glideapps/glide-data-grid";
@@ -24,7 +24,11 @@ export const LOADING_CELL: GridCell = {
   themeOverride: { textDark: "#888", textLight: "#666" },
 };
 
-export const DELETED_OVERRIDE = { bgCell: "rgba(239, 68, 68, 0.1)", textDark: "#999", textLight: "#999" };
+export const DELETED_OVERRIDE = {
+  bgCell: "rgba(239, 68, 68, 0.1)",
+  textDark: "#999",
+  textLight: "#999",
+};
 
 export function buildModifiedOverride(theme: string) {
   return { bgCell: theme === "dark" ? "rgba(245, 158, 11, 0.15)" : "rgba(245, 158, 11, 0.1)" };
@@ -116,7 +120,7 @@ export function buildCellContent(cell: Item, ctx: CellContentContext): GridCell 
   const isModified = cellEdits?.has(key);
   const isDeleted = deletedRows?.has(rowIdx);
   const isFK = fkColIndices.has(colIdx) && !isEditing;
-  const value = isModified ? cellEdits!.get(key)! : (rows[rowIdx]?.[colIdx] ?? "");
+  const value = isModified ? (cellEdits?.get(key) ?? "") : (rows[rowIdx]?.[colIdx] ?? "");
 
   const baseCell: GridCell = {
     kind: GridCellKind.Text,

@@ -1,16 +1,7 @@
 import type { StateCreator } from "zustand";
-import type {
-  ProjectMap,
-  ProjectDetails,
-  ProjectConnectionStatus,
-  DriverType,
-} from "@/types";
+import { deleteProject as deleteProjectApi, getProjects, insertProject } from "@/tauri";
+import type { DriverType, ProjectConnectionStatus, ProjectDetails, ProjectMap } from "@/types";
 import { ProjectConnectionStatus as PCS } from "@/types";
-import {
-  getProjects,
-  insertProject,
-  deleteProject as deleteProjectApi,
-} from "@/tauri";
 import type { ProjectState } from "./index";
 
 export type CoreSlice = {
@@ -21,11 +12,7 @@ export type CoreSlice = {
   deleteProject: (projectId: string) => Promise<void>;
   saveConnection: (name: string, details: ProjectDetails) => Promise<void>;
   updateConnection: (name: string, details: ProjectDetails) => Promise<void>;
-  addDatabaseToServer: (
-    sourceProjectId: string,
-    name: string,
-    database: string,
-  ) => Promise<void>;
+  addDatabaseToServer: (sourceProjectId: string, name: string, database: string) => Promise<void>;
 };
 
 export function parseProjectDetails(arr: string[]): ProjectDetails {
@@ -130,11 +117,7 @@ export const createCoreSlice: StateCreator<
     await get().loadProjects();
   },
 
-  addDatabaseToServer: async (
-    sourceProjectId: string,
-    name: string,
-    database: string,
-  ) => {
+  addDatabaseToServer: async (sourceProjectId: string, name: string, database: string) => {
     const { projects } = get();
     const source = projects[sourceProjectId];
     if (!source) return;

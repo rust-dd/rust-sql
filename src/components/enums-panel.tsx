@@ -1,9 +1,9 @@
-import { useState, useEffect, useCallback } from "react";
-import { DriverFactory } from "@/lib/database-driver";
-import { useProjectStore } from "@/stores/project-store";
 import { List, Loader2, RefreshCw } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { DriverFactory } from "@/lib/database-driver";
+import { useProjectStore } from "@/stores/project-store";
 
 interface EnumType {
   schema: string;
@@ -33,17 +33,22 @@ export function EnumsPanel({ projectId }: { projectId: string }) {
     }
   }, [projectId, details]);
 
-  useEffect(() => { void refresh(); }, [refresh]);
+  useEffect(() => {
+    void refresh();
+  }, [refresh]);
 
   const lowerFilter = filter.toLowerCase();
-  const filtered = enums.filter((e) =>
-    e.name.toLowerCase().includes(lowerFilter) || e.labels.toLowerCase().includes(lowerFilter) || e.schema.toLowerCase().includes(lowerFilter)
+  const filtered = enums.filter(
+    (e) =>
+      e.name.toLowerCase().includes(lowerFilter) ||
+      e.labels.toLowerCase().includes(lowerFilter) ||
+      e.schema.toLowerCase().includes(lowerFilter),
   );
 
   const grouped = new Map<string, EnumType[]>();
   for (const e of filtered) {
     if (!grouped.has(e.schema)) grouped.set(e.schema, []);
-    grouped.get(e.schema)!.push(e);
+    grouped.get(e.schema)?.push(e);
   }
 
   return (
@@ -52,7 +57,9 @@ export function EnumsPanel({ projectId }: { projectId: string }) {
         <div className="flex items-center gap-2">
           <List className="h-4 w-4 text-primary" />
           <span className="font-mono text-sm font-semibold">Enum Types</span>
-          <span className="font-mono text-xs text-muted-foreground">{details?.database ?? projectId}</span>
+          <span className="font-mono text-xs text-muted-foreground">
+            {details?.database ?? projectId}
+          </span>
         </div>
         <div className="flex items-center gap-2">
           <Input
@@ -61,8 +68,18 @@ export function EnumsPanel({ projectId }: { projectId: string }) {
             placeholder="Filter..."
             className="h-7 text-xs font-mono w-48 bg-input/50"
           />
-          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => void refresh()} disabled={isLoading}>
-            {isLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7"
+            onClick={() => void refresh()}
+            disabled={isLoading}
+          >
+            {isLoading ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <RefreshCw className="h-3.5 w-3.5" />
+            )}
           </Button>
         </div>
       </div>
@@ -70,7 +87,9 @@ export function EnumsPanel({ projectId }: { projectId: string }) {
       <div className="flex-1 overflow-auto p-4">
         {Array.from(grouped.entries()).map(([schema, types]) => (
           <div key={schema} className="mb-4">
-            <div className="mb-2 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">{schema}</div>
+            <div className="mb-2 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+              {schema}
+            </div>
             <div className="space-y-2">
               {types.map((e) => (
                 <div key={`${e.schema}.${e.name}`} className="rounded-md border p-3">

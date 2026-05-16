@@ -1,19 +1,19 @@
+import { Loader2, X, XCircle } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { DriverFactory } from "@/lib/database-driver";
+import { useProjectStore } from "@/stores/project-store";
 import { useActiveTab } from "@/stores/tab-store";
 import { useUIStore } from "@/stores/ui-store";
-import { useProjectStore } from "@/stores/project-store";
-import { DriverFactory } from "@/lib/database-driver";
-import { Loader2, X, XCircle } from "lucide-react";
-import { ResultsGrid } from "../results-grid";
-import { ResultsRecord } from "../results-record";
-import { QueryHistory } from "../query-history";
 import { ExplainPanel } from "../explain-panel";
+import { QueryHistory } from "../query-history";
+import { ResultsGrid } from "../results-grid";
 import { ResultsMap } from "../results-map";
-import { ResultsToolbar } from "./toolbar";
+import { ResultsRecord } from "../results-record";
 import { DiffView } from "./diff-view";
-import { useVirtualPaging } from "./use-virtual-paging";
-import { useEditMode } from "./use-edit-mode";
+import { ResultsToolbar } from "./toolbar";
 import type { PanelView } from "./types";
+import { useEditMode } from "./use-edit-mode";
+import { useVirtualPaging } from "./use-virtual-paging";
 
 export function ResultsPanel() {
   const activeTab = useActiveTab();
@@ -84,9 +84,7 @@ export function ResultsPanel() {
     if (isEditing) return result?.rows ?? [];
     if (!result || !debouncedSearch.trim()) return result?.rows ?? [];
     const term = debouncedSearch.toLowerCase();
-    return result.rows.filter((row) =>
-      row.some((cell) => cell.toLowerCase().includes(term)),
-    );
+    return result.rows.filter((row) => row.some((cell) => cell.toLowerCase().includes(term)));
   }, [result, debouncedSearch, isEditing]);
 
   const explainResult = activeTab?.explainResult;
@@ -120,7 +118,13 @@ export function ResultsPanel() {
   if (panelView === "explain" && hasExplain) {
     return (
       <div className="flex h-full flex-col border-t border-border bg-card">
-        <ResultsToolbar {...toolbarProps} result={result ?? null} columns={result?.columns ?? []} filteredRows={filteredRows} filteredCount={filteredRows.length} />
+        <ResultsToolbar
+          {...toolbarProps}
+          result={result ?? null}
+          columns={result?.columns ?? []}
+          filteredRows={filteredRows}
+          filteredCount={filteredRows.length}
+        />
         <ExplainPanel plan={explainResult} />
       </div>
     );
@@ -129,7 +133,13 @@ export function ResultsPanel() {
   if (panelView !== "history" && isExecuting && !result) {
     return (
       <div className="flex h-full flex-col">
-        <ResultsToolbar {...toolbarProps} result={null} columns={[]} filteredRows={[]} filteredCount={0} />
+        <ResultsToolbar
+          {...toolbarProps}
+          result={null}
+          columns={[]}
+          filteredRows={[]}
+          filteredCount={0}
+        />
         <div className="flex flex-1 items-center justify-center text-muted-foreground gap-2">
           <Loader2 className="h-5 w-5 animate-spin" />
           <span className="text-sm">Executing query...</span>
@@ -141,7 +151,13 @@ export function ResultsPanel() {
   if (panelView === "history") {
     return (
       <div className="flex h-full flex-col border-t border-border bg-card">
-        <ResultsToolbar {...toolbarProps} result={result ?? null} columns={result?.columns ?? []} filteredRows={filteredRows} filteredCount={filteredRows.length} />
+        <ResultsToolbar
+          {...toolbarProps}
+          result={result ?? null}
+          columns={result?.columns ?? []}
+          filteredRows={filteredRows}
+          filteredCount={filteredRows.length}
+        />
         <QueryHistory />
       </div>
     );
@@ -150,7 +166,13 @@ export function ResultsPanel() {
   if (panelView === "diff" && pinnedResult && result) {
     return (
       <div className="flex h-full flex-col border-t border-border bg-card">
-        <ResultsToolbar {...toolbarProps} result={result} columns={result.columns} filteredRows={filteredRows} filteredCount={filteredRows.length} />
+        <ResultsToolbar
+          {...toolbarProps}
+          result={result}
+          columns={result.columns}
+          filteredRows={filteredRows}
+          filteredCount={filteredRows.length}
+        />
         <DiffView
           pinnedColumns={pinnedResult.columns}
           pinnedRows={pinnedResult.rows}
@@ -164,7 +186,13 @@ export function ResultsPanel() {
   if (panelView === "map" && result) {
     return (
       <div className="flex h-full flex-col border-t border-border bg-card">
-        <ResultsToolbar {...toolbarProps} result={result} columns={result.columns} filteredRows={filteredRows} filteredCount={filteredRows.length} />
+        <ResultsToolbar
+          {...toolbarProps}
+          result={result}
+          columns={result.columns}
+          filteredRows={filteredRows}
+          filteredCount={filteredRows.length}
+        />
         <ResultsMap columns={result.columns} rows={filteredRows} />
       </div>
     );
@@ -173,7 +201,13 @@ export function ResultsPanel() {
   if (!result) {
     return (
       <div className="flex h-full flex-col">
-        <ResultsToolbar {...toolbarProps} result={null} columns={[]} filteredRows={[]} filteredCount={0} />
+        <ResultsToolbar
+          {...toolbarProps}
+          result={null}
+          columns={[]}
+          filteredRows={[]}
+          filteredCount={0}
+        />
         <div className="flex flex-1 items-center justify-center text-muted-foreground">
           No data to display
         </div>
@@ -183,12 +217,22 @@ export function ResultsPanel() {
 
   return (
     <div className="flex h-full flex-col border-t border-border bg-card">
-      <ResultsToolbar {...toolbarProps} result={result} columns={result.columns} filteredRows={filteredRows} filteredCount={filteredRows.length} />
+      <ResultsToolbar
+        {...toolbarProps}
+        result={result}
+        columns={result.columns}
+        filteredRows={filteredRows}
+        filteredCount={filteredRows.length}
+      />
       {editError && !isEditing && (
         <div className="flex items-center gap-2 px-4 py-1.5 bg-destructive/10 text-destructive text-xs border-b border-border">
           <XCircle className="h-3 w-3" />
           {editError}
-          <button onClick={() => setEditError(null)} className="ml-auto hover:text-foreground">
+          <button
+            type="button"
+            onClick={() => setEditError(null)}
+            className="ml-auto hover:text-foreground"
+          >
             <X className="h-3 w-3" />
           </button>
         </div>

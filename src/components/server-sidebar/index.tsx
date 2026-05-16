@@ -1,18 +1,18 @@
+import { Plus } from "lucide-react";
 import React from "react";
+import { CSVImportModal } from "@/components/csv-import-modal";
+import { ObjectPropertiesModal } from "@/components/object-properties-modal";
 import { Button } from "@/components/ui/button";
 import { ContextMenu, useContextMenu } from "@/components/ui/context-menu";
-import { ObjectPropertiesModal } from "@/components/object-properties-modal";
-import { CSVImportModal } from "@/components/csv-import-modal";
 import { useProjectStore } from "@/stores/project-store";
-import { useUIStore } from "@/stores/ui-store";
-import { useTabStore } from "@/stores/tab-store";
 import { useQueryStore } from "@/stores/query-store";
+import { useTabStore } from "@/stores/tab-store";
+import { useUIStore } from "@/stores/ui-store";
 import type { ProjectDetails } from "@/types";
-import { Plus } from "lucide-react";
 import { AddDatabaseDialog } from "./add-database-dialog";
-import { renderServerGroup } from "./render-server-group";
 import { renderSavedQueries } from "./render-saved-queries";
-import type { CsvImportTarget, PropsModalState, SidebarRenderCtx, ObjectKind } from "./types";
+import { renderServerGroup } from "./render-server-group";
+import type { CsvImportTarget, ObjectKind, PropsModalState, SidebarRenderCtx } from "./types";
 
 export function ServerSidebar({
   onEditConnection,
@@ -67,7 +67,12 @@ export function ServerSidebar({
     name: "",
   });
 
-  const openProperties = (objectType: ObjectKind, projectId: string, schema: string, name: string) => {
+  const openProperties = (
+    objectType: ObjectKind,
+    projectId: string,
+    schema: string,
+    name: string,
+  ) => {
     setPropsModal({ open: true, objectType, projectId, schema, name });
   };
 
@@ -101,10 +106,7 @@ export function ServerSidebar({
       if (!tables[tKey]) {
         setLoad(key, true);
         try {
-          await Promise.all([
-            loadTables(projectId, schema),
-            loadSchemaObjects(projectId, schema),
-          ]);
+          await Promise.all([loadTables(projectId, schema), loadSchemaObjects(projectId, schema)]);
         } catch (e) {
           console.error("Failed to load schema objects:", e);
         } finally {
@@ -137,22 +139,65 @@ export function ServerSidebar({
   const copy = (text: string) => navigator.clipboard.writeText(text);
 
   const ctx: SidebarRenderCtx = {
-    projects, status, serverDatabases, serverTablespaces, schemas, tables,
-    columnDetails, indexes, constraints, triggers, rules, policies,
-    views, materializedViews, functions, triggerFunctions,
-    connect, loadColumns, refreshConnection, deleteProject, addDatabaseToServer,
-    openTab, openMonitorTab, openERDTab, openNotifyTab, openRolesTab,
-    openSchemaDiffTab, openExtensionsTab, openEnumsTab, openPgSettingsTab,
-    loading, selectedItem, setSelectedItem, setCsvImportTarget, setAddDbSource,
-    openProperties, toggle, isOpen, onConnect, onExpandSchema, onExpandTable,
-    onOpenTableQuery, copy, showMenu, onEditConnection,
+    projects,
+    status,
+    serverDatabases,
+    serverTablespaces,
+    schemas,
+    tables,
+    columnDetails,
+    indexes,
+    constraints,
+    triggers,
+    rules,
+    policies,
+    views,
+    materializedViews,
+    functions,
+    triggerFunctions,
+    connect,
+    loadColumns,
+    refreshConnection,
+    deleteProject,
+    addDatabaseToServer,
+    openTab,
+    openMonitorTab,
+    openERDTab,
+    openNotifyTab,
+    openRolesTab,
+    openSchemaDiffTab,
+    openExtensionsTab,
+    openEnumsTab,
+    openPgSettingsTab,
+    loading,
+    selectedItem,
+    setSelectedItem,
+    setCsvImportTarget,
+    setAddDbSource,
+    openProperties,
+    toggle,
+    isOpen,
+    onConnect,
+    onExpandSchema,
+    onExpandTable,
+    onOpenTableQuery,
+    copy,
+    showMenu,
+    onEditConnection,
   };
 
   return (
     <div className="flex h-full flex-col border-r border-sidebar-border bg-sidebar select-none">
       <div className="flex h-12 items-center justify-between border-b border-sidebar-border px-3">
-        <span className="tracking-widest uppercase text-[10px] font-semibold text-sidebar-foreground">CONNECTIONS</span>
-        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setConnectionModalOpen(true)}>
+        <span className="tracking-widest uppercase text-[10px] font-semibold text-sidebar-foreground">
+          CONNECTIONS
+        </span>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-6 w-6"
+          onClick={() => setConnectionModalOpen(true)}
+        >
           <Plus className="h-3 w-3" />
         </Button>
       </div>
@@ -166,12 +211,14 @@ export function ServerSidebar({
           for (const [pid, d] of entries) {
             const fp = serverFp(d);
             if (!serverGroups.has(fp)) serverGroups.set(fp, []);
-            serverGroups.get(fp)!.push(pid);
+            serverGroups.get(fp)?.push(pid);
           }
 
           return (
             <>
-              {Array.from(serverGroups.entries()).map(([fp, pids]) => renderServerGroup(ctx, fp, pids))}
+              {Array.from(serverGroups.entries()).map(([fp, pids]) =>
+                renderServerGroup(ctx, fp, pids),
+              )}
             </>
           );
         })()}
@@ -181,7 +228,9 @@ export function ServerSidebar({
 
       <AddDatabaseDialog
         open={!!addDbSource}
-        onOpenChange={(open) => { if (!open) setAddDbSource(null); }}
+        onOpenChange={(open) => {
+          if (!open) setAddDbSource(null);
+        }}
         sourceProjectId={addDbSource ?? ""}
         projects={projects}
         onAdd={async (name, database) => {
@@ -204,7 +253,9 @@ export function ServerSidebar({
       {csvImportTarget && (
         <CSVImportModal
           open={!!csvImportTarget}
-          onOpenChange={(open) => { if (!open) setCsvImportTarget(null); }}
+          onOpenChange={(open) => {
+            if (!open) setCsvImportTarget(null);
+          }}
           projectId={csvImportTarget.projectId}
           schema={csvImportTarget.schema}
           table={csvImportTarget.table}

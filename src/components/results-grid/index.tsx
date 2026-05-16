@@ -1,27 +1,36 @@
-import { useRef, useMemo, useState, useCallback, useEffect, useImperativeHandle, useLayoutEffect, type MutableRefObject } from "react";
 import DataEditor, {
-  type GridColumn,
-  type GridCell,
-  GridCellKind,
-  type Item,
-  type EditableGridCell,
-  type Theme,
-  type GridSelection,
   CompactSelection,
   type DataEditorRef,
+  type EditableGridCell,
+  type GridCell,
+  GridCellKind,
+  type GridColumn,
+  type GridSelection,
+  type Item,
+  type Theme,
 } from "@glideapps/glide-data-grid";
+import {
+  type MutableRefObject,
+  useCallback,
+  useEffect,
+  useImperativeHandle,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import "@glideapps/glide-data-grid/dist/index.css";
 import { useUIStore } from "@/stores/ui-store";
 import type { VirtualQuery } from "@/types";
 import {
-  GRID_ROW_HEIGHT,
-  DELETED_OVERRIDE,
-  FK_OVERRIDE,
-  buildModifiedOverride,
-  computeGridColumns,
-  computeFkColIndices,
   buildCellContent,
   buildGridTheme,
+  buildModifiedOverride,
+  computeFkColIndices,
+  computeGridColumns,
+  DELETED_OVERRIDE,
+  FK_OVERRIDE,
+  GRID_ROW_HEIGHT,
 } from "./rendering";
 
 interface ResultsGridProps {
@@ -58,7 +67,7 @@ export function ResultsGrid({
   onPageNeeded,
   onViewportRowChange,
   restoreRowIndex,
-  viewportKey,
+  viewportKey: _viewportKey,
   gridRef,
 }: ResultsGridProps) {
   const theme = useUIStore((s) => s.theme);
@@ -67,30 +76,37 @@ export function ResultsGrid({
   const [containerSize, setContainerSize] = useState({ width: 800, height: 400 });
   const visibleRangeRef = useRef({ y: 0, height: 0 });
 
-  useImperativeHandle(gridRef ?? { current: null }, () => ({
-    invalidatePage: (_pageIndex: number) => {
-      if (!virtualQuery) return;
-      const totalRows = virtualQuery.totalRows;
-      if (totalRows <= 0) return;
+  useImperativeHandle(
+    gridRef ?? { current: null },
+    () => ({
+      invalidatePage: (_pageIndex: number) => {
+        if (!virtualQuery) return;
+        const totalRows = virtualQuery.totalRows;
+        if (totalRows <= 0) return;
 
-      const range = visibleRangeRef.current;
-      const visibleStart = Math.max(0, Math.floor(range.y) - 2);
-      const fallbackVisibleRows = Math.max(24, Math.ceil(containerSize.height / GRID_ROW_HEIGHT) + 4);
-      const effectiveHeight = range.height > 0 ? range.height : fallbackVisibleRows;
-      const visibleEnd = Math.min(totalRows - 1, Math.ceil(range.y + effectiveHeight) + 2);
-      if (visibleStart > visibleEnd) return;
+        const range = visibleRangeRef.current;
+        const visibleStart = Math.max(0, Math.floor(range.y) - 2);
+        const fallbackVisibleRows = Math.max(
+          24,
+          Math.ceil(containerSize.height / GRID_ROW_HEIGHT) + 4,
+        );
+        const effectiveHeight = range.height > 0 ? range.height : fallbackVisibleRows;
+        const visibleEnd = Math.min(totalRows - 1, Math.ceil(range.y + effectiveHeight) + 2);
+        if (visibleStart > visibleEnd) return;
 
-      const cells: { cell: Item }[] = [];
-      for (let row = visibleStart; row <= visibleEnd; row++) {
-        for (let col = 0; col < columns.length; col++) {
-          cells.push({ cell: [col, row] });
+        const cells: { cell: Item }[] = [];
+        for (let row = visibleStart; row <= visibleEnd; row++) {
+          for (let col = 0; col < columns.length; col++) {
+            cells.push({ cell: [col, row] });
+          }
         }
-      }
-      if (cells.length > 0) {
-        dataEditorRef.current?.updateCells(cells);
-      }
-    },
-  }), [columns.length, containerSize.height, virtualQuery]);
+        if (cells.length > 0) {
+          dataEditorRef.current?.updateCells(cells);
+        }
+      },
+    }),
+    [columns.length, containerSize.height, virtualQuery],
+  );
 
   // Debounced via rAF to avoid mid-scroll re-renders
   useEffect(() => {
@@ -103,7 +119,9 @@ export function ResultsGrid({
         const { width, height } = entries[0].contentRect;
         const w = Math.round(width);
         const h = Math.round(height);
-        setContainerSize((prev) => (prev.width === w && prev.height === h ? prev : { width: w, height: h }));
+        setContainerSize((prev) =>
+          prev.width === w && prev.height === h ? prev : { width: w, height: h },
+        );
       });
     });
     obs.observe(el);
@@ -113,7 +131,10 @@ export function ResultsGrid({
     };
   }, []);
 
-  const gridColumns = useMemo((): GridColumn[] => computeGridColumns(columns, rows), [columns, rows]);
+  const gridColumns = useMemo(
+    (): GridColumn[] => computeGridColumns(columns, rows),
+    [columns, rows],
+  );
 
   const fkColIndices = useMemo(() => computeFkColIndices(columns, fkColumns), [columns, fkColumns]);
 
@@ -129,21 +150,30 @@ export function ResultsGrid({
     if (typeof restoreRowIndex !== "number" || totalRowCount <= 0) return;
     const targetRow = Math.min(restoreRowIndex, totalRowCount - 1);
     if (targetRow > 0) {
-      dataEditorRef.current?.scrollTo(
-        0,
-        { amount: targetRow, unit: "cell" },
-        "vertical",
-        0,
-        0,
-        { vAlign: "start" },
-      );
+      dataEditorRef.current?.scrollTo(0, { amount: targetRow, unit: "cell" }, "vertical", 0, 0, {
+        vAlign: "start",
+      });
     }
     visibleRangeRef.current = { ...visibleRangeRef.current, y: targetRow };
     onViewportRowChange?.(targetRow);
-  }, [viewportKey, restoreRowIndex, totalRowCount]);
+  }, [restoreRowIndex, totalRowCount, onViewportRowChange]);
 
   const getCellContent = useCallback(
-    (cell: Item): GridCell => buildCellContent(cell, {
+    (cell: Item): GridCell =>
+      buildCellContent(cell, {
+        rows,
+        cellEdits,
+        deletedRows,
+        isEditing,
+        fkColIndices,
+        virtualQuery,
+        onPageNeeded,
+        deletedOverride,
+        modifiedOverride,
+        fkOverride,
+      }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [
       rows,
       cellEdits,
       deletedRows,
@@ -151,12 +181,10 @@ export function ResultsGrid({
       fkColIndices,
       virtualQuery,
       onPageNeeded,
-      deletedOverride,
-      modifiedOverride,
       fkOverride,
-    }),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [rows, cellEdits, deletedRows, isEditing, theme, fkColIndices, virtualQuery, onPageNeeded],
+      modifiedOverride,
+      deletedOverride,
+    ],
   );
 
   // Trigger page loads on scroll, throttled via rAF
@@ -182,9 +210,12 @@ export function ResultsGrid({
     [virtualQuery, onPageNeeded, onViewportRowChange],
   );
 
-  useEffect(() => () => {
-    cancelAnimationFrame(scrollRafId.current);
-  }, []);
+  useEffect(
+    () => () => {
+      cancelAnimationFrame(scrollRafId.current);
+    },
+    [],
+  );
 
   const onCellEdited = useCallback(
     (cell: Item, newVal: EditableGridCell) => {

@@ -1,14 +1,6 @@
+import { AlertTriangle, Check, Key, Loader2, Play, RefreshCw, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import {
-  AlertTriangle,
-  Check,
-  Key,
-  Loader2,
-  Play,
-  RefreshCw,
-  Trash2,
-} from "lucide-react";
 import type { ObjectType } from "./types";
 
 export function ActionsContent({
@@ -52,28 +44,100 @@ export function ActionsContent({
 
   if (objectType === "table") {
     actions.push(
-      { label: "ANALYZE", icon: <RefreshCw className="h-4 w-4" />, confirm: true, description: "Update table statistics for the query planner." },
-      { label: "VACUUM", icon: <RefreshCw className="h-4 w-4" />, confirm: true, description: "Reclaim storage occupied by dead tuples." },
-      { label: "VACUUM FULL", icon: <RefreshCw className="h-4 w-4" />, confirm: true, description: "Rewrite table to reclaim max space. Locks table exclusively." },
-      { label: "REINDEX", icon: <Key className="h-4 w-4" />, confirm: true, description: "Rebuild all indexes on this table." },
-      { label: "TRUNCATE", icon: <Trash2 className="h-4 w-4" />, destructive: true, confirm: true, description: "Remove all rows. Cannot be rolled back." },
-      { label: "DROP TABLE", icon: <Trash2 className="h-4 w-4" />, destructive: true, confirm: true, description: "Permanently delete this table and all its data." },
+      {
+        label: "ANALYZE",
+        icon: <RefreshCw className="h-4 w-4" />,
+        confirm: true,
+        description: "Update table statistics for the query planner.",
+      },
+      {
+        label: "VACUUM",
+        icon: <RefreshCw className="h-4 w-4" />,
+        confirm: true,
+        description: "Reclaim storage occupied by dead tuples.",
+      },
+      {
+        label: "VACUUM FULL",
+        icon: <RefreshCw className="h-4 w-4" />,
+        confirm: true,
+        description: "Rewrite table to reclaim max space. Locks table exclusively.",
+      },
+      {
+        label: "REINDEX",
+        icon: <Key className="h-4 w-4" />,
+        confirm: true,
+        description: "Rebuild all indexes on this table.",
+      },
+      {
+        label: "TRUNCATE",
+        icon: <Trash2 className="h-4 w-4" />,
+        destructive: true,
+        confirm: true,
+        description: "Remove all rows. Cannot be rolled back.",
+      },
+      {
+        label: "DROP TABLE",
+        icon: <Trash2 className="h-4 w-4" />,
+        destructive: true,
+        confirm: true,
+        description: "Permanently delete this table and all its data.",
+      },
     );
   } else if (objectType === "view") {
     actions.push(
-      { label: "DROP VIEW", icon: <Trash2 className="h-4 w-4" />, destructive: true, confirm: true, description: "Permanently delete this view." },
-      { label: "DROP VIEW CASCADE", icon: <Trash2 className="h-4 w-4" />, destructive: true, confirm: true, description: "Drop view and all dependent objects." },
+      {
+        label: "DROP VIEW",
+        icon: <Trash2 className="h-4 w-4" />,
+        destructive: true,
+        confirm: true,
+        description: "Permanently delete this view.",
+      },
+      {
+        label: "DROP VIEW CASCADE",
+        icon: <Trash2 className="h-4 w-4" />,
+        destructive: true,
+        confirm: true,
+        description: "Drop view and all dependent objects.",
+      },
     );
   } else if (objectType === "matview") {
     actions.push(
-      { label: "REFRESH", icon: <RefreshCw className="h-4 w-4" />, confirm: true, description: "Refresh data by re-executing the query." },
-      { label: "REFRESH CONCURRENTLY", icon: <RefreshCw className="h-4 w-4" />, confirm: true, description: "Refresh without locking reads. Requires a unique index." },
-      { label: "DROP MATERIALIZED VIEW", icon: <Trash2 className="h-4 w-4" />, destructive: true, confirm: true, description: "Permanently delete this materialized view." },
+      {
+        label: "REFRESH",
+        icon: <RefreshCw className="h-4 w-4" />,
+        confirm: true,
+        description: "Refresh data by re-executing the query.",
+      },
+      {
+        label: "REFRESH CONCURRENTLY",
+        icon: <RefreshCw className="h-4 w-4" />,
+        confirm: true,
+        description: "Refresh without locking reads. Requires a unique index.",
+      },
+      {
+        label: "DROP MATERIALIZED VIEW",
+        icon: <Trash2 className="h-4 w-4" />,
+        destructive: true,
+        confirm: true,
+        description: "Permanently delete this materialized view.",
+      },
     );
   } else if (objectType === "function" || objectType === "trigger-function") {
     actions.push(
-      { label: "DROP FUNCTION", icon: <Trash2 className="h-4 w-4" />, destructive: true, confirm: true, description: "Permanently delete this function." },
-      { label: "DROP FUNCTION CASCADE", icon: <Trash2 className="h-4 w-4" />, destructive: true, confirm: true, description: "Drop function and all dependent objects (triggers, etc.)." },
+      {
+        label: "DROP FUNCTION",
+        icon: <Trash2 className="h-4 w-4" />,
+        destructive: true,
+        confirm: true,
+        description: "Permanently delete this function.",
+      },
+      {
+        label: "DROP FUNCTION CASCADE",
+        icon: <Trash2 className="h-4 w-4" />,
+        destructive: true,
+        confirm: true,
+        description: "Drop function and all dependent objects (triggers, etc.).",
+      },
     );
   }
 
@@ -113,10 +177,7 @@ export function ActionsContent({
               size="sm"
               className="h-7 text-xs gap-1.5"
               onClick={() => {
-                openTab(
-                  projectId,
-                  `SELECT * FROM ${qualified} ORDER BY 1 DESC LIMIT 10;`,
-                );
+                openTab(projectId, `SELECT * FROM ${qualified} ORDER BY 1 DESC LIMIT 10;`);
                 onOpenChange(false);
               }}
             >
@@ -164,9 +225,7 @@ export function ActionsContent({
               <span
                 className={cn(
                   "shrink-0",
-                  action.destructive
-                    ? "text-destructive"
-                    : "text-muted-foreground",
+                  action.destructive ? "text-destructive" : "text-muted-foreground",
                 )}
               >
                 {action.icon}
@@ -180,9 +239,7 @@ export function ActionsContent({
                 >
                   {action.label}
                 </div>
-                <div className="text-[11px] text-muted-foreground">
-                  {action.description}
-                </div>
+                <div className="text-[11px] text-muted-foreground">{action.description}</div>
               </div>
               {confirmAction !== action.label && (
                 <Button
@@ -190,8 +247,7 @@ export function ActionsContent({
                   size="sm"
                   className={cn(
                     "h-7 px-3 text-xs shrink-0",
-                    action.destructive &&
-                      "text-destructive hover:bg-destructive/10",
+                    action.destructive && "text-destructive hover:bg-destructive/10",
                   )}
                   disabled={actionLoading}
                   onClick={() => {
@@ -210,18 +266,14 @@ export function ActionsContent({
               <div className="px-3.5 pb-3 flex items-center gap-2">
                 <div className="flex-1 flex items-center gap-2">
                   <span className="text-[10px] text-muted-foreground whitespace-nowrap">
-                    Type{" "}
-                    <span className="font-mono font-semibold text-foreground">
-                      {name}
-                    </span>{" "}
-                    to confirm
+                    Type <span className="font-mono font-semibold text-foreground">{name}</span> to
+                    confirm
                   </span>
                   <input
                     type="text"
                     value={confirmInput}
                     onChange={(e) => setConfirmInput(e.target.value)}
                     placeholder={name}
-                    autoFocus
                     className="flex-1 h-7 px-2 text-xs font-mono bg-background border border-border/40 rounded-md outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/20 placeholder:text-muted-foreground/30"
                   />
                 </div>
@@ -237,11 +289,7 @@ export function ActionsContent({
                   disabled={actionLoading || confirmInput !== name}
                   onClick={() => void runAction(action.label)}
                 >
-                  {actionLoading ? (
-                    <Loader2 className="h-3 w-3 animate-spin" />
-                  ) : (
-                    "Confirm"
-                  )}
+                  {actionLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : "Confirm"}
                 </Button>
                 <Button
                   variant="ghost"

@@ -8,12 +8,13 @@ export function extractAliasMap(sql: string): Record<string, TableRef> {
   const map: Record<string, TableRef> = {};
   const re =
     /(from|join)\s+("?[A-Za-z0-9_]+"?)(?:\s*\.\s*("?[A-Za-z0-9_]+"?))?(?:\s+as)?\s+("?[A-Za-z0-9_]+"?)/gi;
-  let m: RegExpExecArray | null;
-  while ((m = re.exec(sql)) !== null) {
+  let m: RegExpExecArray | null = re.exec(sql);
+  while (m !== null) {
     const schemaMaybe = m[3] ? stripQuotes(m[2]) : undefined;
     const table = stripQuotes(m[3] ?? m[2]);
     const alias = stripQuotes(m[4]);
     map[alias] = { schema: schemaMaybe, table };
+    m = re.exec(sql);
   }
   return map;
 }

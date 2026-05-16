@@ -1,11 +1,11 @@
-import { useState, useCallback } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "./ui/dialog";
-import { Button } from "./ui/button";
-import { DriverFactory } from "@/lib/database-driver";
-import { useProjectStore } from "@/stores/project-store";
 import { open } from "@tauri-apps/plugin-dialog";
-import { FileUp, ArrowRight, Check, AlertCircle, Loader2 } from "lucide-react";
+import { AlertCircle, ArrowRight, Check, FileUp, Loader2 } from "lucide-react";
+import { useCallback, useState } from "react";
+import { DriverFactory } from "@/lib/database-driver";
 import { cn } from "@/lib/utils";
+import { useProjectStore } from "@/stores/project-store";
+import { Button } from "./ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "./ui/dialog";
 
 interface CSVImportModalProps {
   open: boolean;
@@ -16,7 +16,14 @@ interface CSVImportModalProps {
   tableColumns: string[];
 }
 
-export function CSVImportModal({ open: isOpen, onOpenChange, projectId, schema, table, tableColumns }: CSVImportModalProps) {
+export function CSVImportModal({
+  open: isOpen,
+  onOpenChange,
+  projectId,
+  schema,
+  table,
+  tableColumns,
+}: CSVImportModalProps) {
   const [filePath, setFilePath] = useState<string | null>(null);
   const [csvHeaders, setCsvHeaders] = useState<string[]>([]);
   const [previewRows, setPreviewRows] = useState<string[][]>([]);
@@ -40,15 +47,15 @@ export function CSVImportModal({ open: isOpen, onOpenChange, projectId, schema, 
       const d = projects[projectId];
       if (!d) return;
       const driver = DriverFactory.getDriver(d.driver);
-      const [headers, rows] = await driver.csvPreview!(path);
+      const preview = await driver.csvPreview?.(path);
+      if (!preview) return;
+      const [headers, rows] = preview;
       setCsvHeaders(headers);
       setPreviewRows(rows);
 
       const autoMapping: Record<number, string> = {};
       headers.forEach((h, i) => {
-        const match = tableColumns.find(
-          (tc) => tc.toLowerCase() === h.toLowerCase()
-        );
+        const match = tableColumns.find((tc) => tc.toLowerCase() === h.toLowerCase());
         if (match) autoMapping[i] = match;
       });
       setMapping(autoMapping);
@@ -75,7 +82,8 @@ export function CSVImportModal({ open: isOpen, onOpenChange, projectId, schema, 
       const d = projects[projectId];
       if (!d) return;
       const driver = DriverFactory.getDriver(d.driver);
-      const count = await driver.csvImport!(projectId, filePath, schema, table, columnMapping);
+      const count = await driver.csvImport?.(projectId, filePath, schema, table, columnMapping);
+      if (count == null) return;
       setResult({ success: true, message: `Successfully imported ${count.toLocaleString()} rows` });
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
@@ -104,13 +112,21 @@ export function CSVImportModal({ open: isOpen, onOpenChange, projectId, schema, 
             <FileUp className="h-4 w-4 text-primary" /> Import CSV
           </DialogTitle>
           <DialogDescription>
-            Import data into <span className="font-mono text-foreground">{schema}.{table}</span>
+            Import data into{" "}
+            <span className="font-mono text-foreground">
+              {schema}.{table}
+            </span>
           </DialogDescription>
         </DialogHeader>
 
         <div className="px-5 pb-5 space-y-4">
           {/* File picker */}
-          <Button variant="outline" onClick={pickFile} disabled={importing} className="w-full justify-center gap-2 font-mono text-xs">
+          <Button
+            variant="outline"
+            onClick={pickFile}
+            disabled={importing}
+            className="w-full justify-center gap-2 font-mono text-xs"
+          >
             <FileUp className="h-3.5 w-3.5" />
             {filePath ? filePath.split("/").pop() : "Choose CSV file..."}
           </Button>
@@ -123,7 +139,12 @@ export function CSVImportModal({ open: isOpen, onOpenChange, projectId, schema, 
                   <thead>
                     <tr className="bg-muted/30">
                       {csvHeaders.map((h, i) => (
-                        <th key={i} className="px-3 py-1.5 text-left text-muted-foreground font-medium whitespace-nowrap">{h}</th>
+                        <th
+                          key={i}
+                          className="px-3 py-1.5 text-left text-muted-foreground font-medium whitespace-nowrap"
+                        >
+                          {h}
+                        </th>
                       ))}
                     </tr>
                   </thead>
@@ -131,7 +152,12 @@ export function CSVImportModal({ open: isOpen, onOpenChange, projectId, schema, 
                     {previewRows.map((row, ri) => (
                       <tr key={ri} className="border-t border-border/20">
                         {row.map((cell, ci) => (
-                          <td key={ci} className="px-3 py-1 whitespace-nowrap max-w-[200px] truncate">{cell}</td>
+                          <td
+                            key={ci}
+                            className="px-3 py-1 whitespace-nowrap max-w-[200px] truncate"
+                          >
+                            {cell}
+                          </td>
                         ))}
                       </tr>
                     ))}
@@ -144,11 +170,15 @@ export function CSVImportModal({ open: isOpen, onOpenChange, projectId, schema, 
           {/* Column mapping */}
           {csvHeaders.length > 0 && (
             <div className="space-y-2">
-              <div className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Column Mapping</div>
+              <div className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                Column Mapping
+              </div>
               <div className="grid gap-1.5 max-h-[200px] overflow-y-auto">
                 {csvHeaders.map((h, i) => (
                   <div key={i} className="flex items-center gap-2 text-xs font-mono">
-                    <span className="w-[140px] truncate text-muted-foreground" title={h}>{h}</span>
+                    <span className="w-[140px] truncate text-muted-foreground" title={h}>
+                      {h}
+                    </span>
                     <ArrowRight className="h-3 w-3 text-muted-foreground/50 shrink-0" />
                     <select
                       value={mapping[i] ?? ""}
@@ -157,7 +187,9 @@ export function CSVImportModal({ open: isOpen, onOpenChange, projectId, schema, 
                     >
                       <option value="">-- skip --</option>
                       {tableColumns.map((col) => (
-                        <option key={col} value={col}>{col}</option>
+                        <option key={col} value={col}>
+                          {col}
+                        </option>
                       ))}
                     </select>
                   </div>
@@ -168,18 +200,31 @@ export function CSVImportModal({ open: isOpen, onOpenChange, projectId, schema, 
 
           {/* Result message */}
           {result && (
-            <div className={cn(
-              "flex items-center gap-2 text-xs font-mono px-3 py-2 rounded-lg",
-              result.success ? "bg-success/10 text-success" : "bg-destructive/10 text-destructive"
-            )}>
-              {result.success ? <Check className="h-3.5 w-3.5" /> : <AlertCircle className="h-3.5 w-3.5" />}
+            <div
+              className={cn(
+                "flex items-center gap-2 text-xs font-mono px-3 py-2 rounded-lg",
+                result.success
+                  ? "bg-success/10 text-success"
+                  : "bg-destructive/10 text-destructive",
+              )}
+            >
+              {result.success ? (
+                <Check className="h-3.5 w-3.5" />
+              ) : (
+                <AlertCircle className="h-3.5 w-3.5" />
+              )}
               {result.message}
             </div>
           )}
 
           {/* Actions */}
           <div className="flex justify-end gap-2 pt-2">
-            <Button variant="ghost" onClick={() => handleClose(false)} disabled={importing} className="font-mono text-xs">
+            <Button
+              variant="ghost"
+              onClick={() => handleClose(false)}
+              disabled={importing}
+              className="font-mono text-xs"
+            >
               {result?.success ? "Done" : "Cancel"}
             </Button>
             {!result?.success && (

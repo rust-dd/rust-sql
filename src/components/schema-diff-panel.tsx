@@ -1,9 +1,19 @@
-import { useState, useEffect, useCallback } from "react";
+import {
+  ArrowLeftRight,
+  Code,
+  Eye,
+  GitCompare,
+  Hash,
+  Minus,
+  Plus,
+  RefreshCw,
+  Table,
+} from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
 import { DriverFactory } from "@/lib/database-driver";
+import { cn } from "@/lib/utils";
 import { useProjectStore } from "@/stores/project-store";
 import type { SchemaObject } from "@/types";
-import { cn } from "@/lib/utils";
-import { GitCompare, Plus, Minus, RefreshCw, ArrowLeftRight, Table, Eye, Code, Hash } from "lucide-react";
 import { Button } from "./ui/button";
 
 interface SchemaDiffPanelProps {
@@ -40,22 +50,54 @@ function computeDiff(left: SchemaObject[], right: SchemaObject[]): DiffEntry[] {
     seen.add(key);
     const r = rightMap.get(key);
     if (!r) {
-      entries.push({ objectType: l.object_type, name: l.name, status: "only-left", leftDef: l.definition });
+      entries.push({
+        objectType: l.object_type,
+        name: l.name,
+        status: "only-left",
+        leftDef: l.definition,
+      });
     } else if (l.definition.trim() !== r.definition.trim()) {
-      entries.push({ objectType: l.object_type, name: l.name, status: "modified", leftDef: l.definition, rightDef: r.definition });
+      entries.push({
+        objectType: l.object_type,
+        name: l.name,
+        status: "modified",
+        leftDef: l.definition,
+        rightDef: r.definition,
+      });
     } else {
-      entries.push({ objectType: l.object_type, name: l.name, status: "identical", leftDef: l.definition, rightDef: r.definition });
+      entries.push({
+        objectType: l.object_type,
+        name: l.name,
+        status: "identical",
+        leftDef: l.definition,
+        rightDef: r.definition,
+      });
     }
   }
 
   for (const [key, r] of rightMap) {
     if (!seen.has(key)) {
-      entries.push({ objectType: r.object_type, name: r.name, status: "only-right", rightDef: r.definition });
+      entries.push({
+        objectType: r.object_type,
+        name: r.name,
+        status: "only-right",
+        rightDef: r.definition,
+      });
     }
   }
 
-  const order: Record<string, number> = { modified: 0, "only-left": 1, "only-right": 2, identical: 3 };
-  entries.sort((a, b) => order[a.status] - order[b.status] || a.objectType.localeCompare(b.objectType) || a.name.localeCompare(b.name));
+  const order: Record<string, number> = {
+    modified: 0,
+    "only-left": 1,
+    "only-right": 2,
+    identical: 3,
+  };
+  entries.sort(
+    (a, b) =>
+      order[a.status] - order[b.status] ||
+      a.objectType.localeCompare(b.objectType) ||
+      a.name.localeCompare(b.name),
+  );
 
   return entries;
 }
@@ -74,7 +116,10 @@ export function SchemaDiffPanel({ projectId }: SchemaDiffPanelProps) {
 
   useEffect(() => {
     if (!driver) return;
-    driver.loadSchemas(projectId).then(setSchemas).catch(() => {});
+    driver
+      .loadSchemas(projectId)
+      .then(setSchemas)
+      .catch(() => {});
   }, [driver, projectId]);
 
   const runDiff = useCallback(async () => {
@@ -83,9 +128,10 @@ export function SchemaDiffPanel({ projectId }: SchemaDiffPanelProps) {
     setSelected(null);
     try {
       const [leftObjects, rightObjects] = await Promise.all([
-        driver.extractSchemaObjects!(projectId, leftSchema),
-        driver.extractSchemaObjects!(projectId, rightSchema),
+        driver.extractSchemaObjects?.(projectId, leftSchema),
+        driver.extractSchemaObjects?.(projectId, rightSchema),
       ]);
+      if (!leftObjects || !rightObjects) return;
       setDiff(computeDiff(leftObjects, rightObjects));
     } catch (err) {
       console.error(err);
@@ -95,7 +141,8 @@ export function SchemaDiffPanel({ projectId }: SchemaDiffPanelProps) {
   }, [driver, projectId, leftSchema, rightSchema]);
 
   const filtered = diff?.filter(
-    (d) => filter === "all" || d.status === filter || (filter === "changes" && d.status !== "identical"),
+    (d) =>
+      filter === "all" || d.status === filter || (filter === "changes" && d.status !== "identical"),
   );
   const counts = diff
     ? {
@@ -136,8 +183,18 @@ export function SchemaDiffPanel({ projectId }: SchemaDiffPanelProps) {
             </option>
           ))}
         </select>
-        <Button variant="gradient" size="sm" onClick={runDiff} disabled={!leftSchema || !rightSchema || loading} className="text-xs font-mono gap-1">
-          {loading ? <RefreshCw className="h-3 w-3 animate-spin" /> : <GitCompare className="h-3 w-3" />}
+        <Button
+          variant="gradient"
+          size="sm"
+          onClick={runDiff}
+          disabled={!leftSchema || !rightSchema || loading}
+          className="text-xs font-mono gap-1"
+        >
+          {loading ? (
+            <RefreshCw className="h-3 w-3 animate-spin" />
+          ) : (
+            <GitCompare className="h-3 w-3" />
+          )}
           Compare
         </Button>
       </div>
@@ -146,37 +203,67 @@ export function SchemaDiffPanel({ projectId }: SchemaDiffPanelProps) {
       {counts && (
         <div className="flex items-center gap-2 px-4 py-2 border-b border-border/20 text-[11px] font-mono">
           <button
+            type="button"
             onClick={() => setFilter("all")}
-            className={cn("px-2 py-0.5 rounded-full transition-colors", filter === "all" ? "bg-accent text-foreground" : "text-muted-foreground hover:text-foreground")}
+            className={cn(
+              "px-2 py-0.5 rounded-full transition-colors",
+              filter === "all"
+                ? "bg-accent text-foreground"
+                : "text-muted-foreground hover:text-foreground",
+            )}
           >
             All ({diff?.length ?? 0})
           </button>
           <button
+            type="button"
             onClick={() => setFilter("changes")}
-            className={cn("px-2 py-0.5 rounded-full transition-colors", filter === "changes" ? "bg-accent text-foreground" : "text-muted-foreground hover:text-foreground")}
+            className={cn(
+              "px-2 py-0.5 rounded-full transition-colors",
+              filter === "changes"
+                ? "bg-accent text-foreground"
+                : "text-muted-foreground hover:text-foreground",
+            )}
           >
             Changes ({counts.modified + counts.onlyLeft + counts.onlyRight})
           </button>
           {counts.modified > 0 && (
             <button
+              type="button"
               onClick={() => setFilter("modified")}
-              className={cn("px-2 py-0.5 rounded-full transition-colors", filter === "modified" ? "bg-amber-500/20 text-amber-500" : "text-amber-500/60 hover:text-amber-500")}
+              className={cn(
+                "px-2 py-0.5 rounded-full transition-colors",
+                filter === "modified"
+                  ? "bg-amber-500/20 text-amber-500"
+                  : "text-amber-500/60 hover:text-amber-500",
+              )}
             >
               Modified ({counts.modified})
             </button>
           )}
           {counts.onlyLeft > 0 && (
             <button
+              type="button"
               onClick={() => setFilter("only-left")}
-              className={cn("px-2 py-0.5 rounded-full transition-colors", filter === "only-left" ? "bg-destructive/20 text-destructive" : "text-destructive/60 hover:text-destructive")}
+              className={cn(
+                "px-2 py-0.5 rounded-full transition-colors",
+                filter === "only-left"
+                  ? "bg-destructive/20 text-destructive"
+                  : "text-destructive/60 hover:text-destructive",
+              )}
             >
               Only in {leftSchema} ({counts.onlyLeft})
             </button>
           )}
           {counts.onlyRight > 0 && (
             <button
+              type="button"
               onClick={() => setFilter("only-right")}
-              className={cn("px-2 py-0.5 rounded-full transition-colors", filter === "only-right" ? "bg-success/20 text-success" : "text-success/60 hover:text-success")}
+              className={cn(
+                "px-2 py-0.5 rounded-full transition-colors",
+                filter === "only-right"
+                  ? "bg-success/20 text-success"
+                  : "text-success/60 hover:text-success",
+              )}
             >
               Only in {rightSchema} ({counts.onlyRight})
             </button>
@@ -189,15 +276,23 @@ export function SchemaDiffPanel({ projectId }: SchemaDiffPanelProps) {
         {/* List */}
         <div className="w-[320px] border-r border-border/30 overflow-y-auto">
           {!diff ? (
-            <div className="flex items-center justify-center h-full text-muted-foreground/40 text-sm font-mono">Select schemas and compare</div>
+            <div className="flex items-center justify-center h-full text-muted-foreground/40 text-sm font-mono">
+              Select schemas and compare
+            </div>
           ) : filtered && filtered.length === 0 ? (
-            <div className="flex items-center justify-center h-full text-muted-foreground/40 text-sm font-mono">No differences found</div>
+            <div className="flex items-center justify-center h-full text-muted-foreground/40 text-sm font-mono">
+              No differences found
+            </div>
           ) : (
             filtered?.map((entry, i) => (
               <button
                 key={i}
+                type="button"
                 onClick={() => setSelected(entry)}
-                className={cn("flex items-center gap-2 w-full px-3 py-1.5 text-left text-xs font-mono transition-colors", selected === entry ? "bg-accent" : "hover:bg-muted/30")}
+                className={cn(
+                  "flex items-center gap-2 w-full px-3 py-1.5 text-left text-xs font-mono transition-colors",
+                  selected === entry ? "bg-accent" : "hover:bg-muted/30",
+                )}
               >
                 <span
                   className={cn(
@@ -214,8 +309,17 @@ export function SchemaDiffPanel({ projectId }: SchemaDiffPanelProps) {
                   {entry.status === "identical" && (typeIcons[entry.objectType] || null)}
                 </span>
                 <span className="text-muted-foreground/50">{typeIcons[entry.objectType]}</span>
-                <span className={cn("truncate", entry.status === "identical" && "text-muted-foreground/40")}>{entry.name}</span>
-                <span className="ml-auto text-[9px] text-muted-foreground/40">{entry.objectType}</span>
+                <span
+                  className={cn(
+                    "truncate",
+                    entry.status === "identical" && "text-muted-foreground/40",
+                  )}
+                >
+                  {entry.name}
+                </span>
+                <span className="ml-auto text-[9px] text-muted-foreground/40">
+                  {entry.objectType}
+                </span>
               </button>
             ))
           )}
@@ -240,13 +344,17 @@ export function SchemaDiffPanel({ projectId }: SchemaDiffPanelProps) {
               {selected.status === "modified" ? (
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <div className="text-[10px] font-mono text-muted-foreground mb-1">{leftSchema}</div>
+                    <div className="text-[10px] font-mono text-muted-foreground mb-1">
+                      {leftSchema}
+                    </div>
                     <pre className="text-xs font-mono bg-destructive/5 border border-destructive/20 rounded-xl p-3 overflow-auto max-h-[500px] whitespace-pre-wrap">
                       {selected.leftDef}
                     </pre>
                   </div>
                   <div>
-                    <div className="text-[10px] font-mono text-muted-foreground mb-1">{rightSchema}</div>
+                    <div className="text-[10px] font-mono text-muted-foreground mb-1">
+                      {rightSchema}
+                    </div>
                     <pre className="text-xs font-mono bg-success/5 border border-success/20 rounded-xl p-3 overflow-auto max-h-[500px] whitespace-pre-wrap">
                       {selected.rightDef}
                     </pre>
@@ -259,7 +367,9 @@ export function SchemaDiffPanel({ projectId }: SchemaDiffPanelProps) {
               )}
             </div>
           ) : (
-            <div className="flex items-center justify-center h-full text-muted-foreground/40 text-sm font-mono">Select an object to view details</div>
+            <div className="flex items-center justify-center h-full text-muted-foreground/40 text-sm font-mono">
+              Select an object to view details
+            </div>
           )}
         </div>
       </div>

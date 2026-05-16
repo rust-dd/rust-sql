@@ -8,12 +8,7 @@ import type {
 } from "@/lib/alter-table-sql";
 import type { FKInfo } from "../types";
 
-export type StructureSubTab =
-  | "columns"
-  | "pk"
-  | "fkeys"
-  | "unique"
-  | "indexes";
+export type StructureSubTab = "columns" | "pk" | "fkeys" | "unique" | "indexes";
 
 export function uid() {
   return crypto.randomUUID();
@@ -58,14 +53,14 @@ export function initStructureState(
       uniqueMap.set(c.constraintName, existing);
     }
   }
-  const uniqueConstraints: DraftUniqueConstraint[] = [
-    ...uniqueMap.entries(),
-  ].map(([name, ucCols]) => ({
-    _id: uid(),
-    _status: "existing" as const,
-    constraintName: name,
-    columns: ucCols,
-  }));
+  const uniqueConstraints: DraftUniqueConstraint[] = [...uniqueMap.entries()].map(
+    ([name, ucCols]) => ({
+      _id: uid(),
+      _status: "existing" as const,
+      constraintName: name,
+      columns: ucCols,
+    }),
+  );
 
   const idxMap = new Map<string, { columns: string[]; isUnique: boolean }>();
   for (const i of idxs ?? []) {
@@ -93,19 +88,17 @@ export function initStructureState(
     existing.push(fk);
     fkMap.set(fk.constraintName, existing);
   }
-  const foreignKeys: DraftForeignKey[] = [...fkMap.entries()].map(
-    ([name, fks]) => ({
-      _id: uid(),
-      _status: "existing" as const,
-      constraintName: name,
-      sourceColumns: fks.map((f) => f.sourceColumn),
-      targetSchema: fks[0].targetSchema,
-      targetTable: fks[0].targetTable,
-      targetColumns: fks.map((f) => f.targetColumn),
-      onUpdate: fks[0].onUpdate,
-      onDelete: fks[0].onDelete,
-    }),
-  );
+  const foreignKeys: DraftForeignKey[] = [...fkMap.entries()].map(([name, fks]) => ({
+    _id: uid(),
+    _status: "existing" as const,
+    constraintName: name,
+    sourceColumns: fks.map((f) => f.sourceColumn),
+    targetSchema: fks[0].targetSchema,
+    targetTable: fks[0].targetTable,
+    targetColumns: fks.map((f) => f.targetColumn),
+    onUpdate: fks[0].onUpdate,
+    onDelete: fks[0].onDelete,
+  }));
 
   return { columns, primaryKey, foreignKeys, uniqueConstraints, indexes };
 }

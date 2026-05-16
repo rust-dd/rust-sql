@@ -10,11 +10,7 @@ export type ViewsSlice = {
   triggerFunctions: Record<string, TriggerFunctionInfo[]>;
   serverDatabases: Record<string, string[]>;
   serverTablespaces: Record<string, [string, string, string][]>;
-  loadTableMetadata: (
-    projectId: string,
-    schema: string,
-    table: string,
-  ) => Promise<void>;
+  loadTableMetadata: (projectId: string, schema: string, table: string) => Promise<void>;
 };
 
 export const createViewsSlice: StateCreator<
@@ -30,11 +26,7 @@ export const createViewsSlice: StateCreator<
   serverDatabases: {},
   serverTablespaces: {},
 
-  loadTableMetadata: async (
-    projectId: string,
-    schema: string,
-    table: string,
-  ) => {
+  loadTableMetadata: async (projectId: string, schema: string, table: string) => {
     const key = `${projectId}::${schema}::${table}`;
     const { columnDetails, projects } = get();
     if (columnDetails[key]) return;
@@ -43,15 +35,14 @@ export const createViewsSlice: StateCreator<
     if (!d) return;
     const driver = DriverFactory.getDriver(d.driver);
 
-    const [colsR, idxsR, consR, trigsR, rlsR, polsR] =
-      await Promise.allSettled([
-        driver.loadColumnDetails(projectId, schema, table),
-        driver.loadIndexes(projectId, schema, table),
-        driver.loadConstraints(projectId, schema, table),
-        driver.loadTriggers(projectId, schema, table),
-        driver.loadRules(projectId, schema, table),
-        driver.loadPolicies(projectId, schema, table),
-      ]);
+    const [colsR, idxsR, consR, trigsR, rlsR, polsR] = await Promise.allSettled([
+      driver.loadColumnDetails(projectId, schema, table),
+      driver.loadIndexes(projectId, schema, table),
+      driver.loadConstraints(projectId, schema, table),
+      driver.loadTriggers(projectId, schema, table),
+      driver.loadRules(projectId, schema, table),
+      driver.loadPolicies(projectId, schema, table),
+    ]);
 
     const val = <T>(r: PromiseSettledResult<T>, fallback: T): T =>
       r.status === "fulfilled" ? r.value : fallback;

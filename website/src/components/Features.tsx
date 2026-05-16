@@ -3,7 +3,7 @@ import {
   GitBranch,
   Key,
   Layers,
-  Map,
+  Map as MapIcon,
   Search,
   Shield,
   Terminal,
@@ -53,12 +53,32 @@ const narrativeFeatures: NarrativeFeature[] = [
 /* ─── Compact feature grid ─── */
 
 const compactFeatures = [
-  { icon: <GitBranch className="h-4 w-4" />, name: "ERD diagrams", desc: "Auto-generated with FK lines" },
-  { icon: <Terminal className="h-4 w-4" />, name: "Inline terminal", desc: "Built-in PTY, run anything" },
-  { icon: <Columns3 className="h-4 w-4" />, name: "Query diff", desc: "Compare results side by side" },
-  { icon: <Shield className="h-4 w-4" />, name: "SSH tunnels", desc: "Remote access without config" },
+  {
+    icon: <GitBranch className="h-4 w-4" />,
+    name: "ERD diagrams",
+    desc: "Auto-generated with FK lines",
+  },
+  {
+    icon: <Terminal className="h-4 w-4" />,
+    name: "Inline terminal",
+    desc: "Built-in PTY, run anything",
+  },
+  {
+    icon: <Columns3 className="h-4 w-4" />,
+    name: "Query diff",
+    desc: "Compare results side by side",
+  },
+  {
+    icon: <Shield className="h-4 w-4" />,
+    name: "SSH tunnels",
+    desc: "Remote access without config",
+  },
   { icon: <Key className="h-4 w-4" />, name: "FK navigation", desc: "Click to follow references" },
-  { icon: <Map className="h-4 w-4" />, name: "PostGIS maps", desc: "Spatial data on live tiles" },
+  {
+    icon: <MapIcon className="h-4 w-4" />,
+    name: "PostGIS maps",
+    desc: "Spatial data on live tiles",
+  },
   { icon: <Zap className="h-4 w-4" />, name: "SIMD JSON", desc: "sonic-rs serialization" },
   { icon: <Layers className="h-4 w-4" />, name: "Workspaces", desc: "Save and restore tab groups" },
 ];
@@ -67,25 +87,18 @@ export function Features() {
   return (
     <section className="px-6 pt-24 pb-12" id="features">
       <div className="mx-auto max-w-[1080px]">
-
         {/* ─── Narrative feature blocks ─── */}
         {narrativeFeatures.map((feat) => (
           <div key={feat.label} className={`feature-block ${feat.reverse ? "reverse" : ""}`}>
             <div>
               <span className="section-label">{feat.label}</span>
-              <h2 className="font-display text-[clamp(1.8rem,4vw,2.8rem)] mt-3">
-                {feat.title}
-              </h2>
-              <p className="text-[var(--fg-muted)] mt-1 text-base font-medium">
-                {feat.subtitle}
-              </p>
+              <h2 className="font-display text-[clamp(1.8rem,4vw,2.8rem)] mt-3">{feat.title}</h2>
+              <p className="text-[var(--fg-muted)] mt-1 text-base font-medium">{feat.subtitle}</p>
               <p className="text-[var(--fg-muted)] mt-4 text-[15px] leading-relaxed max-w-md">
                 {feat.description}
               </p>
             </div>
-            <div>
-              {feat.visual}
-            </div>
+            <div>{feat.visual}</div>
           </div>
         ))}
 
@@ -96,7 +109,10 @@ export function Features() {
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-px bg-[var(--border-subtle)] rounded-2xl overflow-hidden border border-[var(--border-subtle)]">
             {compactFeatures.map((feat) => (
-              <div key={feat.name} className="bg-[var(--bg)] p-5 flex flex-col gap-2 hover:bg-[var(--accent-muted)] transition-colors">
+              <div
+                key={feat.name}
+                className="bg-[var(--bg)] p-5 flex flex-col gap-2 hover:bg-[var(--accent-muted)] transition-colors"
+              >
                 <div className="text-[var(--accent)]">{feat.icon}</div>
                 <div className="text-sm font-semibold">{feat.name}</div>
                 <div className="text-xs text-[var(--fg-muted)]">{feat.desc}</div>
@@ -118,14 +134,28 @@ function EditorVisual() {
         <div className="product-frame-dot bg-[#ff5f57]" />
         <div className="product-frame-dot bg-[#febc2e]" />
         <div className="product-frame-dot bg-[#28c840]" />
-        <span className="flex-1 text-center text-[10px] text-[var(--fg-subtle)] font-[var(--font-mono)]">query editor</span>
+        <span className="flex-1 text-center text-[10px] text-[var(--fg-subtle)] font-[var(--font-mono)]">
+          query editor
+        </span>
       </div>
       {/* Mini editor mock */}
       <div className="editor-bg p-4 font-[var(--font-mono)] text-[11px] leading-5 border-b border-[var(--border-subtle)]">
-        <div className="text-violet-400">SELECT <span className="text-sky-300/80">name</span>, <span className="text-sky-300/80">salary</span></div>
-        <div className="text-violet-400">FROM <span className="text-emerald-400/80">employees</span></div>
-        <div className="text-violet-400">WHERE <span className="text-sky-300/80">salary</span> <span className="text-zinc-400">&gt;</span> <span className="text-amber-300/80">100000</span></div>
-        <div className="text-violet-400">ORDER BY <span className="text-sky-300/80">salary</span> DESC<span className="text-zinc-400">;</span></div>
+        <div className="text-violet-400">
+          SELECT <span className="text-sky-300/80">name</span>,{" "}
+          <span className="text-sky-300/80">salary</span>
+        </div>
+        <div className="text-violet-400">
+          FROM <span className="text-emerald-400/80">employees</span>
+        </div>
+        <div className="text-violet-400">
+          WHERE <span className="text-sky-300/80">salary</span>{" "}
+          <span className="text-zinc-400">&gt;</span>{" "}
+          <span className="text-amber-300/80">100000</span>
+        </div>
+        <div className="text-violet-400">
+          ORDER BY <span className="text-sky-300/80">salary</span> DESC
+          <span className="text-zinc-400">;</span>
+        </div>
       </div>
       {/* Grid preview */}
       <div className="overflow-hidden">
@@ -133,21 +163,37 @@ function EditorVisual() {
           <thead>
             <tr className="bg-[var(--surface-raised)]">
               {["name", "salary"].map((h) => (
-                <th key={h} className="text-left px-3 py-1.5 text-[10px] text-[var(--fg-muted)] font-semibold border-b border-[var(--border-subtle)]">{h}</th>
+                <th
+                  key={h}
+                  className="text-left px-3 py-1.5 text-[10px] text-[var(--fg-muted)] font-semibold border-b border-[var(--border-subtle)]"
+                >
+                  {h}
+                </th>
               ))}
             </tr>
           </thead>
           <tbody>
-            {[["Alice Chen", "$142,000"], ["Bob Park", "$131,500"], ["Carol Wu", "$125,800"]].map((r, i) => (
+            {[
+              ["Alice Chen", "$142,000"],
+              ["Bob Park", "$131,500"],
+              ["Carol Wu", "$125,800"],
+            ].map((r, i) => (
               <tr key={i}>
                 {r.map((c, j) => (
-                  <td key={j} className="px-3 py-1 text-[var(--fg-muted)] border-b border-[var(--border-subtle)]">{c}</td>
+                  <td
+                    key={j}
+                    className="px-3 py-1 text-[var(--fg-muted)] border-b border-[var(--border-subtle)]"
+                  >
+                    {c}
+                  </td>
                 ))}
               </tr>
             ))}
           </tbody>
         </table>
-        <div className="px-3 py-1.5 text-[9px] font-[var(--font-mono)] text-[var(--fg-subtle)]">3 rows · 0.8ms</div>
+        <div className="px-3 py-1.5 text-[9px] font-[var(--font-mono)] text-[var(--fg-subtle)]">
+          3 rows · 0.8ms
+        </div>
       </div>
     </div>
   );
@@ -172,14 +218,18 @@ function NavigatorVisual() {
         <div className="product-frame-dot bg-[#ff5f57]" />
         <div className="product-frame-dot bg-[#febc2e]" />
         <div className="product-frame-dot bg-[#28c840]" />
-        <span className="flex-1 text-center text-[10px] text-[var(--fg-subtle)] font-[var(--font-mono)]">schema navigator</span>
+        <span className="flex-1 text-center text-[10px] text-[var(--fg-subtle)] font-[var(--font-mono)]">
+          schema navigator
+        </span>
       </div>
       <div className="p-2">
         {/* Search */}
         <div className="flex items-center gap-2 rounded-lg border border-[var(--border)] px-3 py-2 mb-2">
           <Search className="h-3 w-3 text-[var(--fg-subtle)]" />
           <span className="text-xs text-[var(--fg-subtle)]">Search tables, views...</span>
-          <span className="ml-auto text-[9px] text-[var(--fg-subtle)] font-[var(--font-mono)] border border-[var(--border)] rounded px-1">⌘K</span>
+          <span className="ml-auto text-[9px] text-[var(--fg-subtle)] font-[var(--font-mono)] border border-[var(--border)] rounded px-1">
+            ⌘K
+          </span>
         </div>
         {/* Tree */}
         {items.map((item, i) => (
@@ -223,14 +273,18 @@ function InsightsVisual() {
         <div className="product-frame-dot bg-[#ff5f57]" />
         <div className="product-frame-dot bg-[#febc2e]" />
         <div className="product-frame-dot bg-[#28c840]" />
-        <span className="flex-1 text-center text-[10px] text-[var(--fg-subtle)] font-[var(--font-mono)]">explain analyze</span>
+        <span className="flex-1 text-center text-[10px] text-[var(--fg-subtle)] font-[var(--font-mono)]">
+          explain analyze
+        </span>
       </div>
       <div className="p-4 font-[var(--font-mono)] text-[11px]">
         {nodes.map((n, i) => (
-          <div key={i} className="flex items-center gap-3 py-1.5" style={{ paddingLeft: n.depth * 20 }}>
-            <div
-              className="h-5 w-5 rounded-md bg-[var(--accent-muted)] text-[var(--accent)] flex items-center justify-center text-[9px] font-bold shrink-0"
-            >
+          <div
+            key={i}
+            className="flex items-center gap-3 py-1.5"
+            style={{ paddingLeft: n.depth * 20 }}
+          >
+            <div className="h-5 w-5 rounded-md bg-[var(--accent-muted)] text-[var(--accent)] flex items-center justify-center text-[9px] font-bold shrink-0">
               {i + 1}
             </div>
             <span className="text-[var(--fg)] font-medium">{n.label}</span>
@@ -238,7 +292,7 @@ function InsightsVisual() {
             <div className="w-16 h-1.5 rounded-full bg-[var(--border)] overflow-hidden shrink-0">
               <div
                 className="h-full rounded-full bg-[var(--accent)]"
-                style={{ width: `${n.pct}%`, opacity: 0.5 + (n.pct / 200) }}
+                style={{ width: `${n.pct}%`, opacity: 0.5 + n.pct / 200 }}
               />
             </div>
           </div>

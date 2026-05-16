@@ -19,10 +19,7 @@ export async function getProjects(): Promise<RawProjectMap> {
   return await invoke<RawProjectMap>("project_db_select");
 }
 
-export async function insertProject(
-  project_id: string,
-  project_details: string[],
-): Promise<void> {
+export async function insertProject(project_id: string, project_details: string[]): Promise<void> {
   await invoke("project_db_insert", { project_id, project_details });
 }
 
@@ -34,10 +31,7 @@ export async function getQueries(): Promise<Record<string, string>> {
   return await invoke<Record<string, string>>("query_db_select");
 }
 
-export async function insertQuery(
-  query_id: string,
-  sql: string,
-): Promise<void> {
+export async function insertQuery(query_id: string, sql: string): Promise<void> {
   await invoke("query_db_insert", { query_id, sql });
 }
 
@@ -61,6 +55,8 @@ export async function workspaceDelete(name: string): Promise<void> {
   await invoke("workspace_delete", { name });
 }
 
-export async function pgsqlTestConnection(key: [string, string, string, string, string, string]): Promise<string> {
+export async function pgsqlTestConnection(
+  key: [string, string, string, string, string, string],
+): Promise<string> {
   return await invoke<string>("pgsql_test_connection", { key });
 }

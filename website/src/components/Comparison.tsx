@@ -1,28 +1,132 @@
-import { Check, X, Minus } from "lucide-react";
+import { Check, Minus, X } from "lucide-react";
 
 type S = "yes" | "no" | "partial";
 
 interface Row {
   feature: string;
-  rsql: S; pgadmin: S; dbeaver: S; datagrip: S; tableplus: S;
+  rsql: S;
+  pgadmin: S;
+  dbeaver: S;
+  datagrip: S;
+  tableplus: S;
   note?: string;
 }
 
 const rows: Row[] = [
-  { feature: "Monaco editor + autocomplete", rsql: "yes", pgadmin: "partial", dbeaver: "partial", datagrip: "yes", tableplus: "partial" },
-  { feature: "Canvas-based result grid", rsql: "yes", pgadmin: "no", dbeaver: "no", datagrip: "no", tableplus: "no", note: "Zero DOM nodes per cell" },
-  { feature: "EXPLAIN plan visualizer", rsql: "yes", pgadmin: "yes", dbeaver: "yes", datagrip: "partial", tableplus: "no" },
-  { feature: "ERD diagrams", rsql: "yes", pgadmin: "yes", dbeaver: "yes", datagrip: "yes", tableplus: "no" },
-  { feature: "Schema navigator", rsql: "yes", pgadmin: "yes", dbeaver: "yes", datagrip: "yes", tableplus: "yes" },
-  { feature: "PostGIS map view", rsql: "yes", pgadmin: "no", dbeaver: "yes", datagrip: "no", tableplus: "no" },
-  { feature: "FK click-navigation", rsql: "yes", pgadmin: "no", dbeaver: "partial", datagrip: "yes", tableplus: "no" },
-  { feature: "Built-in terminal", rsql: "yes", pgadmin: "no", dbeaver: "no", datagrip: "yes", tableplus: "no" },
-  { feature: "Schema diff tool", rsql: "yes", pgadmin: "no", dbeaver: "partial", datagrip: "yes", tableplus: "no", note: "DBeaver: Pro only" },
-  { feature: "Command palette", rsql: "yes", pgadmin: "no", dbeaver: "no", datagrip: "yes", tableplus: "yes" },
-  { feature: "SSH tunnels", rsql: "yes", pgadmin: "yes", dbeaver: "yes", datagrip: "yes", tableplus: "yes" },
-  { feature: "CSV/JSON export", rsql: "yes", pgadmin: "yes", dbeaver: "yes", datagrip: "yes", tableplus: "partial" },
-  { feature: "Dark mode", rsql: "yes", pgadmin: "yes", dbeaver: "yes", datagrip: "yes", tableplus: "yes" },
-  { feature: "Cross-platform", rsql: "yes", pgadmin: "yes", dbeaver: "yes", datagrip: "yes", tableplus: "yes" },
+  {
+    feature: "Monaco editor + autocomplete",
+    rsql: "yes",
+    pgadmin: "partial",
+    dbeaver: "partial",
+    datagrip: "yes",
+    tableplus: "partial",
+  },
+  {
+    feature: "Canvas-based result grid",
+    rsql: "yes",
+    pgadmin: "no",
+    dbeaver: "no",
+    datagrip: "no",
+    tableplus: "no",
+    note: "Zero DOM nodes per cell",
+  },
+  {
+    feature: "EXPLAIN plan visualizer",
+    rsql: "yes",
+    pgadmin: "yes",
+    dbeaver: "yes",
+    datagrip: "partial",
+    tableplus: "no",
+  },
+  {
+    feature: "ERD diagrams",
+    rsql: "yes",
+    pgadmin: "yes",
+    dbeaver: "yes",
+    datagrip: "yes",
+    tableplus: "no",
+  },
+  {
+    feature: "Schema navigator",
+    rsql: "yes",
+    pgadmin: "yes",
+    dbeaver: "yes",
+    datagrip: "yes",
+    tableplus: "yes",
+  },
+  {
+    feature: "PostGIS map view",
+    rsql: "yes",
+    pgadmin: "no",
+    dbeaver: "yes",
+    datagrip: "no",
+    tableplus: "no",
+  },
+  {
+    feature: "FK click-navigation",
+    rsql: "yes",
+    pgadmin: "no",
+    dbeaver: "partial",
+    datagrip: "yes",
+    tableplus: "no",
+  },
+  {
+    feature: "Built-in terminal",
+    rsql: "yes",
+    pgadmin: "no",
+    dbeaver: "no",
+    datagrip: "yes",
+    tableplus: "no",
+  },
+  {
+    feature: "Schema diff tool",
+    rsql: "yes",
+    pgadmin: "no",
+    dbeaver: "partial",
+    datagrip: "yes",
+    tableplus: "no",
+    note: "DBeaver: Pro only",
+  },
+  {
+    feature: "Command palette",
+    rsql: "yes",
+    pgadmin: "no",
+    dbeaver: "no",
+    datagrip: "yes",
+    tableplus: "yes",
+  },
+  {
+    feature: "SSH tunnels",
+    rsql: "yes",
+    pgadmin: "yes",
+    dbeaver: "yes",
+    datagrip: "yes",
+    tableplus: "yes",
+  },
+  {
+    feature: "CSV/JSON export",
+    rsql: "yes",
+    pgadmin: "yes",
+    dbeaver: "yes",
+    datagrip: "yes",
+    tableplus: "partial",
+  },
+  {
+    feature: "Dark mode",
+    rsql: "yes",
+    pgadmin: "yes",
+    dbeaver: "yes",
+    datagrip: "yes",
+    tableplus: "yes",
+  },
+  {
+    feature: "Cross-platform",
+    rsql: "yes",
+    pgadmin: "yes",
+    dbeaver: "yes",
+    datagrip: "yes",
+    tableplus: "yes",
+  },
 ];
 
 const tools = [
@@ -42,9 +146,30 @@ const pricing = [
 ];
 
 const scoreCard = [
-  { label: "Binary size", rsql: "~20 MB", pgadmin: "~180 MB", dbeaver: "~200 MB", datagrip: "~600 MB", tableplus: "~40 MB" },
-  { label: "Grid tech", rsql: "Canvas", pgadmin: "DOM", dbeaver: "SWT", datagrip: "Swing", tableplus: "Native" },
-  { label: "Runtime", rsql: "System WebView", pgadmin: "Python + browser", dbeaver: "JVM (Java 21)", datagrip: "JVM", tableplus: "Native" },
+  {
+    label: "Binary size",
+    rsql: "~20 MB",
+    pgadmin: "~180 MB",
+    dbeaver: "~200 MB",
+    datagrip: "~600 MB",
+    tableplus: "~40 MB",
+  },
+  {
+    label: "Grid tech",
+    rsql: "Canvas",
+    pgadmin: "DOM",
+    dbeaver: "SWT",
+    datagrip: "Swing",
+    tableplus: "Native",
+  },
+  {
+    label: "Runtime",
+    rsql: "System WebView",
+    pgadmin: "Python + browser",
+    dbeaver: "JVM (Java 21)",
+    datagrip: "JVM",
+    tableplus: "Native",
+  },
 ];
 
 function Icon({ s }: { s: S }) {
@@ -61,9 +186,7 @@ export function Comparison() {
 
         <div className="mb-12 max-w-lg">
           <span className="section-label">Comparison</span>
-          <h2 className="font-display text-[clamp(1.8rem,4vw,2.8rem)] mt-3">
-            How RSQL stacks up
-          </h2>
+          <h2 className="font-display text-[clamp(1.8rem,4vw,2.8rem)] mt-3">How RSQL stacks up</h2>
           <p className="text-[var(--fg-muted)] mt-3 text-[15px] leading-relaxed">
             Feature-by-feature against the most popular PostgreSQL tools.
           </p>
@@ -74,7 +197,9 @@ export function Comparison() {
           <table className="w-full min-w-[700px] text-sm border-collapse">
             <thead>
               <tr>
-                <th className="text-left py-3 pr-4 text-[var(--fg-muted)] font-normal text-xs">Feature</th>
+                <th className="text-left py-3 pr-4 text-[var(--fg-muted)] font-normal text-xs">
+                  Feature
+                </th>
                 {tools.map((t) => (
                   <th
                     key={t.key}
@@ -89,7 +214,10 @@ export function Comparison() {
             </thead>
             <tbody>
               {rows.map((row) => (
-                <tr key={row.feature} className="border-t border-[var(--border-subtle)] hover:bg-[var(--accent-muted)] transition-colors">
+                <tr
+                  key={row.feature}
+                  className="border-t border-[var(--border-subtle)] hover:bg-[var(--accent-muted)] transition-colors"
+                >
                   <td className="py-2.5 pr-4 text-[var(--fg)]">
                     {row.feature}
                     {row.note && (
@@ -148,10 +276,14 @@ export function Comparison() {
               <div className="space-y-2 text-sm">
                 {tools.map((t) => (
                   <div key={t.key} className="flex items-center justify-between">
-                    <span className={t.highlight ? "accent-text font-medium" : "text-[var(--fg-muted)]"}>
+                    <span
+                      className={t.highlight ? "accent-text font-medium" : "text-[var(--fg-muted)]"}
+                    >
                       {t.name}
                     </span>
-                    <span className={`font-[var(--font-mono)] text-xs ${t.highlight ? "text-[var(--fg)]" : "text-[var(--fg-subtle)]"}`}>
+                    <span
+                      className={`font-[var(--font-mono)] text-xs ${t.highlight ? "text-[var(--fg)]" : "text-[var(--fg-subtle)]"}`}
+                    >
                       {s[t.key]}
                     </span>
                   </div>

@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { immer } from "zustand/middleware/immer";
-import type { Tab, QueryResult, ExplainPlan, VirtualQuery } from "@/types";
+import type { ExplainPlan, QueryResult, Tab, VirtualQuery } from "@/types";
 
 let nextId = 1;
 function genTabId(): string {
@@ -48,10 +48,7 @@ function makeSingletonTab(
 ): (s: TabState) => void {
   return (s) => {
     const existing = s.tabs.findIndex(
-      (t) =>
-        t.type === type &&
-        t.projectId === projectId &&
-        (!schema || t.schema === schema),
+      (t) => t.type === type && t.projectId === projectId && (!schema || t.schema === schema),
     );
     if (existing >= 0) {
       s.selectedTabIndex = existing;
@@ -99,8 +96,7 @@ export const useTabStore = create<TabState>()(
         });
       },
 
-      openMonitorTab: (projectId) =>
-        set(makeSingletonTab("monitor", projectId, "Monitor")),
+      openMonitorTab: (projectId) => set(makeSingletonTab("monitor", projectId, "Monitor")),
       openERDTab: (projectId, schema) =>
         set(makeSingletonTab("erd", projectId, `ERD: ${schema}`, schema)),
       openTerminalTab: () => {
@@ -115,16 +111,13 @@ export const useTabStore = create<TabState>()(
           s.selectedTabIndex = s.tabs.length - 1;
         });
       },
-      openNotifyTab: (projectId) =>
-        set(makeSingletonTab("notify", projectId, "LISTEN/NOTIFY")),
-      openRolesTab: (projectId) =>
-        set(makeSingletonTab("roles", projectId, "Roles")),
+      openNotifyTab: (projectId) => set(makeSingletonTab("notify", projectId, "LISTEN/NOTIFY")),
+      openRolesTab: (projectId) => set(makeSingletonTab("roles", projectId, "Roles")),
       openSchemaDiffTab: (projectId) =>
         set(makeSingletonTab("schema-diff", projectId, "Schema Diff")),
       openExtensionsTab: (projectId) =>
         set(makeSingletonTab("extensions", projectId, "Extensions")),
-      openEnumsTab: (projectId) =>
-        set(makeSingletonTab("enums", projectId, "Enum Types")),
+      openEnumsTab: (projectId) => set(makeSingletonTab("enums", projectId, "Enum Types")),
       openPgSettingsTab: (projectId) =>
         set(makeSingletonTab("pg-settings", projectId, "PG Settings")),
 
@@ -248,29 +241,19 @@ export const useTabStore = create<TabState>()(
       merge: (persisted: unknown, current: TabState) => {
         const p = persisted as Partial<TabState> | undefined;
         if (!p?.tabs || !Array.isArray(p.tabs)) return current;
-        if (p.tabs.length === 0)
-          return { ...current, tabs: [], selectedTabIndex: -1 };
+        if (p.tabs.length === 0) return { ...current, tabs: [], selectedTabIndex: -1 };
         const validTabs = p.tabs.filter(
           (t): t is Tab =>
-            t != null &&
-            typeof t === "object" &&
-            "id" in t &&
-            "type" in t &&
-            "title" in t,
+            t != null && typeof t === "object" && "id" in t && "type" in t && "title" in t,
         );
-        if (validTabs.length === 0)
-          return { ...current, tabs: [], selectedTabIndex: -1 };
-        const idx = Math.min(
-          Math.max(0, p.selectedTabIndex ?? 0),
-          validTabs.length - 1,
-        );
+        if (validTabs.length === 0) return { ...current, tabs: [], selectedTabIndex: -1 };
+        const idx = Math.min(Math.max(0, p.selectedTabIndex ?? 0), validTabs.length - 1);
         return { ...current, tabs: validTabs, selectedTabIndex: idx };
       },
     },
   ),
 );
 
-/** Derived selector: get active tab reactively */
 export function useActiveTab(): Tab | undefined {
   return useTabStore((s) => s.tabs[s.selectedTabIndex]);
 }

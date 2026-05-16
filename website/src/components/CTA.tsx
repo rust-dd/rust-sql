@@ -8,9 +8,7 @@ export function CTA() {
 
         <span className="section-label">Get started</span>
 
-        <h2 className="font-display text-[clamp(2rem,5vw,3.5rem)] mt-4">
-          Try RSQL today
-        </h2>
+        <h2 className="font-display text-[clamp(2rem,5vw,3.5rem)] mt-4">Try RSQL today</h2>
 
         <p className="mx-auto mt-4 max-w-md text-base text-[var(--fg-muted)] leading-relaxed">
           Free, open source, no account needed. Available on macOS, Windows, and Linux.

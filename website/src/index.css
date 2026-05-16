@@ -26,9 +26,9 @@
   --success: #22c55e;
   --destructive: #ef4444;
 
-  --shadow-sm: 0 1px 2px rgba(0,0,0,0.4);
-  --shadow-md: 0 4px 16px rgba(0,0,0,0.4);
-  --shadow-lg: 0 16px 64px rgba(0,0,0,0.5);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 16px 64px rgba(0, 0, 0, 0.5);
   --shadow-glow: 0 0 60px -12px rgba(167, 139, 250, 0.15);
 }
 
@@ -47,15 +47,18 @@
   --accent-muted: rgba(124, 58, 237, 0.08);
   --success: #16a34a;
   --destructive: #dc2626;
-  --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
-  --shadow-md: 0 4px 16px rgba(0,0,0,0.06);
-  --shadow-lg: 0 16px 64px rgba(0,0,0,0.08);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 16px 64px rgba(0, 0, 0, 0.08);
   --shadow-glow: 0 0 60px -12px rgba(124, 58, 237, 0.08);
 }
 
 /* ─── Reset ─── */
 
-html { scroll-behavior: smooth; background: var(--bg); }
+html {
+  scroll-behavior: smooth;
+  background: var(--bg);
+}
 
 body {
   margin: 0;
@@ -80,13 +83,28 @@ body::before {
   background-size: 128px;
 }
 
-#root { min-height: 100vh; position: relative; z-index: 1; }
+#root {
+  min-height: 100vh;
+  position: relative;
+  z-index: 1;
+}
 
-*, *::before, *::after { border-color: var(--border); }
+*,
+*::before,
+*::after {
+  border-color: var(--border);
+}
 
-::-webkit-scrollbar { width: 6px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--fg-subtle); border-radius: 3px; }
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--fg-subtle);
+  border-radius: 3px;
+}
 
 /* ─── Typography ─── */
 
@@ -97,12 +115,18 @@ body::before {
   line-height: 0.95;
 }
 
-.text-muted { color: var(--fg-muted); }
-.text-subtle { color: var(--fg-subtle); }
+.text-muted {
+  color: var(--fg-muted);
+}
+.text-subtle {
+  color: var(--fg-subtle);
+}
 
 /* ─── Accent ─── */
 
-.accent-text { color: var(--accent); }
+.accent-text {
+  color: var(--accent);
+}
 
 .accent-glow {
   color: var(--accent);
@@ -170,9 +194,7 @@ body::before {
   overflow: hidden;
   border: 1px solid var(--border);
   background: var(--surface);
-  box-shadow:
-    var(--shadow-lg),
-    var(--shadow-glow);
+  box-shadow: var(--shadow-lg), var(--shadow-glow);
 }
 
 .product-frame-titlebar {
@@ -234,18 +256,34 @@ body::before {
 /* ─── Animations ─── */
 
 @keyframes fade-in-up {
-  from { opacity: 0; transform: translateY(24px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @keyframes fade-in {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 @keyframes scale-in {
-  from { opacity: 0; transform: scale(0.96) translateY(16px); }
-  to { opacity: 1; transform: scale(1) translateY(0); }
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
 }
 
 .animate-in {
@@ -260,20 +298,35 @@ body::before {
   animation: fade-in 0.5s ease-out forwards;
 }
 
-.d1 { animation-delay: 0.1s; }
-.d2 { animation-delay: 0.2s; }
-.d3 { animation-delay: 0.3s; }
-.d4 { animation-delay: 0.4s; }
-.d5 { animation-delay: 0.5s; }
+.d1 {
+  animation-delay: 0.1s;
+}
+.d2 {
+  animation-delay: 0.2s;
+}
+.d3 {
+  animation-delay: 0.3s;
+}
+.d4 {
+  animation-delay: 0.4s;
+}
+.d5 {
+  animation-delay: 0.5s;
+}
 
 /* ─── Editor theme (for demo) ─── */
 
-.editor-bg { background: var(--surface); }
-[data-theme="dark"] .editor-bg { background: #0c0c14; }
+.editor-bg {
+  background: var(--surface);
+}
+[data-theme="dark"] .editor-bg {
+  background: #0c0c14;
+}
 
 /* ─── Showcase window reuse for Demo ─── */
 
-.showcase-window { }
+.showcase-window {
+}
 
 .showcase-titlebar {
   display: flex;
@@ -304,7 +357,9 @@ body::before {
   color: var(--accent-fg);
   transition: all 0.2s ease;
 }
-.gradient-btn:hover { opacity: 0.9; }
+.gradient-btn:hover {
+  opacity: 0.9;
+}
 
 .link-chip {
   border: 1px solid var(--border);

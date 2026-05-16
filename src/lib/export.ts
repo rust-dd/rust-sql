@@ -54,7 +54,9 @@ export function toSQL(columns: string[], rows: string[][], tableName = "table_na
 export function toMarkdown(columns: string[], rows: string[][]): string {
   const header = `| ${columns.join(" | ")} |`;
   const separator = `| ${columns.map(() => "---").join(" | ")} |`;
-  const body = rows.map((r) => `| ${r.map((c) => c.replace(/\|/g, "\\|")).join(" | ")} |`).join("\n");
+  const body = rows
+    .map((r) => `| ${r.map((c) => c.replace(/\|/g, "\\|")).join(" | ")} |`)
+    .join("\n");
   return `${header}\n${separator}\n${body}`;
 }
 
@@ -71,7 +73,10 @@ export function toXML(columns: string[], rows: string[][]): string {
   return lines.join("\n");
 }
 
-const formatters: Record<ExportFormat, (cols: string[], rows: string[][], table?: string) => string> = {
+const formatters: Record<
+  ExportFormat,
+  (cols: string[], rows: string[][], table?: string) => string
+> = {
   csv: toCSV,
   json: toJSON,
   sql: toSQL,

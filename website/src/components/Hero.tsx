@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
 import { ArrowRight, Download, Github } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 
 function detectPlatform() {
   if (typeof navigator === "undefined") return "Download";
@@ -49,17 +49,70 @@ function useTypewriter(text: string, speed = 28, delay = 1000) {
 }
 
 function tokenize(sql: string) {
-  const KW = new Set(["SELECT","FROM","JOIN","LEFT","RIGHT","ON","WHERE","GROUP","BY","ORDER","AS","AND","OR","LIMIT","DESC","ASC","ROUND","AVG","COUNT","SUM","MIN","MAX","TRUE","FALSE"]);
-  const TABLES = new Set(["employees","departments","projects"]);
+  const KW = new Set([
+    "SELECT",
+    "FROM",
+    "JOIN",
+    "LEFT",
+    "RIGHT",
+    "ON",
+    "WHERE",
+    "GROUP",
+    "BY",
+    "ORDER",
+    "AS",
+    "AND",
+    "OR",
+    "LIMIT",
+    "DESC",
+    "ASC",
+    "ROUND",
+    "AVG",
+    "COUNT",
+    "SUM",
+    "MIN",
+    "MAX",
+    "TRUE",
+    "FALSE",
+  ]);
+  const TABLES = new Set(["employees", "departments", "projects"]);
 
   return sql.split(/(\s+|[(),;.*=])/).map((t, i) => {
-    if (KW.has(t.toUpperCase())) return <span key={i} className="text-violet-400">{t}</span>;
-    if (TABLES.has(t)) return <span key={i} className="text-emerald-400/80">{t}</span>;
-    if (/^\d+$/.test(t)) return <span key={i} className="text-amber-300/80">{t}</span>;
+    if (KW.has(t.toUpperCase()))
+      return (
+        <span key={i} className="text-violet-400">
+          {t}
+        </span>
+      );
+    if (TABLES.has(t))
+      return (
+        <span key={i} className="text-emerald-400/80">
+          {t}
+        </span>
+      );
+    if (/^\d+$/.test(t))
+      return (
+        <span key={i} className="text-amber-300/80">
+          {t}
+        </span>
+      );
     if (/^(name|department|dept_id|salary|is_active|id|title|department_id|avg_salary)$/.test(t))
-      return <span key={i} className="text-sky-300/80">{t}</span>;
-    if (/^(e|d|p)$/.test(t)) return <span key={i} className="text-sky-300/50">{t}</span>;
-    return <span key={i} className="text-zinc-400">{t}</span>;
+      return (
+        <span key={i} className="text-sky-300/80">
+          {t}
+        </span>
+      );
+    if (/^(e|d|p)$/.test(t))
+      return (
+        <span key={i} className="text-sky-300/50">
+          {t}
+        </span>
+      );
+    return (
+      <span key={i} className="text-zinc-400">
+        {t}
+      </span>
+    );
   });
 }
 
@@ -80,13 +133,19 @@ export function Hero() {
           </h1>
         </div>
 
-        <p className="mx-auto mt-6 max-w-lg text-center text-lg text-[var(--fg-muted)] leading-relaxed animate-in d1" style={{ opacity: 0 }}>
-          A fast, native PostgreSQL workbench built with Rust and Tauri.
-          Open source and free forever.
+        <p
+          className="mx-auto mt-6 max-w-lg text-center text-lg text-[var(--fg-muted)] leading-relaxed animate-in d1"
+          style={{ opacity: 0 }}
+        >
+          A fast, native PostgreSQL workbench built with Rust and Tauri. Open source and free
+          forever.
         </p>
 
         {/* ─── CTAs ─── */}
-        <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center animate-in d2" style={{ opacity: 0 }}>
+        <div
+          className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center animate-in d2"
+          style={{ opacity: 0 }}
+        >
           <a
             href="https://github.com/rust-dd/rust-sql/releases/latest"
             target="_blank"
@@ -148,10 +207,32 @@ export function Hero() {
                         : "text-[var(--fg-muted)]"
                     }`}
                   >
-                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none" className="shrink-0 opacity-60">
+                    <svg
+                      width="12"
+                      height="12"
+                      viewBox="0 0 12 12"
+                      fill="none"
+                      className="shrink-0 opacity-60"
+                    >
                       <rect x="1" y="1" width="10" height="3" rx="1" fill="currentColor" />
-                      <rect x="1" y="5" width="10" height="3" rx="1" fill="currentColor" opacity="0.4" />
-                      <rect x="1" y="9" width="10" height="2" rx="1" fill="currentColor" opacity="0.2" />
+                      <rect
+                        x="1"
+                        y="5"
+                        width="10"
+                        height="3"
+                        rx="1"
+                        fill="currentColor"
+                        opacity="0.4"
+                      />
+                      <rect
+                        x="1"
+                        y="9"
+                        width="10"
+                        height="2"
+                        rx="1"
+                        fill="currentColor"
+                        opacity="0.2"
+                      />
                     </svg>
                     {t}
                   </div>
@@ -160,8 +241,17 @@ export function Hero() {
                   Views
                 </div>
                 {["team_summary", "budget_report"].map((v) => (
-                  <div key={v} className="mx-2 px-2.5 py-1.5 text-[12px] font-[var(--font-mono)] text-[var(--fg-subtle)] flex items-center gap-2">
-                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none" className="shrink-0 opacity-40">
+                  <div
+                    key={v}
+                    className="mx-2 px-2.5 py-1.5 text-[12px] font-[var(--font-mono)] text-[var(--fg-subtle)] flex items-center gap-2"
+                  >
+                    <svg
+                      width="12"
+                      height="12"
+                      viewBox="0 0 12 12"
+                      fill="none"
+                      className="shrink-0 opacity-40"
+                    >
                       <circle cx="6" cy="6" r="4" stroke="currentColor" strokeWidth="1.5" />
                     </svg>
                     {v}
@@ -173,13 +263,28 @@ export function Hero() {
               <div className="flex-1 flex flex-col min-w-0">
                 {/* Toolbar */}
                 <div className="flex items-center gap-3 px-4 py-2 border-b border-[var(--border-subtle)] bg-[var(--surface-raised)]">
-                  <button className={`flex items-center gap-1.5 rounded-lg px-3 py-1 text-xs font-semibold transition-colors ${done ? "bg-[var(--accent)] text-white" : "bg-[var(--surface)] text-[var(--fg-muted)] border border-[var(--border)]"}`}>
-                    <svg width="8" height="10" viewBox="0 0 8 10" fill="currentColor"><polygon points="0,0 8,5 0,10" /></svg>
+                  <button
+                    type="button"
+                    className={`flex items-center gap-1.5 rounded-lg px-3 py-1 text-xs font-semibold transition-colors ${done ? "bg-[var(--accent)] text-white" : "bg-[var(--surface)] text-[var(--fg-muted)] border border-[var(--border)]"}`}
+                  >
+                    <svg width="8" height="10" viewBox="0 0 8 10" fill="currentColor">
+                      <polygon points="0,0 8,5 0,10" />
+                    </svg>
                     Run
                   </button>
                   <div className="h-4 w-px bg-[var(--border-subtle)]" />
-                  <button className="text-xs text-[var(--fg-subtle)] hover:text-[var(--fg-muted)]">Format</button>
-                  <button className="text-xs text-[var(--fg-subtle)] hover:text-[var(--fg-muted)]">Explain</button>
+                  <button
+                    type="button"
+                    className="text-xs text-[var(--fg-subtle)] hover:text-[var(--fg-muted)]"
+                  >
+                    Format
+                  </button>
+                  <button
+                    type="button"
+                    className="text-xs text-[var(--fg-subtle)] hover:text-[var(--fg-muted)]"
+                  >
+                    Explain
+                  </button>
                   <span className="ml-auto text-[10px] font-[var(--font-mono)] text-[var(--fg-subtle)]">
                     {done ? "5 rows · 1.8ms" : ""}
                   </span>
@@ -203,12 +308,17 @@ export function Hero() {
                 </div>
 
                 {/* Results */}
-                <div className={`flex-1 overflow-auto transition-all duration-700 ${done ? "opacity-100" : "opacity-0"}`}>
+                <div
+                  className={`flex-1 overflow-auto transition-all duration-700 ${done ? "opacity-100" : "opacity-0"}`}
+                >
                   <table className="w-full text-left font-[var(--font-mono)] text-[12px]">
                     <thead>
                       <tr className="bg-[var(--surface-raised)]">
                         {["name", "department", "projects", "avg_salary"].map((h) => (
-                          <th key={h} className="px-4 py-2 text-[11px] font-semibold text-[var(--fg-muted)] border-b border-r last:border-r-0 border-[var(--border-subtle)]">
+                          <th
+                            key={h}
+                            className="px-4 py-2 text-[11px] font-semibold text-[var(--fg-muted)] border-b border-r last:border-r-0 border-[var(--border-subtle)]"
+                          >
                             {h}
                           </th>
                         ))}
@@ -218,7 +328,10 @@ export function Hero() {
                       {RESULT_ROWS.map((row, i) => (
                         <tr key={i} className="hover:bg-[var(--accent-muted)] transition-colors">
                           {row.map((cell, j) => (
-                            <td key={j} className="px-4 py-1.5 text-[var(--fg-muted)] border-b border-r last:border-r-0 border-[var(--border-subtle)]">
+                            <td
+                              key={j}
+                              className="px-4 py-1.5 text-[var(--fg-muted)] border-b border-r last:border-r-0 border-[var(--border-subtle)]"
+                            >
                               {cell}
                             </td>
                           ))}
@@ -242,7 +355,17 @@ export function Hero() {
             Works with any PostgreSQL host
           </p>
           <div className="flex flex-wrap justify-center gap-x-6 gap-y-2 text-sm text-[var(--fg-muted)]">
-            {["PostgreSQL", "Supabase", "Neon", "AWS RDS", "Railway", "Render", "Fly.io", "DigitalOcean", "TimescaleDB"].map((name) => (
+            {[
+              "PostgreSQL",
+              "Supabase",
+              "Neon",
+              "AWS RDS",
+              "Railway",
+              "Render",
+              "Fly.io",
+              "DigitalOcean",
+              "TimescaleDB",
+            ].map((name) => (
               <span key={name} className="flex items-center gap-1.5">
                 <span className="h-1 w-1 rounded-full bg-[var(--success)] opacity-60" />
                 {name}

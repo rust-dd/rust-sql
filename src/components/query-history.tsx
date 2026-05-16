@@ -1,7 +1,7 @@
-import { useHistoryStore, type HistoryEntry } from "@/stores/history-store";
-import { useTabStore } from "@/stores/tab-store";
+import { CheckCircle2, Clock, RotateCcw, Trash2, XCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { CheckCircle2, XCircle, Trash2, Clock, RotateCcw } from "lucide-react";
+import { type HistoryEntry, useHistoryStore } from "@/stores/history-store";
+import { useTabStore } from "@/stores/tab-store";
 import { Button } from "./ui/button";
 
 export function QueryHistory() {
@@ -50,8 +50,12 @@ function HistoryRow({
   onRestore: (sql: string) => void;
 }) {
   const time = new Date(entry.timestamp);
-  const timeStr = time.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
-  const sqlPreview = entry.sql.length > 120 ? entry.sql.slice(0, 120) + "..." : entry.sql;
+  const timeStr = time.toLocaleTimeString([], {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  });
+  const sqlPreview = entry.sql.length > 120 ? `${entry.sql.slice(0, 120)}...` : entry.sql;
 
   return (
     <div
@@ -72,9 +76,7 @@ function HistoryRow({
           {sqlPreview}
         </div>
         {entry.error && (
-          <div className="mt-1 text-xs text-destructive font-mono truncate">
-            {entry.error}
-          </div>
+          <div className="mt-1 text-xs text-destructive font-mono truncate">{entry.error}</div>
         )}
         <div className="mt-1 flex items-center gap-3 text-[10px] text-muted-foreground">
           <span className="flex items-center gap-1">
@@ -91,6 +93,7 @@ function HistoryRow({
         </div>
       </div>
       <button
+        type="button"
         onClick={(e) => {
           e.stopPropagation();
           onRestore(entry.sql);

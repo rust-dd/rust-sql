@@ -1,5 +1,5 @@
-import { useMemo, useEffect, useRef } from "react";
 import L from "leaflet";
+import { useEffect, useMemo, useRef } from "react";
 import "leaflet/dist/leaflet.css";
 
 interface ResultsMapProps {
@@ -7,13 +7,11 @@ interface ResultsMapProps {
   rows: string[][];
 }
 
-// WKT patterns for detecting geometry columns
 const WKT_PREFIX =
   /^(POINT|LINESTRING|POLYGON|MULTIPOINT|MULTILINESTRING|MULTIPOLYGON|GEOMETRYCOLLECTION)\s*\(/i;
 const GEOJSON_PREFIX = /^\s*\{\s*"type"\s*:/;
 const WKB_HEX = /^[0-9a-f]{8,}$/i;
 
-// Simple hex byte reader for EWKB
 function hexToFloat64LE(hex: string, offset: number): number {
   const bytes = new Uint8Array(8);
   for (let i = 0; i < 8; i++) {
@@ -27,9 +25,12 @@ function parseEWKBPoint(hex: string): [number, number] | null {
     // EWKB: byte_order(1) + type(4) [+ srid(4)] + x(8) + y(8)
     const bo = hex.substring(0, 2); // 01 = little-endian
     if (bo !== "01") return null;
-    let typeHex = hex.substring(2, 10);
+    const typeHex = hex.substring(2, 10);
     const typeInt = parseInt(
-      typeHex.substring(6, 8) + typeHex.substring(4, 6) + typeHex.substring(2, 4) + typeHex.substring(0, 2),
+      typeHex.substring(6, 8) +
+        typeHex.substring(4, 6) +
+        typeHex.substring(2, 4) +
+        typeHex.substring(0, 2),
       16,
     );
     const hasSRID = (typeInt & 0x20000000) !== 0;
@@ -106,17 +107,22 @@ function parseGeoJSON(json: string, rowIndex: number): ParsedGeom | null {
 }
 
 function detectGeomColumnIndex(columns: string[], rows: string[][]): number {
-  // Check first 10 rows for geometry-like data
   const sample = rows.slice(0, 10);
   for (let ci = 0; ci < columns.length; ci++) {
     const colName = columns[ci].toLowerCase();
-    // Check column name hints
-    const isGeoName = /geom|geometry|geography|location|coordinates|the_geom|wkb_geometry|shape|point|latlng/.test(colName);
+    const isGeoName =
+      /geom|geometry|geography|location|coordinates|the_geom|wkb_geometry|shape|point|latlng/.test(
+        colName,
+      );
 
     let geoCount = 0;
     for (const row of sample) {
       const val = row[ci] ?? "";
-      if (WKT_PREFIX.test(val) || GEOJSON_PREFIX.test(val) || (WKB_HEX.test(val) && val.length >= 40)) {
+      if (
+        WKT_PREFIX.test(val) ||
+        GEOJSON_PREFIX.test(val) ||
+        (WKB_HEX.test(val) && val.length >= 40)
+      ) {
         geoCount++;
       }
     }
@@ -162,7 +168,6 @@ export function ResultsMap({ columns, rows }: ResultsMapProps) {
   useEffect(() => {
     if (!mapRef.current || geometries.length === 0) return;
 
-    // Create map if not exists
     if (!leafletMap.current) {
       leafletMap.current = L.map(mapRef.current, {
         zoomControl: true,
@@ -176,17 +181,14 @@ export function ResultsMap({ columns, rows }: ResultsMapProps) {
 
     const map = leafletMap.current;
 
-    // Clear existing layers (except tile layer)
     map.eachLayer((layer) => {
       if (!(layer instanceof L.TileLayer)) map.removeLayer(layer);
     });
 
-    // Add geometries
     const bounds = L.latLngBounds([]);
     const nonGeomCols = columns.filter((_, i) => i !== geomCol);
 
     for (const geom of geometries) {
-      // Build popup content from non-geometry columns
       const row = rows[geom.rowIndex];
       const popupContent = nonGeomCols
         .map((col) => {
@@ -197,7 +199,7 @@ export function ResultsMap({ columns, rows }: ResultsMapProps) {
 
       if (geom.type === "point" && geom.coords.length > 0) {
         const [lat, lng] = geom.coords[0];
-        if (isFinite(lat) && isFinite(lng)) {
+        if (Number.isFinite(lat) && Number.isFinite(lng)) {
           const marker = L.circleMarker([lat, lng], {
             radius: 6,
             color: "#3b82f6",
@@ -211,7 +213,9 @@ export function ResultsMap({ columns, rows }: ResultsMapProps) {
       } else if (geom.type === "linestring") {
         const line = L.polyline(geom.coords, { color: "#3b82f6", weight: 3 }).addTo(map);
         if (popupContent) line.bindPopup(popupContent);
-        geom.coords.forEach((c) => bounds.extend(c));
+        geom.coords.forEach((c) => {
+          bounds.extend(c);
+        });
       } else if (geom.type === "polygon") {
         const poly = L.polygon(geom.coords, {
           color: "#3b82f6",
@@ -220,11 +224,12 @@ export function ResultsMap({ columns, rows }: ResultsMapProps) {
           weight: 2,
         }).addTo(map);
         if (popupContent) poly.bindPopup(popupContent);
-        geom.coords.forEach((c) => bounds.extend(c));
+        geom.coords.forEach((c) => {
+          bounds.extend(c);
+        });
       }
     }
 
-    // Fit map to bounds
     if (bounds.isValid()) {
       map.fitBounds(bounds, { padding: [40, 40], maxZoom: 16 });
     }
@@ -232,7 +237,6 @@ export function ResultsMap({ columns, rows }: ResultsMapProps) {
     return () => {};
   }, [geometries, columns, rows, geomCol]);
 
-  // Cleanup map on unmount
   useEffect(() => {
     return () => {
       if (leafletMap.current) {
@@ -242,7 +246,6 @@ export function ResultsMap({ columns, rows }: ResultsMapProps) {
     };
   }, []);
 
-  // Invalidate map size when container resizes
   useEffect(() => {
     if (!mapRef.current || !leafletMap.current) return;
     const obs = new ResizeObserver(() => {

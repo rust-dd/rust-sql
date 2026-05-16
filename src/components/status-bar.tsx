@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
-import { useActiveTab } from "@/stores/tab-store";
-import { useProjectStore } from "@/stores/project-store";
+import { cn } from "@/lib/utils";
 import { useHistoryStore } from "@/stores/history-store";
+import { useProjectStore } from "@/stores/project-store";
+import { useActiveTab } from "@/stores/tab-store";
 import { getSystemResourceUsage, type SystemResourceUsage } from "@/tauri";
 import { ProjectConnectionStatus } from "@/types";
-import { cn } from "@/lib/utils";
 
 export function StatusBar() {
   const activeTab = useActiveTab();
@@ -55,9 +55,10 @@ export function StatusBar() {
   const conn = resources
     ? `${resources.db_connections_in_use}/${resources.db_connections_open}`
     : "--";
-  const connWaiting = resources && resources.db_connections_waiting > 0
-    ? ` (${resources.db_connections_waiting} wait)`
-    : "";
+  const connWaiting =
+    resources && resources.db_connections_waiting > 0
+      ? ` (${resources.db_connections_waiting} wait)`
+      : "";
   const net = resources
     ? `↓ ${formatMbps(resources.network_rx_mbps)} ↑ ${formatMbps(resources.network_tx_mbps)}`
     : "--";
@@ -66,13 +67,15 @@ export function StatusBar() {
     <div className="flex h-7 items-center justify-between bg-card/60 backdrop-blur-sm px-3 text-[11px] font-mono text-muted-foreground">
       <div className="flex items-center gap-2">
         {projectId && details ? (
-          <div className={cn(
-            "flex items-center gap-1.5 rounded-full px-2 py-0.5",
-            connStatus === ProjectConnectionStatus.Connected && "bg-success/10 text-success",
-            connStatus === ProjectConnectionStatus.Connecting && "bg-warning/10 text-warning",
-            connStatus === ProjectConnectionStatus.Failed && "bg-destructive/10 text-destructive",
-            !connStatus && "text-muted-foreground",
-          )}>
+          <div
+            className={cn(
+              "flex items-center gap-1.5 rounded-full px-2 py-0.5",
+              connStatus === ProjectConnectionStatus.Connected && "bg-success/10 text-success",
+              connStatus === ProjectConnectionStatus.Connecting && "bg-warning/10 text-warning",
+              connStatus === ProjectConnectionStatus.Failed && "bg-destructive/10 text-destructive",
+              !connStatus && "text-muted-foreground",
+            )}
+          >
             <div
               className={cn(
                 "h-1.5 w-1.5 rounded-full",
@@ -98,7 +101,10 @@ export function StatusBar() {
         <span className="opacity-40">&bull;</span>
         <span>PROC {proc}</span>
         <span className="opacity-40">&bull;</span>
-        <span>CONN {conn}{connWaiting}</span>
+        <span>
+          CONN {conn}
+          {connWaiting}
+        </span>
         <span className="opacity-40">&bull;</span>
         <span>NET {net}</span>
       </div>

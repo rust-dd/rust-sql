@@ -47,7 +47,6 @@ async fn connect_ssh(
         .await
         .map_err(|e| format!("SSH connection to {}:{} failed: {}", ssh_host, ssh_port, e))?;
 
-    // Try key file first
     if let Some(key_path) = ssh_key_path {
         if !key_path.is_empty() {
             match keys::load_secret_key(key_path, ssh_password) {
@@ -68,7 +67,6 @@ async fn connect_ssh(
         }
     }
 
-    // Then password
     if let Some(password) = ssh_password {
         if !password.is_empty() {
             let result = handle

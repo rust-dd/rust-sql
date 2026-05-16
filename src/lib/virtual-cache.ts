@@ -6,7 +6,7 @@ const cache = new Map<string, Map<number, string[][]>>();
 
 export function setPage(queryId: string, pageIndex: number, rows: string[][]): void {
   if (!cache.has(queryId)) cache.set(queryId, new Map());
-  cache.get(queryId)!.set(pageIndex, rows);
+  cache.get(queryId)?.set(pageIndex, rows);
 }
 
 export function getRow(queryId: string, rowIndex: number, pageSize: number): string[] | null {
@@ -30,8 +30,9 @@ export function clearQuery(queryId: string): void {
 export function evictDistant(queryId: string, currentPage: number, maxPages: number): void {
   const pages = cache.get(queryId);
   if (!pages || pages.size <= maxPages) return;
-  const indices = [...pages.keys()].sort((a, b) => Math.abs(a - currentPage) - Math.abs(b - currentPage));
-  // Keep only the closest maxPages pages
+  const indices = [...pages.keys()].sort(
+    (a, b) => Math.abs(a - currentPage) - Math.abs(b - currentPage),
+  );
   const toKeep = new Set(indices.slice(0, maxPages));
   for (const key of pages.keys()) {
     if (!toKeep.has(key)) pages.delete(key);

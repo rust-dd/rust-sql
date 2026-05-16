@@ -1,4 +1,4 @@
-use portable_pty::{native_pty_system, CommandBuilder, MasterPty, PtySize};
+use portable_pty::{CommandBuilder, MasterPty, PtySize, native_pty_system};
 use std::collections::HashMap;
 use std::io::{Read, Write};
 use std::sync::Arc;
@@ -54,7 +54,6 @@ pub async fn terminal_spawn(
         .await
         .insert(id.clone(), session);
 
-    // Spawn reader thread to emit events
     let terminal_id = id.clone();
     std::thread::spawn(move || {
         let mut buf = [0u8; 4096];

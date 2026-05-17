@@ -1,0 +1,42 @@
+[package]
+name = "rsql"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+description.workspace = true
+
+[lib]
+name = "rsql_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+tauri-plugin-opener = "2"
+tauri-plugin-shell = "2.3.1"
+tauri-plugin-fs = "2.4.2"
+tauri-plugin-dialog = "2.6.0"
+tauri-plugin-process = "2.3.1"
+tauri-plugin-updater = "2.10.0"
+
+serde.workspace = true
+serde_json.workspace = true
+sonic-rs.workspace = true
+tokio.workspace = true
+tokio-postgres.workspace = true
+deadpool-postgres.workspace = true
+postgres-native-tls.workspace = true
+native-tls.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+libsql.workspace = true
+thiserror.workspace = true
+portable-pty.workspace = true
+rayon.workspace = true
+sysinfo.workspace = true
+csv.workspace = true
+futures-util.workspace = true
+russh.workspace = true
+rsql-core = { path = "../rsql-core" }

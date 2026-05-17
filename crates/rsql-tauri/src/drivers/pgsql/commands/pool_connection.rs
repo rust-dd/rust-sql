@@ -144,7 +144,7 @@ pub async fn pgsql_connector(
     };
     if let Err(e) = meta_pool.get().await {
         tracing::error!("Meta pool initial connection failed: {:?}", e);
-        return Err(AppError::ConnectionFailed(full_error_chain(&e)).into());
+        return Err(AppError::ConnectionFailed(full_error_chain(&e)));
     }
 
     {

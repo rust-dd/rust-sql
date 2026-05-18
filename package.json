@@ -5,6 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:web": "VITE_BUILD_TARGET=web vite",
+    "dev:proxy": "cargo run -p rsql-proxy -- --addr 127.0.0.1:8080 --dist-dir dist --state-path /tmp/rsql-dev.db",
     "build": "tsc && vite build",
     "preview": "vite preview",
     "tauri": "cd crates/rsql-tauri && tauri",

@@ -39,4 +39,5 @@ sysinfo.workspace = true
 csv.workspace = true
 futures-util.workspace = true
 russh.workspace = true
+async-trait = { workspace = true }
 rsql-core = { path = "../rsql-core" }

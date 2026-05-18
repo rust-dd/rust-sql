@@ -1,5 +1,4 @@
 use rsql_core::AppState;
-use rsql_core::events::SharedEventSink;
 use rsql_core::terminal::TerminalRegistry;
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -15,14 +14,14 @@ use crate::protocol::Outbound;
 pub struct ProxySession {
     pub app_state: Arc<AppState>,
     pub terminals: TerminalRegistry,
-    pub sink: SharedEventSink,
+    pub sink: Arc<ProxyEventSink>,
     pub outbound: UnboundedSender<Outbound>,
     pub cancel_tokens: Arc<Mutex<HashMap<Uuid, CancelToken>>>,
 }
 
 impl ProxySession {
     pub fn new(app_state: Arc<AppState>, outbound: UnboundedSender<Outbound>) -> Self {
-        let sink: SharedEventSink = Arc::new(ProxyEventSink::new(outbound.clone()));
+        let sink = Arc::new(ProxyEventSink::new(outbound.clone()));
         Self {
             app_state,
             terminals: TerminalRegistry::new(),

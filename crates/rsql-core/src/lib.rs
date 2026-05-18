@@ -10,5 +10,5 @@ pub mod state;
 pub mod terminal;
 pub mod utils;
 
-pub use events::{EventSink, SharedEventSink, emit_typed};
+pub use events::{EventSink, emit_typed};
 pub use state::AppState;

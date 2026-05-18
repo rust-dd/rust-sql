@@ -12,7 +12,7 @@ pub async fn pgsql_listen_start(
     app: AppHandle,
 ) -> Result<bool, AppError> {
     let app_state = app.state::<AppState>();
-    let sink: rsql_core::events::SharedEventSink = TauriEventSink::new(app.clone());
+    let sink = TauriEventSink::new(app.clone());
     pubsub::listen_start(app_state.inner(), project_id, channel, sink).await
 }
 

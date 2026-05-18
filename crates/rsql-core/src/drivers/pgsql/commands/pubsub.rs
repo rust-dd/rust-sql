@@ -1,7 +1,9 @@
+use std::sync::Arc;
+
 use crate::AppState;
 use crate::drivers::pgsql::roles_schema_objects::discover_notify_channels;
 use crate::error::AppError;
-use crate::events::SharedEventSink;
+use crate::events::EventSink;
 
 use futures_util::StreamExt;
 use native_tls::TlsConnector;
@@ -37,11 +39,11 @@ pub async fn pgsql_discover_channels(
     discover_notify_channels(&client).await
 }
 
-pub async fn listen_start(
+pub async fn listen_start<S: EventSink>(
     app_state: &AppState,
     project_id: &str,
     channel: &str,
-    sink: SharedEventSink,
+    sink: Arc<S>,
 ) -> Result<bool, AppError> {
     let listen_key = format!("{project_id}:{channel}");
     {
@@ -73,7 +75,12 @@ pub async fn listen_start(
             .password(row.get::<String>(1).unwrap_or_default())
             .dbname(row.get::<String>(2).unwrap_or_default())
             .host(row.get::<String>(3).unwrap_or_default())
-            .port(row.get::<String>(4).unwrap_or_default().parse().unwrap_or(5432));
+            .port(
+                row.get::<String>(4)
+                    .unwrap_or_default()
+                    .parse()
+                    .unwrap_or(5432),
+            );
         let ssl = row.get::<String>(5).map(|s| s == "true").unwrap_or(false);
         (cfg, ssl)
     };
@@ -81,15 +88,16 @@ pub async fn listen_start(
     let channel_owned = channel.to_string();
     let event_name = format!("pg-notify-{project_id}");
     let handle = tokio::spawn(async move {
-        async fn listen_loop<S, T>(
+        async fn listen_loop<Stream, TlsStream, EVT>(
             client: tokio_postgres::Client,
-            mut connection: tokio_postgres::Connection<S, T>,
+            mut connection: tokio_postgres::Connection<Stream, TlsStream>,
             channel: &str,
             event_name: &str,
-            sink: &SharedEventSink,
+            sink: &Arc<EVT>,
         ) where
-            S: tokio::io::AsyncRead + tokio::io::AsyncWrite + Unpin,
-            T: tokio::io::AsyncRead + tokio::io::AsyncWrite + Unpin,
+            Stream: tokio::io::AsyncRead + tokio::io::AsyncWrite + Unpin,
+            TlsStream: tokio::io::AsyncRead + tokio::io::AsyncWrite + Unpin,
+            EVT: EventSink,
         {
             let listen_sql = format!("LISTEN \"{}\"", channel.replace('"', "\"\""));
             if let Err(e) = client.batch_execute(&listen_sql).await {
@@ -104,7 +112,7 @@ pub async fn listen_start(
                             "channel": n.channel(),
                             "payload": n.payload(),
                         });
-                        sink.emit_json(event_name, payload).await;
+                        sink.emit(event_name, &payload);
                     }
                     Ok(_) => {}
                     Err(e) => {
@@ -133,7 +141,11 @@ pub async fn listen_start(
         }
     });
 
-    app_state.notify_handles.lock().await.insert(listen_key, handle);
+    app_state
+        .notify_handles
+        .lock()
+        .await
+        .insert(listen_key, handle);
     Ok(true)
 }
 

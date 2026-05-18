@@ -1,6 +1,7 @@
 use axum::extract::ws::Message;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
+use sonic_rs;
 
 pub const BINARY_ID_LEN: usize = 16;
 
@@ -70,9 +71,9 @@ impl Outbound {
         Outbound::Binary { id, payload }
     }
 
-    pub fn into_ws_message(self) -> Result<Message, serde_json::Error> {
+    pub fn into_ws_message(self) -> Result<Message, sonic_rs::Error> {
         match self {
-            Outbound::Text(frame) => Ok(Message::Text(serde_json::to_string(&frame)?.into())),
+            Outbound::Text(frame) => Ok(Message::Text(sonic_rs::to_string(&frame)?.into())),
             Outbound::Binary { id, payload } => {
                 let mut buf = Vec::with_capacity(BINARY_ID_LEN + payload.len());
                 buf.extend_from_slice(id.as_bytes());
@@ -83,8 +84,8 @@ impl Outbound {
     }
 }
 
-pub fn parse_text(text: &str) -> Result<Inbound, serde_json::Error> {
-    serde_json::from_str(text)
+pub fn parse_text(text: &str) -> Result<Inbound, sonic_rs::Error> {
+    sonic_rs::from_str(text)
 }
 
 pub fn parse_binary(bytes: &[u8]) -> Option<(Uuid, &[u8])> {

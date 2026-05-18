@@ -22,11 +22,11 @@ tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
+sonic-rs = { workspace = true }
 clap = { workspace = true }
 futures-util = { workspace = true }
 rsql-core = { path = "../rsql-core" }
 uuid = { workspace = true }
-async-trait = { workspace = true }
 tokio-postgres = { workspace = true }
 
 [dev-dependencies]

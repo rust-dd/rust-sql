@@ -12,9 +12,8 @@ impl TauriEventSink {
     }
 }
 
-#[async_trait::async_trait]
 impl EventSink for TauriEventSink {
-    async fn emit_json(&self, event: &str, payload: serde_json::Value) {
+    fn emit<T: serde::Serialize>(&self, event: &str, payload: &T) {
         if let Err(e) = self.app.emit(event, payload) {
             tracing::warn!(event, error = %e, "TauriEventSink emit failed");
         }

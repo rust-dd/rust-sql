@@ -4,13 +4,14 @@ pub use session::TerminalRegistry;
 
 use portable_pty::{CommandBuilder, PtySize, native_pty_system};
 use std::io::Read;
+use std::sync::Arc;
 
 use crate::error::AppError;
-use crate::events::SharedEventSink;
+use crate::events::EventSink;
 
-pub async fn spawn(
+pub async fn spawn<S: EventSink>(
     registry: &TerminalRegistry,
-    sink: SharedEventSink,
+    sink: Arc<S>,
     id: String,
     cols: u16,
     rows: u16,
@@ -41,27 +42,20 @@ pub async fn spawn(
     registry.insert(id.clone(), session).await;
 
     let terminal_id = id;
-    let reader_sink = sink.clone();
-    let handle = tokio::runtime::Handle::current();
+    let reader_sink = sink;
     std::thread::spawn(move || {
         let mut buf = [0u8; 4096];
         loop {
             match reader.read(&mut buf) {
                 Ok(0) => {
                     let event = format!("terminal-exit-{terminal_id}");
-                    let sink = reader_sink.clone();
-                    handle.spawn(async move {
-                        sink.emit_json(&event, serde_json::Value::Null).await
-                    });
+                    reader_sink.emit(&event, &serde_json::Value::Null);
                     break;
                 }
                 Ok(n) => {
                     let data = String::from_utf8_lossy(&buf[..n]).to_string();
                     let event = format!("terminal-data-{terminal_id}");
-                    let sink = reader_sink.clone();
-                    handle.spawn(async move {
-                        sink.emit_json(&event, serde_json::Value::String(data)).await
-                    });
+                    reader_sink.emit(&event, &data);
                 }
                 Err(_) => break,
             }

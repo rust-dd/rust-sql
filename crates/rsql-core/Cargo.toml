@@ -26,7 +26,6 @@ sysinfo.workspace = true
 csv.workspace = true
 futures-util.workspace = true
 russh.workspace = true
-async-trait = { workspace = true }
 uuid = { workspace = true }
 
 [dev-dependencies]

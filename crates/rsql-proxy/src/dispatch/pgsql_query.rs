@@ -1,6 +1,7 @@
 use rsql_core::drivers::pgsql::commands::{pool_helpers, query};
 use rsql_core::drivers::pgsql::streaming::execute_query_streamed;
 use rsql_core::error::AppError;
+use rsql_core::events::EventSink;
 use serde::Deserialize;
 use uuid::Uuid;
 
@@ -123,11 +124,8 @@ pub async fn handle(
             let stream_id = a.stream_id.clone();
             tokio::spawn(async move {
                 if let Err(e) = execute_query_streamed(&client, &sql, &stream_id, &sink).await {
-                    sink.emit_json(
-                        &format!("query-stream-{stream_id}"),
-                        serde_json::json!({"type": "error", "message": e.to_string()}),
-                    )
-                    .await;
+                    let err_payload = serde_json::json!({"type": "error", "message": e.to_string()});
+                    sink.emit(&format!("query-stream-{stream_id}"), &err_payload);
                 }
             });
             Ok(Outbound::response(id, serde_json::Value::Null))

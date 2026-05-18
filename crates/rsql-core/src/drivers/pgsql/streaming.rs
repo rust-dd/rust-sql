@@ -1,10 +1,11 @@
+use std::sync::Arc;
 use std::time::Instant;
 use tokio_postgres::{Client, SimpleQueryMessage};
 
 use crate::drivers::pgsql::CELL_SEP;
 use crate::drivers::pgsql::query_execution::{join_sep, pack_rows_vec, process_simple_messages};
 use crate::error::AppError;
-use crate::events::{SharedEventSink, emit_typed};
+use crate::events::EventSink;
 
 #[derive(serde::Serialize, Clone)]
 #[serde(tag = "type")]
@@ -20,11 +21,11 @@ pub enum QueryStreamEvent {
 const MAX_STREAM_ROWS: usize = 500_000;
 const CURSOR_FETCH_SIZE: usize = 10_000;
 
-pub async fn execute_query_streamed(
+pub async fn execute_query_streamed<S: EventSink>(
     client: &Client,
     sql: &str,
     stream_id: &str,
-    sink: &SharedEventSink,
+    sink: &Arc<S>,
 ) -> Result<(), AppError> {
     let start = Instant::now();
     let event_name = format!("query-stream-{stream_id}");
@@ -78,17 +79,12 @@ pub async fn execute_query_streamed(
 
                 if !columns_sent && let Some(cols) = batch_columns {
                     let header = join_sep(&cols, CELL_SEP);
-                    emit_typed(
-                        sink,
-                        &event_name,
-                        &QueryStreamEvent::Columns { columns: header, total_rows: 0 },
-                    )
-                    .await;
+                    sink.emit(&event_name, &QueryStreamEvent::Columns { columns: header, total_rows: 0 });
                     columns_sent = true;
                 }
 
                 let packed = pack_rows_vec(&batch_rows);
-                emit_typed(sink, &event_name, &QueryStreamEvent::Chunk { data: packed }).await;
+                sink.emit(&event_name, &QueryStreamEvent::Chunk { data: packed });
 
                 total_sent += batch_rows.len();
                 if total_sent >= MAX_STREAM_ROWS {
@@ -98,19 +94,17 @@ pub async fn execute_query_streamed(
             }
 
             if !columns_sent {
-                emit_typed(
-                    sink,
+                sink.emit(
                     &event_name,
                     &QueryStreamEvent::Columns { columns: String::new(), total_rows: 0 },
-                )
-                .await;
+                );
             }
 
             client.batch_execute("CLOSE _rsql_cur").await.ok();
             client.batch_execute("COMMIT").await.ok();
 
             let elapsed = start.elapsed().as_millis() as f32;
-            emit_typed(sink, &event_name, &QueryStreamEvent::Done { elapsed, capped }).await;
+            sink.emit(&event_name, &QueryStreamEvent::Done { elapsed, capped });
         }
         Err(_) => {
             client.batch_execute("ROLLBACK").await.ok();
@@ -123,32 +117,26 @@ pub async fn execute_query_streamed(
             let (columns, rows) = process_simple_messages(messages);
 
             if columns.is_empty() {
-                emit_typed(
-                    sink,
+                sink.emit(
                     &event_name,
                     &QueryStreamEvent::Columns { columns: String::new(), total_rows: 0 },
-                )
-                .await;
+                );
             } else {
                 let header = join_sep(&columns, CELL_SEP);
-                emit_typed(
-                    sink,
+                sink.emit(
                     &event_name,
                     &QueryStreamEvent::Columns { columns: header, total_rows: rows.len() },
-                )
-                .await;
+                );
 
                 let packed = pack_rows_vec(&rows);
-                emit_typed(sink, &event_name, &QueryStreamEvent::Chunk { data: packed }).await;
+                sink.emit(&event_name, &QueryStreamEvent::Chunk { data: packed });
             }
 
             let elapsed = start.elapsed().as_millis() as f32;
-            emit_typed(
-                sink,
+            sink.emit(
                 &event_name,
                 &QueryStreamEvent::Done { elapsed, capped: false },
-            )
-            .await;
+            );
         }
     }
 

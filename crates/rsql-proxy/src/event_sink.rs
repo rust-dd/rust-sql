@@ -13,10 +13,16 @@ impl ProxyEventSink {
     }
 }
 
-#[async_trait::async_trait]
 impl EventSink for ProxyEventSink {
-    async fn emit_json(&self, event: &str, payload: serde_json::Value) {
-        if let Err(e) = self.tx.send(Outbound::event(event, payload)) {
+    fn emit<T: serde::Serialize>(&self, event: &str, payload: &T) {
+        let value = match serde_json::to_value(payload) {
+            Ok(v) => v,
+            Err(e) => {
+                tracing::error!(error = %e, event, "ProxyEventSink serialize failed");
+                return;
+            }
+        };
+        if let Err(e) = self.tx.send(Outbound::event(event, value)) {
             tracing::debug!(error = %e, "ProxyEventSink: receiver closed");
         }
     }

@@ -49,7 +49,7 @@ pub async fn pgsql_run_query_streamed(
     let client = acquire_client(&app_state.clients, project_id).await?;
     set_cancel_token(&app_state, project_id, client.cancel_token()).await?;
 
-    let sink: rsql_core::events::SharedEventSink = crate::event_sink::TauriEventSink::new(app.clone());
+    let sink = crate::event_sink::TauriEventSink::new(app.clone());
     execute_query_streamed(&client, sql, stream_id, &sink).await
 }
 

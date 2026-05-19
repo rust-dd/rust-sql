@@ -1,15 +1,12 @@
+import { isTauriRuntime } from "@/lib/runtime";
+
 declare global {
   interface Window {
-    __TAURI_INTERNALS__?: unknown;
     __RSQL_PROXY_URL__?: string;
   }
 }
 
-export function isTauriRuntime(): boolean {
-  if (typeof window === "undefined") return false;
-  if (import.meta.env.VITE_BUILD_TARGET === "web") return false;
-  return "__TAURI_INTERNALS__" in window && window.__TAURI_INTERNALS__ != null;
-}
+export { isTauriRuntime };
 
 export function deriveProxyUrl(): string {
   if (typeof window === "undefined") {

@@ -1,5 +1,4 @@
-import { save } from "@tauri-apps/plugin-dialog";
-import { writeTextFile } from "@tauri-apps/plugin-fs";
+import { dialog } from "@/lib/platform";
 
 export type ExportFormat = "csv" | "json" | "sql" | "markdown" | "xml";
 
@@ -109,14 +108,11 @@ export async function exportResults(
   const content = formatters[format](columns, rows, tableName);
   const ext = extensions[format];
 
-  const filePath = await save({
-    defaultPath: `export.${ext}`,
+  await dialog.saveFile({
+    defaultName: `export.${ext}`,
+    content,
     filters: [{ name: filterNames[format], extensions: [ext] }],
   });
-
-  if (!filePath) return; // user cancelled
-
-  await writeTextFile(filePath, content);
 }
 
 export function copyToClipboard(

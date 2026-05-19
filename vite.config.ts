@@ -11,14 +11,51 @@ export default defineConfig(async ({ mode }) => {
   const target = env.VITE_BUILD_TARGET ?? "tauri";
   const proxyTarget = env.VITE_RSQL_PROXY_DEV ?? "ws://127.0.0.1:8080";
 
+  const stubPath = path.resolve(__dirname, "./src/lib/platform/stubs/empty.ts");
+
+  const tauriStubPlugin =
+    target === "web"
+      ? {
+          name: "tauri-stub-synthetic-exports",
+          load(id: string) {
+            if (id === stubPath) {
+              return {
+                code: "const _stub = {}; export default _stub;",
+                syntheticNamedExports: true,
+              };
+            }
+          },
+        }
+      : null;
+
   return {
-    plugins: [react(), tailwindcss()],
+    plugins: [react(), tailwindcss(), ...(tauriStubPlugin ? [tauriStubPlugin] : [])],
     define: {
       __RSQL_BUILD_TARGET__: JSON.stringify(target),
     },
     resolve: {
       alias: {
         "@": path.resolve(__dirname, "./src"),
+        ...(target === "web"
+          ? {
+              "@tauri-apps/plugin-dialog": path.resolve(
+                __dirname,
+                "./src/lib/platform/stubs/empty.ts",
+              ),
+              "@tauri-apps/plugin-fs": path.resolve(
+                __dirname,
+                "./src/lib/platform/stubs/empty.ts",
+              ),
+              "@tauri-apps/plugin-process": path.resolve(
+                __dirname,
+                "./src/lib/platform/stubs/empty.ts",
+              ),
+              "@tauri-apps/plugin-updater": path.resolve(
+                __dirname,
+                "./src/lib/platform/stubs/empty.ts",
+              ),
+            }
+          : {}),
       },
     },
     clearScreen: false,

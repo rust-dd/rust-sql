@@ -1,7 +1,7 @@
 use axum::extract::ws::Message;
 use serde::{Deserialize, Serialize};
-use uuid::Uuid;
 use sonic_rs;
+use uuid::Uuid;
 
 pub const BINARY_ID_LEN: usize = 16;
 
@@ -11,7 +11,10 @@ pub enum Inbound {
     Request(Request),
     Cancel(Cancel),
     #[serde(skip)]
-    BinaryChunk { id: Uuid, payload: Vec<u8> },
+    BinaryChunk {
+        id: Uuid,
+        payload: Vec<u8>,
+    },
 }
 
 #[derive(Debug, Deserialize)]
@@ -56,15 +59,26 @@ pub enum Outbound {
 
 impl Outbound {
     pub fn response(id: Uuid, payload: serde_json::Value) -> Self {
-        Outbound::Text(OutboundFrame::Response { id, payload, end: Some(true) })
+        Outbound::Text(OutboundFrame::Response {
+            id,
+            payload,
+            end: Some(true),
+        })
     }
 
     pub fn error(id: Uuid, message: impl Into<String>) -> Self {
-        Outbound::Text(OutboundFrame::Error { id, message: message.into(), code: None })
+        Outbound::Text(OutboundFrame::Error {
+            id,
+            message: message.into(),
+            code: None,
+        })
     }
 
     pub fn event(event: impl Into<String>, payload: serde_json::Value) -> Self {
-        Outbound::Text(OutboundFrame::Event { event: event.into(), payload })
+        Outbound::Text(OutboundFrame::Event {
+            event: event.into(),
+            payload,
+        })
     }
 
     pub fn binary(id: Uuid, payload: Vec<u8>) -> Self {

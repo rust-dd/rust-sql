@@ -18,7 +18,9 @@ async fn workspace_roundtrip_over_ws() {
         "cmd": "workspace_save",
         "payload": { "name": "ws-test", "tabs": "[]" }
     });
-    ws.send(Message::Text(save_req.to_string().into())).await.unwrap();
+    ws.send(Message::Text(save_req.to_string().into()))
+        .await
+        .unwrap();
 
     let resp = next_text(&mut ws).await;
     assert_eq!(resp["type"], "response");
@@ -31,7 +33,9 @@ async fn workspace_roundtrip_over_ws() {
         "cmd": "workspace_load_all",
         "payload": {}
     });
-    ws.send(Message::Text(load_req.to_string().into())).await.unwrap();
+    ws.send(Message::Text(load_req.to_string().into()))
+        .await
+        .unwrap();
 
     let resp = next_text(&mut ws).await;
     assert_eq!(resp["type"], "response");
@@ -49,5 +53,20 @@ where
             Message::Ping(_) | Message::Pong(_) => continue,
             other => panic!("unexpected: {other:?}"),
         }
+    }
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn terminal_spawn_returns_error_when_disabled_env_set() {
+    unsafe {
+        std::env::set_var("RSQL_DISABLE_TERMINAL", "1");
+    }
+    use rsql_proxy::dispatch::terminal_cmds::is_terminal_disabled;
+    assert!(
+        is_terminal_disabled(),
+        "RSQL_DISABLE_TERMINAL=1 must be honored"
+    );
+    unsafe {
+        std::env::remove_var("RSQL_DISABLE_TERMINAL");
     }
 }

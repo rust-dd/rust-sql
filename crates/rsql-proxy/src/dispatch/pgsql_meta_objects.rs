@@ -52,10 +52,9 @@ pub async fn handle(
                 func_name: String,
             }
             let a: Args = serde_json::from_value(payload).map_err(|e| e.to_string())?;
-            let v =
-                object_info::pgsql_function_info(state, &a.project_id, &a.schema, &a.func_name)
-                    .await
-                    .map_err(stringify)?;
+            let v = object_info::pgsql_function_info(state, &a.project_id, &a.schema, &a.func_name)
+                .await
+                .map_err(stringify)?;
             json_resp(serde_json::to_value(v).map_err(|e| e.to_string())?)
         }
 

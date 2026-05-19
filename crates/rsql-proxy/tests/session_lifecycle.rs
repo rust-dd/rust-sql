@@ -18,7 +18,9 @@ async fn closing_ws_does_not_panic() {
         "cmd": "workspace_save",
         "payload": { "name": "ephemeral", "tabs": "[]" }
     });
-    ws.send(Message::Text(req.to_string().into())).await.unwrap();
+    ws.send(Message::Text(req.to_string().into()))
+        .await
+        .unwrap();
     let _ = ws.next().await;
 
     ws.send(Message::Close(None)).await.ok();

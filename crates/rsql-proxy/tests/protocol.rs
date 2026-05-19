@@ -1,4 +1,4 @@
-use rsql_proxy::protocol::{parse_binary, parse_text, Inbound, Outbound};
+use rsql_proxy::protocol::{Inbound, Outbound, parse_binary, parse_text};
 use uuid::Uuid;
 
 #[test]

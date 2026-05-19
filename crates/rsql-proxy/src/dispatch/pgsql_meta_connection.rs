@@ -31,7 +31,9 @@ pub async fn handle(
             let key: [&str; 6] = [
                 &a.key[0], &a.key[1], &a.key[2], &a.key[3], &a.key[4], &a.key[5],
             ];
-            let v = connection::pgsql_test_connection(key).await.map_err(stringify)?;
+            let v = connection::pgsql_test_connection(key)
+                .await
+                .map_err(stringify)?;
             json_resp(serde_json::Value::String(v))
         }
 

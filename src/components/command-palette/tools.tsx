@@ -152,17 +152,19 @@ export function ActionsGroup({
         )}
         <span>{theme === "light" ? "Dark Mode" : "Light Mode"}</span>
       </Command.Item>
-      <Command.Item
-        value="Check For Updates"
-        onSelect={() => {
-          onClose();
-          onCheckUpdates();
-        }}
-      >
-        <Download className="h-4 w-4 text-muted-foreground" />
-        <span>Check for Updates</span>
-        <span className="cmdk-meta">App</span>
-      </Command.Item>
+      {__RSQL_BUILD_TARGET__ !== "web" && (
+        <Command.Item
+          value="Check For Updates"
+          onSelect={() => {
+            onClose();
+            onCheckUpdates();
+          }}
+        >
+          <Download className="h-4 w-4 text-muted-foreground" />
+          <span>Check for Updates</span>
+          <span className="cmdk-meta">App</span>
+        </Command.Item>
+      )}
       {pinnedResult ? (
         <Command.Item
           value="Clear Pinned Result"

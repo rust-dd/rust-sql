@@ -84,10 +84,12 @@ export function TopBar({
 
         <div className="h-4 w-px bg-border/50" />
 
-        <Button variant="ghost" size="sm" className="h-8 gap-2" onClick={onCheckUpdates}>
-          <Download className="h-4 w-4" />
-          <span className="text-xs">Updates</span>
-        </Button>
+        {__RSQL_BUILD_TARGET__ !== "web" && (
+          <Button variant="ghost" size="sm" className="h-8 gap-2" onClick={onCheckUpdates}>
+            <Download className="h-4 w-4" />
+            <span className="text-xs">Updates</span>
+          </Button>
+        )}
         <Button
           variant="ghost"
           size="icon"

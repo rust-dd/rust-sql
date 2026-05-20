@@ -1,6 +1,5 @@
-import { invoke } from "@tauri-apps/api/core";
+import { transport } from "./transport";
 
-// Raw wire types from Rust backend (string arrays)
 export type RawProjectMap = Record<string, string[]>;
 
 export interface SystemResourceUsage {
@@ -16,47 +15,47 @@ export interface SystemResourceUsage {
 }
 
 export async function getProjects(): Promise<RawProjectMap> {
-  return await invoke<RawProjectMap>("project_db_select");
+  return await transport.invoke<RawProjectMap>("project_db_select");
 }
 
 export async function insertProject(project_id: string, project_details: string[]): Promise<void> {
-  await invoke("project_db_insert", { project_id, project_details });
+  await transport.invoke("project_db_insert", { project_id, project_details });
 }
 
 export async function deleteProject(project_id: string): Promise<void> {
-  await invoke("project_db_delete", { project_id });
+  await transport.invoke("project_db_delete", { project_id });
 }
 
 export async function getQueries(): Promise<Record<string, string>> {
-  return await invoke<Record<string, string>>("query_db_select");
+  return await transport.invoke<Record<string, string>>("query_db_select");
 }
 
 export async function insertQuery(query_id: string, sql: string): Promise<void> {
-  await invoke("query_db_insert", { query_id, sql });
+  await transport.invoke("query_db_insert", { query_id, sql });
 }
 
 export async function deleteQuery(query_id: string): Promise<void> {
-  await invoke("query_db_delete", { query_id });
+  await transport.invoke("query_db_delete", { query_id });
 }
 
 export async function getSystemResourceUsage(): Promise<SystemResourceUsage> {
-  return await invoke<SystemResourceUsage>("system_resource_usage");
+  return await transport.invoke<SystemResourceUsage>("system_resource_usage");
 }
 
 export async function workspaceSave(name: string, tabs: string): Promise<void> {
-  await invoke("workspace_save", { name, tabs });
+  await transport.invoke("workspace_save", { name, tabs });
 }
 
 export async function workspaceLoadAll(): Promise<[string, string][]> {
-  return await invoke<[string, string][]>("workspace_load_all");
+  return await transport.invoke<[string, string][]>("workspace_load_all");
 }
 
 export async function workspaceDelete(name: string): Promise<void> {
-  await invoke("workspace_delete", { name });
+  await transport.invoke("workspace_delete", { name });
 }
 
 export async function pgsqlTestConnection(
   key: [string, string, string, string, string, string],
 ): Promise<string> {
-  return await invoke<string>("pgsql_test_connection", { key });
+  return await transport.invoke<string>("pgsql_test_connection", { key });
 }

@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
-import { workspaceDelete, workspaceLoadAll, workspaceSave } from "@/tauri";
+import { workspaceDelete, workspaceLoadAll, workspaceSave } from "@/lib/api";
 
 interface WorkspaceEntry {
   name: string;

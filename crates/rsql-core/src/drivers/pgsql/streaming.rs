@@ -1,11 +1,12 @@
+use std::sync::Arc;
 use std::time::Instant;
 use tokio_postgres::{Client, SimpleQueryMessage};
 
-use rsql_core::drivers::pgsql::CELL_SEP;
-use rsql_core::drivers::pgsql::query_execution::{join_sep, pack_rows_vec, process_simple_messages};
-use rsql_core::error::AppError;
+use crate::drivers::pgsql::CELL_SEP;
+use crate::drivers::pgsql::query_execution::{join_sep, pack_rows_vec, process_simple_messages};
+use crate::error::AppError;
+use crate::events::EventSink;
 
-/// Events emitted during streamed query execution.
 #[derive(serde::Serialize, Clone)]
 #[serde(tag = "type")]
 pub enum QueryStreamEvent {
@@ -17,35 +18,27 @@ pub enum QueryStreamEvent {
     Done { elapsed: f32, capped: bool },
 }
 
-/// Maximum rows to send to the frontend to prevent OOM in the webview.
 const MAX_STREAM_ROWS: usize = 500_000;
 const CURSOR_FETCH_SIZE: usize = 10_000;
 
-/// Stream query results using a PostgreSQL cursor.
-/// Fetches rows in batches from the server — never loads the full result into Rust memory.
-/// Caps at MAX_STREAM_ROWS to protect the webview from OOM.
-pub async fn execute_query_streamed(
+pub async fn execute_query_streamed<S: EventSink>(
     client: &Client,
     sql: &str,
     stream_id: &str,
-    app: &tauri::AppHandle,
+    sink: &Arc<S>,
 ) -> Result<(), AppError> {
-    use tauri::Emitter;
-
     let start = Instant::now();
-    let event_name = format!("query-stream-{}", stream_id);
+    let event_name = format!("query-stream-{stream_id}");
 
-    // Begin transaction + declare cursor for memory-efficient streaming
     client
         .batch_execute("BEGIN")
         .await
         .map_err(|e| AppError::QueryFailed(e.to_string()))?;
 
-    let cursor_sql = format!("DECLARE _rsql_cur NO SCROLL CURSOR FOR {}", sql);
+    let cursor_sql = format!("DECLARE _rsql_cur NO SCROLL CURSOR FOR {sql}");
     match client.batch_execute(&cursor_sql).await {
         Ok(_) => {
-            // Cursor-based fetch loop using simple_query for zero type conversion
-            let fetch_sql = format!("FETCH {} FROM _rsql_cur", CURSOR_FETCH_SIZE);
+            let fetch_sql = format!("FETCH {CURSOR_FETCH_SIZE} FROM _rsql_cur");
             let mut total_sent: usize = 0;
             let mut columns_sent = false;
             let mut capped = false;
@@ -86,18 +79,12 @@ pub async fn execute_query_streamed(
 
                 if !columns_sent && let Some(cols) = batch_columns {
                     let header = join_sep(&cols, CELL_SEP);
-                    let _ = app.emit(
-                        &event_name,
-                        QueryStreamEvent::Columns {
-                            columns: header,
-                            total_rows: 0,
-                        },
-                    );
+                    sink.emit(&event_name, &QueryStreamEvent::Columns { columns: header, total_rows: 0 });
                     columns_sent = true;
                 }
 
                 let packed = pack_rows_vec(&batch_rows);
-                let _ = app.emit(&event_name, QueryStreamEvent::Chunk { data: packed });
+                sink.emit(&event_name, &QueryStreamEvent::Chunk { data: packed });
 
                 total_sent += batch_rows.len();
                 if total_sent >= MAX_STREAM_ROWS {
@@ -107,12 +94,9 @@ pub async fn execute_query_streamed(
             }
 
             if !columns_sent {
-                let _ = app.emit(
+                sink.emit(
                     &event_name,
-                    QueryStreamEvent::Columns {
-                        columns: String::new(),
-                        total_rows: 0,
-                    },
+                    &QueryStreamEvent::Columns { columns: String::new(), total_rows: 0 },
                 );
             }
 
@@ -120,13 +104,11 @@ pub async fn execute_query_streamed(
             client.batch_execute("COMMIT").await.ok();
 
             let elapsed = start.elapsed().as_millis() as f32;
-            let _ = app.emit(&event_name, QueryStreamEvent::Done { elapsed, capped });
+            sink.emit(&event_name, &QueryStreamEvent::Done { elapsed, capped });
         }
-        Err(_cursor_err) => {
-            // DECLARE CURSOR failed (non-SELECT query like INSERT/UPDATE/DDL)
+        Err(_) => {
             client.batch_execute("ROLLBACK").await.ok();
 
-            // Re-execute with simple_query for multi-statement support
             let messages = client
                 .simple_query(sql)
                 .await
@@ -135,34 +117,25 @@ pub async fn execute_query_streamed(
             let (columns, rows) = process_simple_messages(messages);
 
             if columns.is_empty() {
-                let _ = app.emit(
+                sink.emit(
                     &event_name,
-                    QueryStreamEvent::Columns {
-                        columns: String::new(),
-                        total_rows: 0,
-                    },
+                    &QueryStreamEvent::Columns { columns: String::new(), total_rows: 0 },
                 );
             } else {
                 let header = join_sep(&columns, CELL_SEP);
-                let _ = app.emit(
+                sink.emit(
                     &event_name,
-                    QueryStreamEvent::Columns {
-                        columns: header,
-                        total_rows: rows.len(),
-                    },
+                    &QueryStreamEvent::Columns { columns: header, total_rows: rows.len() },
                 );
 
                 let packed = pack_rows_vec(&rows);
-                let _ = app.emit(&event_name, QueryStreamEvent::Chunk { data: packed });
+                sink.emit(&event_name, &QueryStreamEvent::Chunk { data: packed });
             }
 
             let elapsed = start.elapsed().as_millis() as f32;
-            let _ = app.emit(
+            sink.emit(
                 &event_name,
-                QueryStreamEvent::Done {
-                    elapsed,
-                    capped: false,
-                },
+                &QueryStreamEvent::Done { elapsed, capped: false },
             );
         }
     }

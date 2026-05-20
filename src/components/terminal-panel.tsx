@@ -1,5 +1,4 @@
-import { invoke } from "@tauri-apps/api/core";
-import { listen } from "@tauri-apps/api/event";
+import { transport } from "@/lib/transport";
 import { FitAddon } from "@xterm/addon-fit";
 import { Terminal } from "@xterm/xterm";
 import { useCallback, useEffect, useRef } from "react";
@@ -95,28 +94,28 @@ export function TerminalPanel({ terminalId }: TerminalPanelProps) {
       const cols = term.cols;
       const rows = term.rows;
 
-      invoke("terminal_spawn", { id: terminalId, cols, rows }).catch((err) => {
+      transport.invoke("terminal_spawn", { id: terminalId, cols, rows }).catch((err) => {
         term.writeln(`\r\nFailed to spawn terminal: ${err}\r\n`);
       });
     }
 
-    const dataUnlisten = listen<string>(`terminal-data-${terminalId}`, (event) => {
-      term.write(event.payload);
+    const dataUnlisten = transport.listen<string>(`terminal-data-${terminalId}`, (payload) => {
+      term.write(payload);
     });
 
-    const exitUnlisten = listen(`terminal-exit-${terminalId}`, () => {
+    const exitUnlisten = transport.listen(`terminal-exit-${terminalId}`, () => {
       term.writeln("\r\n[Process exited]");
     });
 
     const dataDisposable = term.onData((data) => {
-      invoke("terminal_write", { id: terminalId, data }).catch(() => {});
+      transport.invoke("terminal_write", { id: terminalId, data }).catch(() => {});
     });
 
     const resizeObs = new ResizeObserver(() => {
       fitAddon.fit();
       const cols = term.cols;
       const rows = term.rows;
-      invoke("terminal_resize", { id: terminalId, cols, rows }).catch(() => {});
+      transport.invoke("terminal_resize", { id: terminalId, cols, rows }).catch(() => {});
     });
     resizeObs.observe(containerRef.current);
 

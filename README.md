@@ -255,6 +255,20 @@ Images are published for `linux/amd64` and `linux/arm64`. `docker pull` picks th
 
 ---
 
+## Performance
+
+RSQL ships a Criterion-based microbench suite for the packed-binary path and the proxy's WS framing. The exit gate for the browser/proxy build is **scroll FPS within 10% of the desktop Tauri build on a 1M-row query**.
+
+Run the bench suite:
+
+```bash
+cargo bench -p rsql-bench
+```
+
+Reports land under `target/criterion/<group>/<param>/report/index.html`. See [BENCHMARKS.md](./BENCHMARKS.md) for methodology, hardware fingerprint, captured numbers, and the manual 1M-row scroll FPS procedure.
+
+---
+
 ## Development
 
 ```bash

@@ -25,21 +25,33 @@ async fn pgsql_run_query_binary_frame() {
     let (mut ws, _) = connect_async(format!("ws://{addr}/ws")).await.unwrap();
 
     let id = Uuid::now_v7();
-    ws.send(Message::Text(json!({
-        "type": "request",
-        "id": id.to_string(),
-        "cmd": "pgsql_connector",
-        "payload": { "project_id": "p", "key": key, "ssh": null }
-    }).to_string().into())).await.unwrap();
+    ws.send(Message::Text(
+        json!({
+            "type": "request",
+            "id": id.to_string(),
+            "cmd": "pgsql_connector",
+            "payload": { "project_id": "p", "key": key, "ssh": null }
+        })
+        .to_string()
+        .into(),
+    ))
+    .await
+    .unwrap();
     let _ = ws.next().await;
 
     let id = Uuid::now_v7();
-    ws.send(Message::Text(json!({
-        "type": "request",
-        "id": id.to_string(),
-        "cmd": "pgsql_run_query_packed",
-        "payload": { "project_id": "p", "sql": "SELECT 1 AS x", "timeout_ms": null }
-    }).to_string().into())).await.unwrap();
+    ws.send(Message::Text(
+        json!({
+            "type": "request",
+            "id": id.to_string(),
+            "cmd": "pgsql_run_query_packed",
+            "payload": { "project_id": "p", "sql": "SELECT 1 AS x", "timeout_ms": null }
+        })
+        .to_string()
+        .into(),
+    ))
+    .await
+    .unwrap();
 
     loop {
         match ws.next().await.unwrap().unwrap() {

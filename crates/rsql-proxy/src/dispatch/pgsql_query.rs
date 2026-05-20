@@ -73,10 +73,9 @@ pub async fn handle(
                 limit: usize,
             }
             let a: Args = serde_json::from_value(payload).map_err(|e| e.to_string())?;
-            let s =
-                query::pgsql_fetch_page(state, &a.query_id, a.col_count, a.offset, a.limit)
-                    .await
-                    .map_err(stringify)?;
+            let s = query::pgsql_fetch_page(state, &a.query_id, a.col_count, a.offset, a.limit)
+                .await
+                .map_err(stringify)?;
             Ok(Outbound::binary(id, s.into_bytes()))
         }
         "pgsql_close_virtual" => {
@@ -109,10 +108,9 @@ pub async fn handle(
                 stream_id: String,
             }
             let a: Args = serde_json::from_value(payload).map_err(|e| e.to_string())?;
-            let client =
-                pool_helpers::acquire_client(&state.clients, &a.project_id)
-                    .await
-                    .map_err(stringify)?;
+            let client = pool_helpers::acquire_client(&state.clients, &a.project_id)
+                .await
+                .map_err(stringify)?;
             let token = client.cancel_token();
             pool_helpers::set_cancel_token(state, &a.project_id, token.clone())
                 .await
@@ -124,7 +122,8 @@ pub async fn handle(
             let stream_id = a.stream_id.clone();
             tokio::spawn(async move {
                 if let Err(e) = execute_query_streamed(&client, &sql, &stream_id, &sink).await {
-                    let err_payload = serde_json::json!({"type": "error", "message": e.to_string()});
+                    let err_payload =
+                        serde_json::json!({"type": "error", "message": e.to_string()});
                     sink.emit(&format!("query-stream-{stream_id}"), &err_payload);
                 }
             });

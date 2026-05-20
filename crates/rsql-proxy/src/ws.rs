@@ -1,6 +1,9 @@
 use axum::{
     Router,
-    extract::{State, WebSocketUpgrade, ws::{Message, WebSocket}},
+    extract::{
+        State, WebSocketUpgrade,
+        ws::{Message, WebSocket},
+    },
     response::IntoResponse,
     routing::get,
 };

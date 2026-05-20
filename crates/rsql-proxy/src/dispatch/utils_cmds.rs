@@ -17,8 +17,7 @@ pub async fn handle(
                 let mut monitor = session.app_state.resource_monitor.lock().await;
                 monitor.sample()
             };
-            let (q_open, q_avail, q_max, q_wait) =
-                pool_stats(&session.app_state.clients).await;
+            let (q_open, q_avail, q_max, q_wait) = pool_stats(&session.app_state.clients).await;
             let (m_open, m_avail, m_max, m_wait) =
                 pool_stats(&session.app_state.meta_clients).await;
             let total_open = q_open.saturating_add(m_open);

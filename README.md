@@ -213,6 +213,62 @@ Planned features, roughly in priority order:
 
 ---
 
+## Docker (Browser Build)
+
+The same RSQL frontend that ships in the Tauri desktop app is also available as a one-command Docker image. The image bundles a Rust WebSocket proxy that exposes every backend command over WS, so the full feature set works in a browser.
+
+```bash
+docker run -d \
+  -p 8080:8080 \
+  -v rsql-data:/data \
+  ghcr.io/rust-dd/rsql:latest
+# open http://localhost:8080
+```
+
+All connection data, query history, and workspaces persist in the named volume `rsql-data` mounted at `/data`.
+
+### Environment variables
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `RSQL_BIND` | `0.0.0.0:8080` | Listen address. Override to `127.0.0.1:8080` for loopback-only. |
+| `RSQL_DIST_DIR` | `/app/dist` | Static asset directory (frontend bundle). Leave default. |
+| `RSQL_STATE_PATH` | `/data/rsql.db` | libsql state file path. Keep on a mounted volume to persist across restarts. |
+| `RSQL_DISABLE_TERMINAL` | _unset_ | Set to `1` to disable the built-in PTY terminal. Recommended for any container reachable from outside `127.0.0.1`. |
+| `RUST_LOG` | `info,rsql_proxy=info` | tracing-subscriber env filter. |
+
+### Security
+
+The image listens on `0.0.0.0:8080` so it works out of the box with `docker run -p`. **The proxy is designed for trusted networks (a developer laptop, a private network)**. Do not expose it to the public internet without putting an auth layer in front (oauth2-proxy, Caddy with basic auth, Cloudflare Access, etc.).
+
+The built-in terminal spawns a real PTY inside the container. If your container is reachable from any untrusted source, set `RSQL_DISABLE_TERMINAL=1`.
+
+### Tags
+
+- `latest` — most recent release.
+- `vX.Y.Z` — pinned to a specific release tag (matches `release.yml`).
+- `X.Y.Z` — same image, version-only tag.
+
+### Multi-arch
+
+Images are published for `linux/amd64` and `linux/arm64`. `docker pull` picks the right variant automatically.
+
+---
+
+## Performance
+
+RSQL ships a Criterion-based microbench suite for the packed-binary path and the proxy's WS framing. The exit gate for the browser/proxy build is **scroll FPS within 10% of the desktop Tauri build on a 1M-row query**.
+
+Run the bench suite:
+
+```bash
+cargo bench -p rsql-bench
+```
+
+Reports land under `target/criterion/<group>/<param>/report/index.html`. See [BENCHMARKS.md](./BENCHMARKS.md) for methodology, hardware fingerprint, captured numbers, and the manual 1M-row scroll FPS procedure.
+
+---
+
 ## Development
 
 ```bash

@@ -1,9 +1,9 @@
 use std::{collections::BTreeMap, sync::Arc};
 use tokio::sync::Mutex;
 
+use super::AppState;
 use crate::error::AppError;
 use crate::utils::ResourceMonitor;
-use super::AppState;
 
 pub async fn bootstrap(db_path: &str) -> Result<AppState, AppError> {
     let db = libsql::Builder::new_local(db_path)

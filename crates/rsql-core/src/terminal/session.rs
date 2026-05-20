@@ -16,12 +16,16 @@ pub struct TerminalRegistry {
 
 impl Default for TerminalRegistry {
     fn default() -> Self {
-        Self { inner: Arc::new(Mutex::new(HashMap::new())) }
+        Self {
+            inner: Arc::new(Mutex::new(HashMap::new())),
+        }
     }
 }
 
 impl TerminalRegistry {
-    pub fn new() -> Self { Self::default() }
+    pub fn new() -> Self {
+        Self::default()
+    }
 
     pub(crate) async fn insert(&self, id: String, session: TerminalSession) {
         self.inner.lock().await.insert(id, session);
@@ -50,7 +54,12 @@ impl TerminalRegistry {
             .ok_or_else(|| AppError::QueryFailed(format!("terminal not found: {id}")))?;
         session
             .master
-            .resize(PtySize { rows, cols, pixel_width: 0, pixel_height: 0 })
+            .resize(PtySize {
+                rows,
+                cols,
+                pixel_width: 0,
+                pixel_height: 0,
+            })
             .map_err(|e| AppError::QueryFailed(e.to_string()))?;
         Ok(())
     }

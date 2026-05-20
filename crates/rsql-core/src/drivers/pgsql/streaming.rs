@@ -79,7 +79,13 @@ pub async fn execute_query_streamed<S: EventSink>(
 
                 if !columns_sent && let Some(cols) = batch_columns {
                     let header = join_sep(&cols, CELL_SEP);
-                    sink.emit(&event_name, &QueryStreamEvent::Columns { columns: header, total_rows: 0 });
+                    sink.emit(
+                        &event_name,
+                        &QueryStreamEvent::Columns {
+                            columns: header,
+                            total_rows: 0,
+                        },
+                    );
                     columns_sent = true;
                 }
 
@@ -96,7 +102,10 @@ pub async fn execute_query_streamed<S: EventSink>(
             if !columns_sent {
                 sink.emit(
                     &event_name,
-                    &QueryStreamEvent::Columns { columns: String::new(), total_rows: 0 },
+                    &QueryStreamEvent::Columns {
+                        columns: String::new(),
+                        total_rows: 0,
+                    },
                 );
             }
 
@@ -119,13 +128,19 @@ pub async fn execute_query_streamed<S: EventSink>(
             if columns.is_empty() {
                 sink.emit(
                     &event_name,
-                    &QueryStreamEvent::Columns { columns: String::new(), total_rows: 0 },
+                    &QueryStreamEvent::Columns {
+                        columns: String::new(),
+                        total_rows: 0,
+                    },
                 );
             } else {
                 let header = join_sep(&columns, CELL_SEP);
                 sink.emit(
                     &event_name,
-                    &QueryStreamEvent::Columns { columns: header, total_rows: rows.len() },
+                    &QueryStreamEvent::Columns {
+                        columns: header,
+                        total_rows: rows.len(),
+                    },
                 );
 
                 let packed = pack_rows_vec(&rows);
@@ -135,7 +150,10 @@ pub async fn execute_query_streamed<S: EventSink>(
             let elapsed = start.elapsed().as_millis() as f32;
             sink.emit(
                 &event_name,
-                &QueryStreamEvent::Done { elapsed, capped: false },
+                &QueryStreamEvent::Done {
+                    elapsed,
+                    capped: false,
+                },
             );
         }
     }

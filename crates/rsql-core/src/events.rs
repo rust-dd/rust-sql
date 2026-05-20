@@ -25,9 +25,14 @@ mod tests {
     #[test]
     fn emit_forwards_to_sink() {
         #[derive(serde::Serialize)]
-        struct Probe { n: u32, label: &'static str }
+        struct Probe {
+            n: u32,
+            label: &'static str,
+        }
 
-        let sink = Arc::new(RecordingSink { log: Mutex::new(Vec::new()) });
+        let sink = Arc::new(RecordingSink {
+            log: Mutex::new(Vec::new()),
+        });
         emit_typed(&*sink, "probe", &Probe { n: 7, label: "hi" });
 
         let log = sink.log.lock().unwrap();

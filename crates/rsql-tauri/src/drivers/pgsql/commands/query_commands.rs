@@ -34,7 +34,8 @@ pub async fn pgsql_run_query_packed(
     timeout_ms: Option<u32>,
     app_state: State<'_, AppState>,
 ) -> Result<Response, AppError> {
-    let json = query::pgsql_run_query_packed(app_state.inner(), project_id, sql, timeout_ms).await?;
+    let json =
+        query::pgsql_run_query_packed(app_state.inner(), project_id, sql, timeout_ms).await?;
     Ok(Response::new(json))
 }
 

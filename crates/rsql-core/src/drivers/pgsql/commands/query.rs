@@ -29,10 +29,7 @@ pub async fn pgsql_run_query(
     sonic_rs::to_string(&result).map_err(|e| AppError::QueryFailed(e.to_string()))
 }
 
-pub async fn pgsql_cancel_query(
-    app_state: &AppState,
-    project_id: &str,
-) -> Result<bool, AppError> {
+pub async fn pgsql_cancel_query(app_state: &AppState, project_id: &str) -> Result<bool, AppError> {
     let cancel_token = {
         let cancel_tokens = app_state.cancel_tokens.lock().await;
         cancel_tokens
@@ -96,8 +93,7 @@ pub async fn pgsql_execute_virtual(
 
     let timeout = timeout_ms.unwrap_or(0);
     apply_statement_timeout(&client, timeout).await;
-    let result =
-        execute_virtual(&client, &app_state.virtual_cache, sql, query_id, page_size).await;
+    let result = execute_virtual(&client, &app_state.virtual_cache, sql, query_id, page_size).await;
     reset_statement_timeout(&client, timeout).await;
     let result = result?;
 
@@ -142,8 +138,7 @@ pub async fn pgsql_fetch_page(
             if let Err(e) = snapshot_store_page(app_state, query_id, page_index, &packed).await {
                 tracing::warn!("Failed to persist fetched page for {}: {:?}", query_id, e);
             }
-            return sonic_rs::to_string(&packed)
-                .map_err(|e| AppError::QueryFailed(e.to_string()));
+            return sonic_rs::to_string(&packed).map_err(|e| AppError::QueryFailed(e.to_string()));
         }
         Err(err) => {
             tracing::debug!(
@@ -179,10 +174,7 @@ pub async fn pgsql_fetch_page(
     )))
 }
 
-pub async fn pgsql_close_virtual(
-    app_state: &AppState,
-    query_id: &str,
-) -> Result<(), AppError> {
+pub async fn pgsql_close_virtual(app_state: &AppState, query_id: &str) -> Result<(), AppError> {
     close_virtual(&app_state.virtual_cache, query_id).await?;
     if let Err(e) = snapshot_cleanup_query(app_state, query_id).await {
         tracing::warn!(

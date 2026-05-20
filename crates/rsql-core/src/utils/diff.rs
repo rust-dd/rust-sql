@@ -36,40 +36,40 @@ pub fn compute_diff(pinned_packed: &str, current_packed: &str) -> (String, Strin
     let pinned_set: HashSet<&str> = pinned_rows.iter().copied().collect();
     let current_set: HashSet<&str> = current_rows.iter().copied().collect();
 
-    let (added, removed, unchanged_count) =
-        if current_rows.len() > 5000 || pinned_rows.len() > 5000 {
-            let added: Vec<&str> = current_rows
-                .par_iter()
-                .filter(|r| !pinned_set.contains(*r))
-                .copied()
-                .collect();
-            let removed: Vec<&str> = pinned_rows
-                .par_iter()
-                .filter(|r| !current_set.contains(*r))
-                .copied()
-                .collect();
-            let unchanged: usize = current_rows
-                .par_iter()
-                .filter(|r| pinned_set.contains(*r))
-                .count();
-            (added, removed, unchanged)
-        } else {
-            let added: Vec<&str> = current_rows
-                .iter()
-                .filter(|r| !pinned_set.contains(*r))
-                .copied()
-                .collect();
-            let removed: Vec<&str> = pinned_rows
-                .iter()
-                .filter(|r| !current_set.contains(*r))
-                .copied()
-                .collect();
-            let unchanged: usize = current_rows
-                .iter()
-                .filter(|r| pinned_set.contains(*r))
-                .count();
-            (added, removed, unchanged)
-        };
+    let (added, removed, unchanged_count) = if current_rows.len() > 5000 || pinned_rows.len() > 5000
+    {
+        let added: Vec<&str> = current_rows
+            .par_iter()
+            .filter(|r| !pinned_set.contains(*r))
+            .copied()
+            .collect();
+        let removed: Vec<&str> = pinned_rows
+            .par_iter()
+            .filter(|r| !current_set.contains(*r))
+            .copied()
+            .collect();
+        let unchanged: usize = current_rows
+            .par_iter()
+            .filter(|r| pinned_set.contains(*r))
+            .count();
+        (added, removed, unchanged)
+    } else {
+        let added: Vec<&str> = current_rows
+            .iter()
+            .filter(|r| !pinned_set.contains(*r))
+            .copied()
+            .collect();
+        let removed: Vec<&str> = pinned_rows
+            .iter()
+            .filter(|r| !current_set.contains(*r))
+            .copied()
+            .collect();
+        let unchanged: usize = current_rows
+            .iter()
+            .filter(|r| pinned_set.contains(*r))
+            .count();
+        (added, removed, unchanged)
+    };
 
     let header = pinned_packed.split(ROW_SEP).next().unwrap_or("");
     (

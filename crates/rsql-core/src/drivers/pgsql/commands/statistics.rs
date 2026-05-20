@@ -64,10 +64,7 @@ pub async fn pgsql_fk_details(
     load_fk_details(&client, schema, table, direction).await
 }
 
-pub async fn pgsql_load_locks(
-    app_state: &AppState,
-    project_id: &str,
-) -> Result<String, AppError> {
+pub async fn pgsql_load_locks(app_state: &AppState, project_id: &str) -> Result<String, AppError> {
     let client = acquire_client(&app_state.meta_clients, project_id).await?;
     let result = load_active_locks(&client).await?;
     sonic_rs::to_string(&result).map_err(|e| AppError::QueryFailed(e.to_string()))

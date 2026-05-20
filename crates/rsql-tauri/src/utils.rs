@@ -29,5 +29,3 @@ pub async fn system_resource_usage(
 pub fn compute_diff(pinned_packed: String, current_packed: String) -> (String, String, usize) {
     rsql_core::utils::diff::compute_diff(&pinned_packed, &current_packed)
 }
-
-pub use rsql_core::utils::ResourceMonitor;

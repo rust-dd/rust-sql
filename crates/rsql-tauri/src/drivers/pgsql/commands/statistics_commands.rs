@@ -1,6 +1,6 @@
 use rsql_core::AppState;
-use rsql_core::drivers::pgsql::{DbStat, FKDetail, ForeignKeyInfo, ObjectStats};
 use rsql_core::drivers::pgsql::commands::statistics;
+use rsql_core::drivers::pgsql::{DbStat, FKDetail, ForeignKeyInfo, ObjectStats};
 use rsql_core::error::AppError;
 
 use tauri::State;

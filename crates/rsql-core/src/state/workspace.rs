@@ -48,10 +48,7 @@ pub async fn workspace_load_all(
     Ok(workspaces)
 }
 
-pub async fn workspace_delete(
-    local_db: &libsql::Database,
-    name: &str,
-) -> Result<(), AppError> {
+pub async fn workspace_delete(local_db: &libsql::Database, name: &str) -> Result<(), AppError> {
     let conn = local_db
         .connect()
         .map_err(|e| AppError::DatabaseError(e.to_string()))?;

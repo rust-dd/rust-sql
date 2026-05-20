@@ -6,10 +6,7 @@ async fn project_roundtrip() {
     // databases are scoped per-connection, and the project_* helpers open
     // their own connections internally.
     let tmp_dir = std::env::temp_dir();
-    let db_path = tmp_dir.join(format!(
-        "rsql_core_state_smoke_{}.db",
-        std::process::id()
-    ));
+    let db_path = tmp_dir.join(format!("rsql_core_state_smoke_{}.db", std::process::id()));
     let _ = std::fs::remove_file(&db_path);
 
     let db = libsql::Builder::new_local(&db_path)
@@ -113,7 +110,10 @@ async fn bootstrap_creates_tables() {
 
     let conn = state.local_db.connect().unwrap();
     let mut rows = conn
-        .query("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name", ())
+        .query(
+            "SELECT name FROM sqlite_master WHERE type='table' ORDER BY name",
+            (),
+        )
         .await
         .unwrap();
 
@@ -129,6 +129,9 @@ async fn bootstrap_creates_tables() {
         "virtual_query_snapshots",
         "virtual_query_pages",
     ] {
-        assert!(names.contains(&required.to_string()), "missing table: {required}");
+        assert!(
+            names.contains(&required.to_string()),
+            "missing table: {required}"
+        );
     }
 }

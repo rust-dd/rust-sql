@@ -18,7 +18,12 @@ pub async fn spawn<S: EventSink>(
 ) -> Result<(), AppError> {
     let pty_system = native_pty_system();
     let pair = pty_system
-        .openpty(PtySize { rows, cols, pixel_width: 0, pixel_height: 0 })
+        .openpty(PtySize {
+            rows,
+            cols,
+            pixel_width: 0,
+            pixel_height: 0,
+        })
         .map_err(|e| AppError::QueryFailed(e.to_string()))?;
 
     let mut cmd = CommandBuilder::new_default_prog();
@@ -38,7 +43,10 @@ pub async fn spawn<S: EventSink>(
         .try_clone_reader()
         .map_err(|e| AppError::QueryFailed(e.to_string()))?;
 
-    let session = session::TerminalSession { writer, master: pair.master };
+    let session = session::TerminalSession {
+        writer,
+        master: pair.master,
+    };
     registry.insert(id.clone(), session).await;
 
     let terminal_id = id;

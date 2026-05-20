@@ -104,8 +104,15 @@ pub async fn pgsql_table_action(
     object_type: &str,
     app_state: State<'_, AppState>,
 ) -> Result<String, AppError> {
-    admin::pgsql_table_action(app_state.inner(), project_id, action, schema, table, object_type)
-        .await
+    admin::pgsql_table_action(
+        app_state.inner(),
+        project_id,
+        action,
+        schema,
+        table,
+        object_type,
+    )
+    .await
 }
 
 #[tauri::command(rename_all = "snake_case")]

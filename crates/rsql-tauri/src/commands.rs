@@ -5,9 +5,7 @@ use std::collections::BTreeMap;
 use tauri::{AppHandle, Manager, State};
 
 #[tauri::command(rename_all = "snake_case")]
-pub async fn project_db_select(
-    app_state: State<'_, AppState>,
-) -> Result<BTreeVecStore, AppError> {
+pub async fn project_db_select(app_state: State<'_, AppState>) -> Result<BTreeVecStore, AppError> {
     rsql_core::state::project::project_db_select(&app_state.local_db).await
 }
 
@@ -17,12 +15,8 @@ pub async fn project_db_insert(
     project_details: Vec<String>,
     app_state: State<'_, AppState>,
 ) -> Result<(), AppError> {
-    rsql_core::state::project::project_db_insert(
-        &app_state.local_db,
-        project_id,
-        project_details,
-    )
-    .await
+    rsql_core::state::project::project_db_insert(&app_state.local_db, project_id, project_details)
+        .await
 }
 
 #[tauri::command(rename_all = "snake_case")]

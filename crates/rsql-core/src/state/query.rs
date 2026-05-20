@@ -49,10 +49,7 @@ pub async fn query_db_insert(
     Ok(())
 }
 
-pub async fn query_db_delete(
-    local_db: &libsql::Database,
-    query_id: &str,
-) -> Result<(), AppError> {
+pub async fn query_db_delete(local_db: &libsql::Database, query_id: &str) -> Result<(), AppError> {
     let conn = local_db
         .connect()
         .map_err(|e| AppError::DatabaseError(e.to_string()))?;

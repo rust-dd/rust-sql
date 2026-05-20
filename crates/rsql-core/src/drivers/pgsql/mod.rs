@@ -4,9 +4,9 @@ pub mod extensions;
 pub mod metadata_schema;
 pub mod metadata_views_functions;
 pub mod query_execution;
-pub mod streaming;
 pub mod roles_schema_objects;
 pub mod statistics_activity;
+pub mod streaming;
 
 use deadpool_postgres::Pool;
 use std::sync::Arc;

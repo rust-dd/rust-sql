@@ -34,7 +34,9 @@ pub async fn handle(
                 file_path: String,
             }
             let a: Args = serde_json::from_value(payload).map_err(|e| e.to_string())?;
-            let v = admin::pgsql_csv_preview(&a.file_path).await.map_err(stringify)?;
+            let v = admin::pgsql_csv_preview(&a.file_path)
+                .await
+                .map_err(stringify)?;
             json_resp(serde_json::to_value(v).map_err(|e| e.to_string())?)
         }
 

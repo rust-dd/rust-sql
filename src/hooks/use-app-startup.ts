@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { startBackgroundUpdateCheck } from "@/lib/updater";
+import { updater } from "@/lib/platform";
 import { useProjectStore } from "@/stores/project-store";
 
 export function useAppStartup() {
@@ -10,6 +10,6 @@ export function useAppStartup() {
   }, [loadProjects]);
 
   useEffect(() => {
-    startBackgroundUpdateCheck();
+    updater.startBackgroundUpdateCheck();
   }, []);
 }

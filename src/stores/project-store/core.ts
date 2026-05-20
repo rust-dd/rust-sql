@@ -1,5 +1,5 @@
 import type { StateCreator } from "zustand";
-import { deleteProject as deleteProjectApi, getProjects, insertProject } from "@/tauri";
+import { deleteProject as deleteProjectApi, getProjects, insertProject } from "@/lib/api";
 import type { DriverType, ProjectConnectionStatus, ProjectDetails, ProjectMap } from "@/types";
 import { ProjectConnectionStatus as PCS } from "@/types";
 import type { ProjectState } from "./index";

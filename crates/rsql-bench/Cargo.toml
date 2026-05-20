@@ -1,0 +1,29 @@
+[package]
+name = "rsql-bench"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+publish = false
+
+[dependencies]
+
+[dev-dependencies]
+criterion = { workspace = true }
+rsql-core = { path = "../rsql-core" }
+rsql-proxy = { path = "../rsql-proxy" }
+serde_json = { workspace = true }
+sonic-rs = { workspace = true }
+tokio-postgres = { workspace = true }
+uuid = { workspace = true }
+
+[[bench]]
+name = "pack_rows"
+harness = false
+
+[[bench]]
+name = "protocol_frames"
+harness = false
+
+[[bench]]
+name = "process_simple_messages"
+harness = false

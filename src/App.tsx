@@ -22,7 +22,7 @@ import { TerminalPanel } from "@/components/terminal-panel";
 import { TopBar } from "@/components/top-bar";
 import { useAppStartup } from "@/hooks/use-app-startup";
 import { useQueryLifecycle } from "@/hooks/use-query-lifecycle";
-import { checkForUpdates } from "@/lib/updater";
+import { updater } from "@/lib/platform";
 import { useProjectStore } from "@/stores/project-store";
 import { useActiveTab, useTabStore } from "@/stores/tab-store";
 import { useUIStore } from "@/stores/ui-store";
@@ -123,7 +123,7 @@ export default function App() {
       onContextMenu={(e) => e.preventDefault()}
     >
       <TopBar
-        onCheckUpdates={() => void checkForUpdates()}
+        onCheckUpdates={() => void updater.checkForUpdates()}
         onOpenCommandPalette={() => setCommandPaletteOpen(true)}
       />
 
@@ -298,7 +298,7 @@ export default function App() {
         onClose={() => setCommandPaletteOpen(false)}
         onExecute={() => void runQuery()}
         onExplain={() => void runExplain()}
-        onCheckUpdates={() => void checkForUpdates()}
+        onCheckUpdates={() => void updater.checkForUpdates()}
       />
       <Toaster theme="dark" position="bottom-right" richColors />
     </div>

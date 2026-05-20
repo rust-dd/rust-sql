@@ -22,7 +22,9 @@ pub async fn handle(
                 project_id: String,
             }
             let a: Args = serde_json::from_value(payload).map_err(|e| e.to_string())?;
-            let v = metadata::$fn(state, &a.project_id).await.map_err(stringify)?;
+            let v = metadata::$fn(state, &a.project_id)
+                .await
+                .map_err(stringify)?;
             json_resp(serde_json::to_value(v).map_err(|e| e.to_string())?)
         }};
     }

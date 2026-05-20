@@ -20,7 +20,9 @@ pub struct ProxyConfig {
 }
 
 pub fn router(config: ProxyConfig) -> Router {
-    let ws_state = ws::WsState { app_state: config.app_state };
+    let ws_state = ws::WsState {
+        app_state: config.app_state,
+    };
     let mut app = Router::new()
         .merge(health::routes())
         .merge(ws::routes(ws_state));

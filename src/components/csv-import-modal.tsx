@@ -1,4 +1,4 @@
-import { open } from "@tauri-apps/plugin-dialog";
+import { dialog } from "@/lib/platform";
 import { AlertCircle, ArrowRight, Check, FileUp, Loader2 } from "lucide-react";
 import { useCallback, useState } from "react";
 import { DriverFactory } from "@/lib/database-driver";
@@ -33,13 +33,20 @@ export function CSVImportModal({
   const projects = useProjectStore((s) => s.projects);
 
   const pickFile = useCallback(async () => {
-    const selected = await open({
-      multiple: false,
+    const selected = await dialog.openFile({
       filters: [{ name: "CSV", extensions: ["csv", "tsv", "txt"] }],
     });
     if (!selected) return;
 
-    const path = typeof selected === "string" ? selected : selected;
+    if (selected.kind === "file") {
+      setResult({
+        success: false,
+        message: "CSV import in the web build is coming soon. Use the desktop app to import files.",
+      });
+      return;
+    }
+
+    const path = selected.path;
     setFilePath(path);
     setResult(null);
 

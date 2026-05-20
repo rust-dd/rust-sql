@@ -44,10 +44,7 @@ pub async fn handle(
             super::pgsql_meta_statistics::handle(session, cmd, payload, id).await
         }
 
-        "pgsql_view_info"
-        | "pgsql_matview_info"
-        | "pgsql_function_info"
-        | "pgsql_generate_ddl" => {
+        "pgsql_view_info" | "pgsql_matview_info" | "pgsql_function_info" | "pgsql_generate_ddl" => {
             super::pgsql_meta_objects::handle(session, cmd, payload, id).await
         }
 

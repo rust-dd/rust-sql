@@ -23,7 +23,10 @@ export interface Transport {
 }
 
 export class TransportError extends Error {
-  constructor(public readonly code: string | undefined, message: string) {
+  constructor(
+    public readonly code: string | undefined,
+    message: string,
+  ) {
     super(message);
     this.name = "TransportError";
   }

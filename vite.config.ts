@@ -42,10 +42,7 @@ export default defineConfig(async ({ mode }) => {
                 __dirname,
                 "./src/lib/platform/stubs/empty.ts",
               ),
-              "@tauri-apps/plugin-fs": path.resolve(
-                __dirname,
-                "./src/lib/platform/stubs/empty.ts",
-              ),
+              "@tauri-apps/plugin-fs": path.resolve(__dirname, "./src/lib/platform/stubs/empty.ts"),
               "@tauri-apps/plugin-process": path.resolve(
                 __dirname,
                 "./src/lib/platform/stubs/empty.ts",

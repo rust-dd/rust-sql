@@ -43,7 +43,11 @@ export class WebSocketTransport implements Transport {
     return (await this.dispatch(cmd, args, opts, false)) as T;
   }
 
-  async invokeRaw(cmd: string, args?: Record<string, unknown>, opts?: InvokeOptions): Promise<Uint8Array> {
+  async invokeRaw(
+    cmd: string,
+    args?: Record<string, unknown>,
+    opts?: InvokeOptions,
+  ): Promise<Uint8Array> {
     return (await this.dispatch(cmd, args, opts, true)) as Uint8Array;
   }
 
@@ -84,7 +88,8 @@ export class WebSocketTransport implements Transport {
   close(): void {
     this.closedByUser = true;
     this.socket?.close(1000, "client shutdown");
-    for (const p of this.pending.values()) p.reject(new TransportError("CLOSED", "transport closed"));
+    for (const p of this.pending.values())
+      p.reject(new TransportError("CLOSED", "transport closed"));
     this.pending.clear();
     this.events.clear();
   }
@@ -119,7 +124,9 @@ export class WebSocketTransport implements Transport {
       throw new TransportError("CLOSED", "websocket is not open");
     }
     if (this.socket.bufferedAmount > BUFFERED_WARN_THRESHOLD && !this.backpressureWarned) {
-      console.warn(`WebSocketTransport: bufferedAmount=${this.socket.bufferedAmount} exceeds threshold`);
+      console.warn(
+        `WebSocketTransport: bufferedAmount=${this.socket.bufferedAmount} exceeds threshold`,
+      );
       this.backpressureWarned = true;
     } else if (this.socket.bufferedAmount < BUFFERED_WARN_THRESHOLD / 4) {
       this.backpressureWarned = false;
@@ -230,7 +237,8 @@ export class WebSocketTransport implements Transport {
 
   private onClose(): void {
     if (this.closedByUser) return;
-    for (const p of this.pending.values()) p.reject(new TransportError("DISCONNECTED", "websocket closed"));
+    for (const p of this.pending.values())
+      p.reject(new TransportError("DISCONNECTED", "websocket closed"));
     this.pending.clear();
     const delay = this.backoff.next();
     console.warn(`WebSocketTransport: reconnecting in ${delay}ms`);

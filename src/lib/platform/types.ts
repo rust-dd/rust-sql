@@ -14,9 +14,7 @@ export interface OpenFileOptions {
   filters?: FileFilter[];
 }
 
-export type OpenFileResult =
-  | { kind: "path"; path: string }
-  | { kind: "file"; file: File };
+export type OpenFileResult = { kind: "path"; path: string } | { kind: "file"; file: File };
 
 export interface Dialog {
   saveFile(opts: SaveFileOptions): Promise<boolean>;

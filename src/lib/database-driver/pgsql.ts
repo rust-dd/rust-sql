@@ -49,10 +49,17 @@ export class PostgreSQLDriver implements DatabaseDriver {
     return transport.invoke<string[]>("pgsql_load_schemas", { project_id: projectId });
   }
   async loadTables(projectId: string, schema: string) {
-    return transport.invoke<WireTableInfo[]>("pgsql_load_tables", { project_id: projectId, schema });
+    return transport.invoke<WireTableInfo[]>("pgsql_load_tables", {
+      project_id: projectId,
+      schema,
+    });
   }
   async loadColumns(projectId: string, schema: string, table: string) {
-    return transport.invoke<string[]>("pgsql_load_columns", { project_id: projectId, schema, table });
+    return transport.invoke<string[]>("pgsql_load_columns", {
+      project_id: projectId,
+      schema,
+      table,
+    });
   }
   async loadColumnDetails(projectId: string, schema: string, table: string) {
     const wire = await transport.invoke<WireColumnDetail[]>("pgsql_load_column_details", {
@@ -106,7 +113,10 @@ export class PostgreSQLDriver implements DatabaseDriver {
     return transport.invoke<string[]>("pgsql_load_views", { project_id: projectId, schema });
   }
   async loadMaterializedViews(projectId: string, schema: string) {
-    return transport.invoke<string[]>("pgsql_load_materialized_views", { project_id: projectId, schema });
+    return transport.invoke<string[]>("pgsql_load_materialized_views", {
+      project_id: projectId,
+      schema,
+    });
   }
   async loadFunctions(projectId: string, schema: string) {
     const wire = await transport.invoke<WireFunctionInfo[]>("pgsql_load_functions", {
@@ -167,14 +177,16 @@ export class PostgreSQLDriver implements DatabaseDriver {
       }
     });
 
-    transport.invoke("pgsql_run_query_streamed", {
-      project_id: projectId,
-      sql,
-      stream_id: streamId,
-    }).catch((err) => {
-      unlisten();
-      rejectStream?.(err);
-    });
+    transport
+      .invoke("pgsql_run_query_streamed", {
+        project_id: projectId,
+        sql,
+        stream_id: streamId,
+      })
+      .catch((err) => {
+        unlisten();
+        rejectStream?.(err);
+      });
 
     return streamDone;
   }
@@ -216,7 +228,9 @@ export class PostgreSQLDriver implements DatabaseDriver {
     return transport.invoke<string[][]>("pgsql_load_activity", { project_id: projectId });
   }
   async loadDatabaseStats(projectId: string) {
-    return transport.invoke<[string, string][]>("pgsql_load_database_stats", { project_id: projectId });
+    return transport.invoke<[string, string][]>("pgsql_load_database_stats", {
+      project_id: projectId,
+    });
   }
   async loadTableStats(projectId: string) {
     return transport.invoke<string[][]>("pgsql_load_table_stats", { project_id: projectId });
@@ -241,13 +255,16 @@ export class PostgreSQLDriver implements DatabaseDriver {
     });
   }
   async loadFKDetails(projectId: string, schema: string, table: string, direction: string) {
-    return transport.invoke<[string, string, string, string, string, string, string, string, string][]>(
-      "pgsql_fk_details",
-      { project_id: projectId, schema, table, direction },
-    );
+    return transport.invoke<
+      [string, string, string, string, string, string, string, string, string][]
+    >("pgsql_fk_details", { project_id: projectId, schema, table, direction });
   }
   async loadViewInfo(projectId: string, schema: string, view: string) {
-    return transport.invoke<[string, string][]>("pgsql_view_info", { project_id: projectId, schema, view });
+    return transport.invoke<[string, string][]>("pgsql_view_info", {
+      project_id: projectId,
+      schema,
+      view,
+    });
   }
   async loadMatviewInfo(projectId: string, schema: string, matview: string) {
     return transport.invoke<[string, string][]>("pgsql_matview_info", {
@@ -296,7 +313,11 @@ export class PostgreSQLDriver implements DatabaseDriver {
     return transport.invoke<boolean>("pgsql_listen_stop", { project_id: projectId, channel });
   }
   async notifySend(projectId: string, channel: string, payload: string) {
-    return transport.invoke<boolean>("pgsql_notify_send", { project_id: projectId, channel, payload });
+    return transport.invoke<boolean>("pgsql_notify_send", {
+      project_id: projectId,
+      channel,
+      payload,
+    });
   }
   async discoverChannels(projectId: string) {
     return transport.invoke<string[]>("pgsql_discover_channels", { project_id: projectId });
@@ -335,13 +356,17 @@ export class PostgreSQLDriver implements DatabaseDriver {
     return transport.invoke<string[]>("pgsql_load_databases", { project_id: projectId });
   }
   async loadTablespaces(projectId: string) {
-    return transport.invoke<[string, string, string][]>("pgsql_load_tablespaces", { project_id: projectId });
+    return transport.invoke<[string, string, string][]>("pgsql_load_tablespaces", {
+      project_id: projectId,
+    });
   }
   async loadExtensions(projectId: string) {
     return transport.invoke<string[][]>("pgsql_load_extensions", { project_id: projectId });
   }
   async loadAvailableExtensions(projectId: string) {
-    return transport.invoke<string[][]>("pgsql_load_available_extensions", { project_id: projectId });
+    return transport.invoke<string[][]>("pgsql_load_available_extensions", {
+      project_id: projectId,
+    });
   }
   async loadEnumTypes(projectId: string) {
     return transport.invoke<string[][]>("pgsql_load_enum_types", { project_id: projectId });

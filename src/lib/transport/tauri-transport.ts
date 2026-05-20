@@ -22,7 +22,11 @@ export class TauriTransport implements Transport {
     return invoke<T>(cmd, args);
   }
 
-  async invokeRaw(cmd: string, args?: Record<string, unknown>, _opts?: InvokeOptions): Promise<Uint8Array> {
+  async invokeRaw(
+    cmd: string,
+    args?: Record<string, unknown>,
+    _opts?: InvokeOptions,
+  ): Promise<Uint8Array> {
     const { invoke } = await this.core();
     const result = await invoke<ArrayBuffer | Uint8Array | string>(cmd, args);
     if (result instanceof Uint8Array) return result;

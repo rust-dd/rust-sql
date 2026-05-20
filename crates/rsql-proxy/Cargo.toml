@@ -1,0 +1,37 @@
+[package]
+name = "rsql-proxy"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+description = "rsql-proxy: WebSocket bridge for the browser/hosted RSQL build"
+
+[lib]
+name = "rsql_proxy"
+path = "src/lib.rs"
+
+[[bin]]
+name = "rsql-proxy"
+path = "src/main.rs"
+
+[dependencies]
+axum = { workspace = true }
+tower = { workspace = true }
+tower-http = { workspace = true }
+tokio = { workspace = true, features = ["rt-multi-thread", "macros", "signal", "net"] }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+sonic-rs = { workspace = true }
+clap = { workspace = true }
+futures-util = { workspace = true }
+rsql-core = { path = "../rsql-core" }
+uuid = { workspace = true }
+tokio-postgres = { workspace = true }
+
+[dev-dependencies]
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
+tokio-tungstenite = "0.24"
+tokio = { workspace = true, features = ["macros", "rt-multi-thread", "time"] }
+tempfile = "3"
+serde_json = { workspace = true }

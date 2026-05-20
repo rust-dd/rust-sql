@@ -1,0 +1,33 @@
+[package]
+name = "rsql-core"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+description = "Shared core for the rsql desktop and proxy builds"
+
+[lib]
+path = "src/lib.rs"
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+sonic-rs.workspace = true
+tokio.workspace = true
+tokio-postgres.workspace = true
+deadpool-postgres.workspace = true
+postgres-native-tls.workspace = true
+native-tls.workspace = true
+tracing.workspace = true
+libsql.workspace = true
+thiserror.workspace = true
+portable-pty.workspace = true
+rayon.workspace = true
+sysinfo.workspace = true
+csv.workspace = true
+futures-util.workspace = true
+russh.workspace = true
+uuid = { workspace = true }
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
+tempfile = "3"

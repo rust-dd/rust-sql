@@ -1,4 +1,4 @@
-import { listen } from "@tauri-apps/api/event";
+import { transport } from "@/lib/transport";
 import { Bell, BellOff, Radio, Send, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { DriverFactory } from "@/lib/database-driver";
@@ -44,18 +44,20 @@ export function NotifyPanel({ projectId }: NotifyPanelProps) {
     const eventName = `pg-notify-${projectId}`;
     let unlisten: (() => void) | null = null;
 
-    listen<{ channel: string; payload: string }>(eventName, (event) => {
-      setNotifications((prev) => [
-        ...prev,
-        {
-          channel: event.payload.channel,
-          payload: event.payload.payload,
-          timestamp: new Date().toISOString(),
-        },
-      ]);
-    }).then((fn) => {
-      unlisten = fn;
-    });
+    transport
+      .listen<{ channel: string; payload: string }>(eventName, (payload) => {
+        setNotifications((prev) => [
+          ...prev,
+          {
+            channel: payload.channel,
+            payload: payload.payload,
+            timestamp: new Date().toISOString(),
+          },
+        ]);
+      })
+      .then((fn) => {
+        unlisten = fn;
+      });
 
     return () => {
       unlisten?.();

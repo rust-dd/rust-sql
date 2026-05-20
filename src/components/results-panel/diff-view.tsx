@@ -1,4 +1,4 @@
-import { invoke } from "@tauri-apps/api/core";
+import { transport } from "@/lib/transport";
 import { Diff, Loader2 } from "lucide-react";
 import { useRef, useState } from "react";
 
@@ -44,10 +44,11 @@ export function DiffView({
     const pinnedPacked = packRows(pinnedColumns, pinnedRows);
     const currentPacked = packRows(currentColumns, currentRows);
 
-    invoke<[string, string, number]>("compute_diff", {
-      pinned_packed: pinnedPacked,
-      current_packed: currentPacked,
-    })
+    transport
+      .invoke<[string, string, number]>("compute_diff", {
+        pinned_packed: pinnedPacked,
+        current_packed: currentPacked,
+      })
       .then(([addedPacked, removedPacked, unchangedCount]) => {
         const unpackRows = (packed: string): string[][] => {
           if (!packed) return [];

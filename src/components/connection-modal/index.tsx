@@ -1,7 +1,7 @@
 import { CheckCircle2, Loader2, XCircle } from "lucide-react";
 import type React from "react";
 import { useEffect, useState } from "react";
-import { pgsqlTestConnection } from "@/tauri";
+import { pgsqlTestConnection } from "@/lib/api";
 import type { DriverType, ProjectDetails } from "@/types";
 import { Button } from "../ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "../ui/dialog";

@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
-import { deleteQuery, getQueries, insertQuery } from "@/tauri";
+import { deleteQuery, getQueries, insertQuery } from "@/lib/api";
 
 export interface SavedQuery {
   id: string;

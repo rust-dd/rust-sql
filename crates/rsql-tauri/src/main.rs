@@ -4,6 +4,7 @@
 mod app_setup;
 mod commands;
 mod drivers;
+mod event_sink;
 mod terminal;
 mod utils;
 

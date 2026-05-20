@@ -5,7 +5,7 @@ use rsql_core::error::AppError;
 use tauri::ipc::Response;
 use tauri::{AppHandle, Manager, State};
 
-use crate::drivers::pgsql::streaming::execute_query_streamed;
+use rsql_core::drivers::pgsql::streaming::execute_query_streamed;
 
 use super::pool_connection::{acquire_client, set_cancel_token};
 
@@ -49,7 +49,8 @@ pub async fn pgsql_run_query_streamed(
     let client = acquire_client(&app_state.clients, project_id).await?;
     set_cancel_token(&app_state, project_id, client.cancel_token()).await?;
 
-    execute_query_streamed(&client, sql, stream_id, &app).await
+    let sink = crate::event_sink::TauriEventSink::new(app.clone());
+    execute_query_streamed(&client, sql, stream_id, &sink).await
 }
 
 #[tauri::command(rename_all = "snake_case")]

@@ -1,6 +1,9 @@
+pub mod bootstrap;
 pub mod project;
 pub mod query;
 pub mod workspace;
+
+pub use bootstrap::bootstrap;
 
 use deadpool_postgres::Pool;
 use std::{collections::BTreeMap, sync::Arc};

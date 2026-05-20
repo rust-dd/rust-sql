@@ -3,7 +3,7 @@ import { cn } from "@/lib/utils";
 import { useHistoryStore } from "@/stores/history-store";
 import { useProjectStore } from "@/stores/project-store";
 import { useActiveTab } from "@/stores/tab-store";
-import { getSystemResourceUsage, type SystemResourceUsage } from "@/tauri";
+import { getSystemResourceUsage, type SystemResourceUsage } from "@/lib/api";
 import { ProjectConnectionStatus } from "@/types";
 
 export function StatusBar() {

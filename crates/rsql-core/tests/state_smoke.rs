@@ -102,3 +102,33 @@ async fn project_roundtrip() {
     drop(db);
     let _ = std::fs::remove_file(&db_path);
 }
+
+#[tokio::test]
+async fn bootstrap_creates_tables() {
+    let tmp = tempfile::NamedTempFile::new().unwrap();
+    let path = tmp.path().to_string_lossy().to_string();
+    let state = rsql_core::state::bootstrap(&path)
+        .await
+        .expect("bootstrap should succeed");
+
+    let conn = state.local_db.connect().unwrap();
+    let mut rows = conn
+        .query("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name", ())
+        .await
+        .unwrap();
+
+    let mut names = Vec::new();
+    while let Some(row) = rows.next().await.unwrap() {
+        names.push(row.get::<String>(0).unwrap());
+    }
+
+    for required in [
+        "projects",
+        "queries",
+        "workspaces",
+        "virtual_query_snapshots",
+        "virtual_query_pages",
+    ] {
+        assert!(names.contains(&required.to_string()), "missing table: {required}");
+    }
+}

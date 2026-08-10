@@ -6,7 +6,7 @@ use crate::drivers::pgsql::execute_virtual;
 
 use tokio::time::{Duration, sleep};
 
-use super::pool_connection::{acquire_client, is_sqlite_lock_error, set_cancel_token};
+use super::pool_connection::{acquire_client, is_sqlite_lock_error};
 use super::{CELL_SEP, SNAPSHOT_PAGE_WRITE_RETRIES};
 
 #[derive(Clone)]
@@ -232,7 +232,6 @@ pub(crate) async fn restore_virtual_from_snapshot(
     };
 
     let client = acquire_client(&app_state.clients, &meta.project_id).await?;
-    set_cancel_token(app_state, &meta.project_id, client.cancel_token()).await?;
 
     let (columns_packed, total_rows, first_page_packed, _) = execute_virtual(
         &client,

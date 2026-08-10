@@ -43,8 +43,8 @@ export class PostgreSQLDriver implements DatabaseDriver {
       ssh: ssh ?? null,
     });
   }
-  async cancelQuery(projectId: string) {
-    return invoke<boolean>("pgsql_cancel_query", { project_id: projectId });
+  async cancelQuery(execId: string) {
+    return invoke<boolean>("pgsql_cancel_query", { exec_id: execId });
   }
   async loadSchemas(projectId: string) {
     return invoke<string[]>("pgsql_load_schemas", { project_id: projectId });
@@ -123,11 +123,12 @@ export class PostgreSQLDriver implements DatabaseDriver {
     });
     return parseTriggerFunctionInfo(wire);
   }
-  async runQuery(projectId: string, sql: string, timeoutMs?: number) {
+  async runQuery(projectId: string, sql: string, timeoutMs?: number, execId?: string) {
     // Use packed format for faster IPC (avoids JSON overhead of nested arrays)
     const [packed, time] = await invoke<WirePackedResult>("pgsql_run_query_packed", {
       project_id: projectId,
       sql,
+      exec_id: execId ?? crypto.randomUUID(),
       timeout_ms: timeoutMs ?? null,
     });
     return unpackResult(packed, time);
@@ -137,6 +138,7 @@ export class PostgreSQLDriver implements DatabaseDriver {
     sql: string,
     streamId: string,
     { onColumns, onChunk, onDone }: StreamCallbacks,
+    execId?: string,
   ): Promise<void> {
     let resolveStream: () => void;
     let rejectStream: (err: unknown) => void;
@@ -171,6 +173,7 @@ export class PostgreSQLDriver implements DatabaseDriver {
       project_id: projectId,
       sql,
       stream_id: streamId,
+      exec_id: execId ?? streamId,
     }).catch((err) => {
       unlisten();
       rejectStream?.(err);
@@ -184,11 +187,13 @@ export class PostgreSQLDriver implements DatabaseDriver {
     queryId: string,
     pageSize: number,
     timeoutMs?: number,
+    execId?: string,
   ) {
     return invoke<[string, number, string, number]>("pgsql_execute_virtual", {
       project_id: projectId,
       sql,
       query_id: queryId,
+      exec_id: execId ?? queryId,
       page_size: pageSize,
       timeout_ms: timeoutMs ?? null,
     });

@@ -7,7 +7,7 @@ use crate::drivers::pgsql::mutation::{
 use tauri::{Result, State};
 use tokio_postgres::types::ToSql;
 
-use super::pool_connection::{acquire_client, set_cancel_token};
+use super::pool_connection::acquire_client;
 
 #[derive(serde::Serialize)]
 pub struct MutationReport {
@@ -81,7 +81,6 @@ pub async fn pgsql_apply_row_mutations(
     }
 
     let mut client = acquire_client(&app_state.clients, project_id).await?;
-    set_cancel_token(&app_state, project_id, client.cancel_token()).await?;
 
     let types = load_column_types(&client, schema, table).await?;
 

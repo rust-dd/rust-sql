@@ -61,7 +61,7 @@ export interface DatabaseDriver {
     key: [string, string, string, string, string, string],
     ssh?: string[],
   ): Promise<ProjectConnectionStatus>;
-  cancelQuery?(projectId: string): Promise<boolean>;
+  cancelQuery?(execId: string): Promise<boolean>;
   loadSchemas(projectId: string): Promise<string[]>;
   loadTables(projectId: string, schema: string): Promise<WireTableInfo[]>;
   loadColumns(projectId: string, schema: string, table: string): Promise<string[]>;
@@ -75,12 +75,18 @@ export interface DatabaseDriver {
   loadMaterializedViews(projectId: string, schema: string): Promise<string[]>;
   loadFunctions(projectId: string, schema: string): Promise<FunctionInfo[]>;
   loadTriggerFunctions(projectId: string, schema: string): Promise<TriggerFunctionInfo[]>;
-  runQuery(projectId: string, sql: string, timeoutMs?: number): Promise<WireQueryResult>;
+  runQuery(
+    projectId: string,
+    sql: string,
+    timeoutMs?: number,
+    execId?: string,
+  ): Promise<WireQueryResult>;
   runQueryStreamed?(
     projectId: string,
     sql: string,
     streamId: string,
     callbacks: StreamCallbacks,
+    execId?: string,
   ): Promise<void>;
   executeVirtual?(
     projectId: string,
@@ -88,6 +94,7 @@ export interface DatabaseDriver {
     queryId: string,
     pageSize: number,
     timeoutMs?: number,
+    execId?: string,
   ): Promise<[string, number, string, number]>;
   fetchPage?(
     projectId: string,

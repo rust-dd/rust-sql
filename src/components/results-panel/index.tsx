@@ -40,16 +40,16 @@ export function ResultsPanel() {
   const vq = activeTab?.virtualQuery;
 
   const handleCancel = useCallback(async () => {
-    if (!activeTab?.projectId || !activeTab.isExecuting) return;
+    if (!activeTab?.projectId || !activeTab.isExecuting || !activeTab.execId) return;
     const d = useProjectStore.getState().projects[activeTab.projectId];
     if (!d) return;
     try {
       const driver = DriverFactory.getDriver(d.driver);
-      await driver.cancelQuery?.(activeTab.projectId);
+      await driver.cancelQuery?.(activeTab.execId);
     } catch (err) {
       console.error("Failed to cancel query:", err);
     }
-  }, [activeTab?.projectId, activeTab?.isExecuting]);
+  }, [activeTab?.projectId, activeTab?.isExecuting, activeTab?.execId]);
 
   const { gridRef, handlePageNeeded, handleViewportRowChange, restoreRowIndex } = useVirtualPaging({
     vq,

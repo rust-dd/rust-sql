@@ -86,12 +86,16 @@ pub(crate) async fn reset_statement_timeout(client: &deadpool_postgres::Client, 
 
 pub(crate) async fn set_cancel_token(
     app_state: &AppState,
+    exec_id: &str,
     project_id: &str,
     token: CancelToken,
-) -> std::result::Result<(), AppError> {
+) {
     let mut cancel_tokens = app_state.cancel_tokens.lock().await;
-    cancel_tokens.insert(project_id.to_string(), token);
-    Ok(())
+    cancel_tokens.insert(exec_id.to_string(), (project_id.to_string(), token));
+}
+
+pub(crate) async fn clear_cancel_token(app_state: &AppState, exec_id: &str) {
+    app_state.cancel_tokens.lock().await.remove(exec_id);
 }
 
 #[tauri::command(rename_all = "snake_case")]
@@ -245,13 +249,10 @@ pub async fn pgsql_connector(
     };
 
     // Validate connectivity eagerly so connector keeps previous fail/connected behavior.
-    let query_client = match query_pool.get().await {
-        Ok(c) => c,
-        Err(e) => {
-            tracing::error!("Query pool initial connection failed: {:?}", e);
-            return Err(AppError::ConnectionFailed(full_error_chain(&e)).into());
-        }
-    };
+    if let Err(e) = query_pool.get().await {
+        tracing::error!("Query pool initial connection failed: {:?}", e);
+        return Err(AppError::ConnectionFailed(full_error_chain(&e)).into());
+    }
     if let Err(e) = meta_pool.get().await {
         tracing::error!("Meta pool initial connection failed: {:?}", e);
         return Err(AppError::ConnectionFailed(full_error_chain(&e)).into());
@@ -264,10 +265,6 @@ pub async fn pgsql_connector(
     {
         let mut meta_clients = app_state.meta_clients.lock().await;
         meta_clients.insert(project_id.to_string(), Arc::clone(&meta_pool));
-    }
-    {
-        let mut cancel_tokens = app_state.cancel_tokens.lock().await;
-        cancel_tokens.insert(project_id.to_string(), query_client.cancel_token());
     }
     {
         let mut client_ssl = app_state.client_ssl.lock().await;

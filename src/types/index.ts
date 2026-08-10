@@ -43,6 +43,8 @@ export interface Tab {
   title: string;
   editorValue: string;
   isExecuting: boolean;
+  /** Identifies the in-flight query so cancel targets this tab's query only. */
+  execId?: string;
   result?: QueryResult;
   explainResult?: ExplainPlan;
   virtualQuery?: VirtualQuery;

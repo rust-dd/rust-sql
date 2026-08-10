@@ -42,7 +42,8 @@ export function useQueryLifecycle({ setCommandPaletteOpen }: UseQueryLifecycleAr
       if (newStatus !== "Connected") return;
     }
 
-    setExecuting(tabId, true);
+    const execId = crypto.randomUUID();
+    setExecuting(tabId, true, execId);
     const startTime = Date.now();
     try {
       const driver = DriverFactory.getDriver(d.driver);
@@ -65,6 +66,7 @@ export function useQueryLifecycle({ setCommandPaletteOpen }: UseQueryLifecycleAr
           queryId,
           PAGE_SIZE,
           timeoutMs,
+          execId,
         );
 
         if (!colsPacked) {
@@ -116,7 +118,12 @@ export function useQueryLifecycle({ setCommandPaletteOpen }: UseQueryLifecycleAr
           });
         }
       } else {
-        const [cols, rows, time] = await driver.runQuery(tab.projectId, tab.editorValue, timeoutMs);
+        const [cols, rows, time] = await driver.runQuery(
+          tab.projectId,
+          tab.editorValue,
+          timeoutMs,
+          execId,
+        );
         updateResult(tabId, { columns: cols, rows, time });
         notifyQueryComplete(tab.editorValue, time, true, rows.length);
         addHistoryEntry({
@@ -215,14 +222,14 @@ export function useQueryLifecycle({ setCommandPaletteOpen }: UseQueryLifecycleAr
   const cancelQuery = useCallback(async () => {
     const { tabs, selectedTabIndex } = useTabStore.getState();
     const tab = tabs[selectedTabIndex];
-    if (!tab?.projectId || !tab.isExecuting) return;
+    if (!tab?.projectId || !tab.isExecuting || !tab.execId) return;
 
     const d = useProjectStore.getState().projects[tab.projectId];
     if (!d) return;
 
     try {
       const driver = DriverFactory.getDriver(d.driver);
-      await driver.cancelQuery?.(tab.projectId);
+      await driver.cancelQuery?.(tab.execId);
     } catch (err) {
       console.error("Failed to cancel query:", err);
     }

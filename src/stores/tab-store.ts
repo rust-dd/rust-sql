@@ -31,7 +31,7 @@ interface TabState {
   updateContent: (tabId: string, value: string) => void;
   updateResult: (tabId: string, result: QueryResult) => void;
   setResult: (tabId: string, result: QueryResult) => void;
-  setExecuting: (tabId: string, executing: boolean) => void;
+  setExecuting: (tabId: string, executing: boolean, execId?: string) => void;
   setProjectId: (tabId: string, projectId: string) => void;
   setExplainResult: (tabId: string, plan: ExplainPlan | undefined) => void;
   setVirtualQuery: (tabId: string, vq: VirtualQuery | undefined) => void;
@@ -182,6 +182,7 @@ export const useTabStore = create<TabState>()(
           withTab(s, tabId, (tab) => {
             tab.result = result;
             tab.isExecuting = false;
+            tab.execId = undefined;
           });
         }),
       setResult: (tabId, result) =>
@@ -190,10 +191,11 @@ export const useTabStore = create<TabState>()(
             tab.result = result;
           });
         }),
-      setExecuting: (tabId, executing) =>
+      setExecuting: (tabId, executing, execId) =>
         set((s) => {
           withTab(s, tabId, (tab) => {
             tab.isExecuting = executing;
+            tab.execId = executing ? execId : undefined;
           });
         }),
       setProjectId: (tabId, projectId) =>

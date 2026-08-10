@@ -1,10 +1,10 @@
 use std::time::Instant;
 use tokio_postgres::{Client, SimpleQueryMessage};
 
-use crate::common::enums::AppError;
+use crate::common::enums::{AppError, query_failed};
 
-use super::super::CELL_SEP;
-use super::helpers::{join_sep, pack_rows_vec, process_simple_messages};
+use super::super::wire::{Cell, pack_columns, pack_rows};
+use super::helpers::{column_names, process_simple_messages, row_cells};
 
 /// Events emitted during streamed query execution.
 #[derive(serde::Serialize, Clone)]
@@ -37,10 +37,7 @@ pub async fn execute_query_streamed(
     let event_name = format!("query-stream-{}", stream_id);
 
     // Begin transaction + declare cursor for memory-efficient streaming
-    client
-        .batch_execute("BEGIN")
-        .await
-        .map_err(|e| AppError::QueryFailed(e.to_string()))?;
+    client.batch_execute("BEGIN").await.map_err(query_failed)?;
 
     let cursor_sql = format!("DECLARE _rsql_cur NO SCROLL CURSOR FOR {}", sql);
     match client.batch_execute(&cursor_sql).await {
@@ -60,24 +57,15 @@ pub async fn execute_query_streamed(
                     }
                 };
 
-                let mut batch_rows: Vec<Vec<String>> = Vec::new();
+                let mut batch_rows: Vec<Vec<Cell>> = Vec::new();
                 let mut batch_columns: Option<Vec<String>> = None;
 
                 for msg in messages {
                     if let SimpleQueryMessage::Row(row) = msg {
-                        let col_count = row.columns().len();
                         if batch_columns.is_none() {
-                            let mut cols = Vec::with_capacity(col_count);
-                            for c in row.columns() {
-                                cols.push(c.name().to_owned());
-                            }
-                            batch_columns = Some(cols);
+                            batch_columns = Some(column_names(&row));
                         }
-                        let mut cells = Vec::with_capacity(col_count);
-                        for i in 0..col_count {
-                            cells.push(row.get(i).unwrap_or("null").to_owned());
-                        }
-                        batch_rows.push(cells);
+                        batch_rows.push(row_cells(&row));
                     }
                 }
 
@@ -86,7 +74,7 @@ pub async fn execute_query_streamed(
                 }
 
                 if !columns_sent && let Some(cols) = batch_columns {
-                    let header = join_sep(&cols, CELL_SEP);
+                    let header = pack_columns(&cols);
                     let _ = app.emit(
                         &event_name,
                         QueryStreamEvent::Columns {
@@ -97,7 +85,7 @@ pub async fn execute_query_streamed(
                     columns_sent = true;
                 }
 
-                let packed = pack_rows_vec(&batch_rows);
+                let packed = pack_rows(&batch_rows);
                 let _ = app.emit(&event_name, QueryStreamEvent::Chunk { data: packed });
 
                 total_sent += batch_rows.len();
@@ -128,10 +116,7 @@ pub async fn execute_query_streamed(
             client.batch_execute("ROLLBACK").await.ok();
 
             // Re-execute with simple_query for multi-statement support
-            let messages = client
-                .simple_query(sql)
-                .await
-                .map_err(|e| AppError::QueryFailed(e.to_string()))?;
+            let messages = client.simple_query(sql).await.map_err(query_failed)?;
 
             let (columns, rows) = process_simple_messages(messages);
 
@@ -144,7 +129,7 @@ pub async fn execute_query_streamed(
                     },
                 );
             } else {
-                let header = join_sep(&columns, CELL_SEP);
+                let header = pack_columns(&columns);
                 let _ = app.emit(
                     &event_name,
                     QueryStreamEvent::Columns {
@@ -153,7 +138,7 @@ pub async fn execute_query_streamed(
                     },
                 );
 
-                let packed = pack_rows_vec(&rows);
+                let packed = pack_rows(&rows);
                 let _ = app.emit(&event_name, QueryStreamEvent::Chunk { data: packed });
             }
 

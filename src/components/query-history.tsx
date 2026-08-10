@@ -1,7 +1,7 @@
 import { CheckCircle2, Clock, RotateCcw, Trash2, XCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { type HistoryEntry, useHistoryStore } from "@/stores/history-store";
-import { useTabStore } from "@/stores/tab-store";
+import { tabIdAt, useTabStore } from "@/stores/tab-store";
 import { Button } from "./ui/button";
 
 export function QueryHistory() {
@@ -11,7 +11,8 @@ export function QueryHistory() {
   const updateContent = useTabStore((s) => s.updateContent);
 
   const restoreQuery = (sql: string) => {
-    updateContent(selectedTabIndex, sql);
+    const tabId = tabIdAt(selectedTabIndex);
+    if (tabId) updateContent(tabId, sql);
   };
 
   if (entries.length === 0) {

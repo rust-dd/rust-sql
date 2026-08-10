@@ -72,42 +72,21 @@ pub fn setup_app(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>>
         .await
         .expect("Failed to create workspaces table");
 
-        conn.execute(
-            "CREATE TABLE IF NOT EXISTS virtual_query_snapshots (
-                query_id TEXT PRIMARY KEY,
-                project_id TEXT NOT NULL,
-                sql TEXT NOT NULL,
-                columns_packed TEXT NOT NULL DEFAULT '',
-                total_rows INTEGER NOT NULL DEFAULT 0,
-                page_size INTEGER NOT NULL DEFAULT 0,
-                col_count INTEGER NOT NULL DEFAULT 0,
-                created_at INTEGER NOT NULL
-            )",
-            (),
-        )
-        .await
-        .expect("Failed to create virtual_query_snapshots table");
-
-        conn.execute(
-            "CREATE TABLE IF NOT EXISTS virtual_query_pages (
-                query_id TEXT NOT NULL,
-                page_index INTEGER NOT NULL,
-                packed_page TEXT NOT NULL DEFAULT '',
-                PRIMARY KEY (query_id, page_index)
-            )",
-            (),
-        )
-        .await
-        .expect("Failed to create virtual_query_pages table");
-
-        // Best-effort orphan cleanup in case app exited before tab-close cleanup.
-        conn.execute(
-            "DELETE FROM virtual_query_pages
-             WHERE query_id NOT IN (SELECT query_id FROM virtual_query_snapshots)",
-            (),
-        )
-        .await
-        .ok();
+        // Virtual query results were mirrored into these tables one page at a
+        // time as the user scrolled, but nothing could ever read them back: the
+        // frontend does not persist the query id a page belongs to, so after a
+        // restart every row was unreachable. Drop them and reclaim the space.
+        let dropped_snapshots = conn
+            .execute("DROP TABLE IF EXISTS virtual_query_pages", ())
+            .await
+            .is_ok()
+            & conn
+                .execute("DROP TABLE IF EXISTS virtual_query_snapshots", ())
+                .await
+                .is_ok();
+        if dropped_snapshots {
+            conn.execute("VACUUM", ()).await.ok();
+        }
 
         for col in [
             "ssh_enabled",

@@ -1,37 +1,53 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { ForeignKey } from "@/lib/database-driver";
 import { DriverFactory } from "@/lib/database-driver";
-import {
-  generateDelete,
-  generateUpdate,
-  parseSelectTable,
-  quoteIdent,
-  quoteLiteral,
-} from "@/lib/sql-utils";
+import { buildMutations, countPending, emptySession, rowKeys } from "@/lib/mutations";
+import { parseSelectTable, quoteIdent, quoteLiteral } from "@/lib/sql-utils";
+import type { CellValue } from "@/lib/wire";
 import { useProjectStore } from "@/stores/project-store";
 import { useTabStore } from "@/stores/tab-store";
-import type { EditState } from "./types";
+import type { QueryResult } from "@/types";
 
 interface UseEditModeArgs {
+  tabId: string | undefined;
   projectId: string | undefined;
   editorValue: string | undefined;
-  result:
-    | { columns: string[]; rows: string[][]; time: number; capped?: boolean }
-    | null
-    | undefined;
+  result: QueryResult | null | undefined;
 }
 
-export function useEditMode({ projectId, editorValue, result }: UseEditModeArgs) {
-  const [isEditing, setIsEditing] = useState(false);
-  const [editState, setEditState] = useState<EditState | null>(null);
+export function useEditMode({ tabId, projectId, editorValue, result }: UseEditModeArgs) {
   const [editError, setEditError] = useState<string | null>(null);
   const [isCommitting, setIsCommitting] = useState(false);
-  const [pendingDeleteCount, setPendingDeleteCount] = useState(0);
+  const [confirmingApply, setConfirmingApply] = useState(false);
+
+  const editSession = useTabStore((s) => s.tabs.find((t) => t.id === tabId)?.editSession);
+  const isEditing = !!editSession;
 
   const editableTable = useMemo(() => {
     if (!editorValue) return null;
     return parseSelectTable(editorValue);
   }, [editorValue]);
+
+  // A session belongs to the table it was opened against. If the editor now
+  // points somewhere else, applying it would write to the wrong table.
+  const sessionMatchesEditor =
+    !editSession ||
+    (!!editableTable &&
+      editableTable.schema === editSession.schema &&
+      editableTable.table === editSession.table);
+
+  const keys = useMemo(
+    () =>
+      editSession && result
+        ? rowKeys(result.columns, result.rows, editSession.pkColumns)
+        : ([] as (string | null)[]),
+    [editSession, result],
+  );
+
+  const pending = useMemo(
+    () => (editSession ? countPending(editSession) : { updates: 0, deletes: 0 }),
+    [editSession],
+  );
 
   const [fkMap, setFkMap] = useState<
     Map<string, { schema: string; table: string; column: string }>
@@ -76,23 +92,25 @@ export function useEditMode({ projectId, editorValue, result }: UseEditModeArgs)
 
       const d = useProjectStore.getState().projects[pid];
       if (!d) return;
-      const newTabIdx = useTabStore.getState().tabs.length - 1;
-      useTabStore.getState().setExecuting(newTabIdx, true);
+      const tabs = useTabStore.getState().tabs;
+      const newTabId = tabs[tabs.length - 1]?.id;
+      if (!newTabId) return;
+      useTabStore.getState().setExecuting(newTabId, true);
       const driver = DriverFactory.getDriver(d.driver);
       driver
         .runQuery(pid, sql)
         .then(([cols, rows, time]) => {
-          useTabStore.getState().updateResult(newTabIdx, { columns: cols, rows, time });
+          useTabStore.getState().updateResult(newTabId, { columns: cols, rows, time });
         })
         .catch(() => {
-          useTabStore.getState().setExecuting(newTabIdx, false);
+          useTabStore.getState().setExecuting(newTabId, false);
         });
     },
     [fkMap, projectId],
   );
 
   const handleEnterEdit = useCallback(async () => {
-    if (!editableTable || !projectId) return;
+    if (!editableTable || !projectId || !tabId) return;
     const d = useProjectStore.getState().projects[projectId];
     if (!d) return;
     setEditError(null);
@@ -120,161 +138,157 @@ export function useEditMode({ projectId, editorValue, result }: UseEditModeArgs)
         return;
       }
 
-      setEditState({
-        schema: editableTable.schema,
-        table: editableTable.table,
-        pkColumns,
-        cellEdits: new Map(),
-        deletedRows: new Set(),
-      });
-      setIsEditing(true);
+      useTabStore
+        .getState()
+        .startEditSession(
+          tabId,
+          emptySession(editableTable.schema, editableTable.table, pkColumns),
+        );
     } catch (err: any) {
       setEditError(err?.message ?? "Failed to load table info");
     }
-  }, [editableTable, projectId, result?.columns]);
+  }, [editableTable, projectId, tabId, result?.columns]);
 
   const handleDiscard = useCallback(() => {
-    setIsEditing(false);
-    setEditState(null);
+    if (!tabId) return;
+    useTabStore.getState().discardEditSession(tabId);
     setEditError(null);
-  }, []);
+    setConfirmingApply(false);
+  }, [tabId]);
 
-  const runAndRefresh = useCallback(
-    async (statements: string[]) => {
-      if (!projectId || statements.length === 0) return;
-      setIsCommitting(true);
-      setEditError(null);
+  const handleRequestApply = useCallback(() => {
+    if (pending.updates + pending.deletes === 0) return;
+    setConfirmingApply(true);
+  }, [pending]);
 
-      try {
-        const d = useProjectStore.getState().projects[projectId];
-        if (!d) throw new Error("Project not found");
-        const driver = DriverFactory.getDriver(d.driver);
+  const handleCancelApply = useCallback(() => setConfirmingApply(false), []);
 
-        const txnSql = ["BEGIN", ...statements, "COMMIT"].join(";\n");
-        await driver.runQuery(projectId, txnSql, 30000);
+  const handleConfirmApply = useCallback(async () => {
+    setConfirmingApply(false);
+    if (!editSession || !projectId || !tabId) return;
 
-        const [cols, rows, time] = await driver.runQuery(projectId, editorValue ?? "");
-        const tabIdx = useTabStore.getState().selectedTabIndex;
-        useTabStore.getState().updateResult(tabIdx, { columns: cols, rows, time });
-
-        setIsEditing(false);
-        setEditState(null);
-        setPendingDeleteCount(0);
-      } catch (err: any) {
-        setEditError(err?.message ?? "Commit failed");
-      } finally {
-        setIsCommitting(false);
-      }
-    },
-    [projectId, editorValue],
-  );
-
-  const handleCommit = useCallback(() => {
-    if (!editState || !result) return;
-    const { schema, table, pkColumns, cellEdits, deletedRows } = editState;
-    const columns = result.columns;
-    const originalRows = result.rows;
-
-    const editsByRow = new Map<number, Map<number, string>>();
-    for (const [key, value] of cellEdits) {
-      const [rowStr, colStr] = key.split(":");
-      const rowIdx = parseInt(rowStr, 10);
-      const colIdx = parseInt(colStr, 10);
-      if (deletedRows.has(rowIdx)) continue;
-      if (!editsByRow.has(rowIdx)) editsByRow.set(rowIdx, new Map());
-      editsByRow.get(rowIdx)?.set(colIdx, value);
-    }
-
-    const statements: string[] = [];
-    for (const [rowIdx, changes] of editsByRow) {
-      statements.push(
-        generateUpdate(schema, table, columns, originalRows[rowIdx], changes, pkColumns),
-      );
-    }
-
-    if (statements.length === 0) {
+    const mutations = buildMutations(editSession);
+    if (mutations.length === 0) {
       handleDiscard();
       return;
     }
 
-    void runAndRefresh(statements);
-  }, [editState, result, handleDiscard, runAndRefresh]);
+    setIsCommitting(true);
+    setEditError(null);
 
-  const handleDeleteRows = useCallback(() => {
-    if (!editState || editState.deletedRows.size === 0) return;
-    setPendingDeleteCount(editState.deletedRows.size);
-  }, [editState]);
+    try {
+      const d = useProjectStore.getState().projects[projectId];
+      if (!d) throw new Error("Project not found");
+      const driver = DriverFactory.getDriver(d.driver);
+      if (!driver.applyRowMutations) throw new Error("Driver does not support inline editing");
 
-  const handleConfirmDelete = useCallback(() => {
-    if (!editState || !result) return;
-    const { schema, table, pkColumns, deletedRows } = editState;
-    const columns = result.columns;
-    const originalRows = result.rows;
+      // One transaction for updates and deletes together. The backend requires
+      // each statement to affect exactly one row and rolls the batch back
+      // otherwise, so a no-op surfaces as an error rather than a silent success.
+      await driver.applyRowMutations(
+        projectId,
+        editSession.schema,
+        editSession.table,
+        mutations,
+        30000,
+      );
 
-    const statements: string[] = [];
-    for (const rowIdx of deletedRows) {
-      statements.push(generateDelete(schema, table, columns, originalRows[rowIdx], pkColumns));
+      const [cols, rows, time] = await driver.runQuery(projectId, editorValue ?? "");
+      useTabStore.getState().updateResult(tabId, { columns: cols, rows, time });
+
+      useTabStore.getState().discardEditSession(tabId);
+    } catch (err: any) {
+      setEditError(err?.message ?? String(err));
+    } finally {
+      setIsCommitting(false);
     }
-
-    setPendingDeleteCount(0);
-    void runAndRefresh(statements);
-  }, [editState, result, runAndRefresh]);
-
-  const handleCancelDelete = useCallback(() => {
-    setPendingDeleteCount(0);
-  }, []);
+  }, [editSession, projectId, tabId, editorValue, handleDiscard]);
 
   const handleCellEdit = useCallback(
     (rowIndex: number, colIndex: number, value: string) => {
-      setEditState((prev) => {
-        if (!prev) return prev;
-        const newEdits = new Map(prev.cellEdits);
-        const original = result?.rows[rowIndex]?.[colIndex] ?? "";
-        if (value === original) {
-          newEdits.delete(`${rowIndex}:${colIndex}`);
-        } else {
-          newEdits.set(`${rowIndex}:${colIndex}`, value);
-        }
-        return { ...prev, cellEdits: newEdits };
-      });
+      if (!tabId || !editSession || !result) return;
+      const key = keys[rowIndex];
+      if (!key) {
+        setEditError("This row cannot be identified by its primary key and cannot be edited.");
+        return;
+      }
+      const column = result.columns[colIndex];
+      if (!column) return;
+
+      const original = result.rows[rowIndex]?.[colIndex];
+      const next: CellValue | undefined = value === original ? undefined : value;
+      useTabStore.getState().setCellEdit(tabId, key, column, next);
     },
-    [result],
+    [tabId, editSession, result, keys],
   );
 
-  const handleRowDelete = useCallback((rowIndex: number) => {
-    setEditState((prev) => {
-      if (!prev) return prev;
-      const newDeleted = new Set(prev.deletedRows);
-      newDeleted.add(rowIndex);
-      return { ...prev, deletedRows: newDeleted };
-    });
-  }, []);
+  const setRowDeleted = useCallback(
+    (rowIndex: number, deleted: boolean) => {
+      if (!tabId || !editSession) return;
+      const key = keys[rowIndex];
+      if (!key) {
+        setEditError("This row cannot be identified by its primary key and cannot be deleted.");
+        return;
+      }
+      useTabStore.getState().setRowDeleted(tabId, key, deleted);
+    },
+    [tabId, editSession, keys],
+  );
 
-  const handleRowRestore = useCallback((rowIndex: number) => {
-    setEditState((prev) => {
-      if (!prev) return prev;
-      const newDeleted = new Set(prev.deletedRows);
-      newDeleted.delete(rowIndex);
-      return { ...prev, deletedRows: newDeleted };
+  const handleRowDelete = useCallback(
+    (rowIndex: number) => setRowDeleted(rowIndex, true),
+    [setRowDeleted],
+  );
+  const handleRowRestore = useCallback(
+    (rowIndex: number) => setRowDeleted(rowIndex, false),
+    [setRowDeleted],
+  );
+
+  // The grid still works in row positions, so translate identities back to it.
+  const editedCells = useMemo(() => {
+    const map = new Map<string, string>();
+    if (!editSession || !result) return map;
+    keys.forEach((key, rowIndex) => {
+      if (!key) return;
+      const columns = editSession.edits[key];
+      if (!columns) return;
+      for (const [column, value] of Object.entries(columns)) {
+        const colIndex = result.columns.indexOf(column);
+        if (colIndex >= 0) map.set(`${rowIndex}:${colIndex}`, value ?? "");
+      }
     });
-  }, []);
+    return map;
+  }, [editSession, result, keys]);
+
+  const deletedRowIndices = useMemo(() => {
+    const set = new Set<number>();
+    if (!editSession) return set;
+    const marked = new Set(editSession.deletes);
+    keys.forEach((key, rowIndex) => {
+      if (key && marked.has(key)) set.add(rowIndex);
+    });
+    return set;
+  }, [editSession, keys]);
 
   return {
     isEditing,
-    editState,
+    editSession,
     editError,
     setEditError,
     isCommitting,
-    pendingDeleteCount,
+    confirmingApply,
+    pending,
+    sessionMatchesEditor,
     editableTable,
     fkMap,
+    editedCells,
+    deletedRowIndices,
     handleFKNavigate,
     handleEnterEdit,
     handleDiscard,
-    handleCommit,
-    handleDeleteRows,
-    handleConfirmDelete,
-    handleCancelDelete,
+    handleRequestApply,
+    handleConfirmApply,
+    handleCancelApply,
     handleCellEdit,
     handleRowDelete,
     handleRowRestore,

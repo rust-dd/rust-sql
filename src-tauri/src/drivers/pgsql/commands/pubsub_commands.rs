@@ -1,5 +1,5 @@
 use crate::AppState;
-use crate::common::enums::AppError;
+use crate::common::enums::{AppError, query_failed};
 use crate::drivers::pgsql::discover_notify_channels;
 
 use futures_util::StreamExt;
@@ -43,10 +43,10 @@ pub async fn pgsql_listen_start(project_id: &str, channel: &str, app: AppHandle)
             .ok_or_else(|| AppError::ProjectNotFound(project_id.to_string()))?;
 
         let mut cfg = Config::new();
-        cfg.user(&row.get::<String>(0).unwrap_or_default())
-            .password(&row.get::<String>(1).unwrap_or_default())
-            .dbname(&row.get::<String>(2).unwrap_or_default())
-            .host(&row.get::<String>(3).unwrap_or_default())
+        cfg.user(row.get::<String>(0).unwrap_or_default())
+            .password(row.get::<String>(1).unwrap_or_default())
+            .dbname(row.get::<String>(2).unwrap_or_default())
+            .host(row.get::<String>(3).unwrap_or_default())
             .port(
                 row.get::<String>(4)
                     .unwrap_or_default()
@@ -159,10 +159,7 @@ pub async fn pgsql_notify_send(
         channel.replace('\'', "''"),
         payload.replace('\'', "''"),
     );
-    client
-        .batch_execute(&sql)
-        .await
-        .map_err(|e| AppError::QueryFailed(e.to_string()))?;
+    client.batch_execute(&sql).await.map_err(query_failed)?;
     Ok(true)
 }
 

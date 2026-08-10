@@ -177,7 +177,8 @@ export function CommandPalette({
         tabWidth: 2,
         keywordCase: "upper",
       });
-      useTabStore.getState().updateContent(idx, formatted);
+      const tabId = useTabStore.getState().tabs[idx]?.id;
+      if (tabId) useTabStore.getState().updateContent(tabId, formatted);
     } catch {
       /* ignore */
     }

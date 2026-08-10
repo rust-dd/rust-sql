@@ -1,6 +1,6 @@
 use tokio_postgres::{Client, SimpleQueryMessage};
 
-use crate::common::enums::AppError;
+use crate::common::enums::{AppError, query_failed};
 
 pub async fn generate_full_ddl(
     client: &Client,
@@ -44,10 +44,7 @@ async fn generate_table_ddl(
 SELECT string_agg(col_def, E',\n' ORDER BY ordinal_position) FROM col_ddl"#
     );
 
-    let col_result = client
-        .simple_query(&sql)
-        .await
-        .map_err(|e| AppError::QueryFailed(e.to_string()))?;
+    let col_result = client.simple_query(&sql).await.map_err(query_failed)?;
     let mut col_defs = String::new();
     for msg in &col_result {
         if let SimpleQueryMessage::Row(row) = msg {
@@ -60,12 +57,11 @@ SELECT string_agg(col_def, E',\n' ORDER BY ordinal_position) FROM col_ddl"#
     fn collect_lines(messages: &[SimpleQueryMessage]) -> Vec<String> {
         let mut out = Vec::new();
         for msg in messages {
-            if let SimpleQueryMessage::Row(row) = msg {
-                if let Some(line) = row.get(0) {
-                    if !line.is_empty() {
-                        out.push(line.to_string());
-                    }
-                }
+            if let SimpleQueryMessage::Row(row) = msg
+                && let Some(line) = row.get(0)
+                && !line.is_empty()
+            {
+                out.push(line.to_string());
             }
         }
         out
@@ -79,10 +75,7 @@ SELECT string_agg(col_def, E',\n' ORDER BY ordinal_position) FROM col_ddl"#
            WHERE n.nspname = '{schema}' AND c.relname = '{table}'
            ORDER BY CASE con.contype WHEN 'p' THEN 0 WHEN 'u' THEN 1 WHEN 'f' THEN 2 ELSE 3 END"#
     );
-    let con_result = client
-        .simple_query(&con_sql)
-        .await
-        .map_err(|e| AppError::QueryFailed(e.to_string()))?;
+    let con_result = client.simple_query(&con_sql).await.map_err(query_failed)?;
     for line in collect_lines(&con_result) {
         ddl.push('\n');
         ddl.push_str(&line);
@@ -98,10 +91,7 @@ SELECT string_agg(col_def, E',\n' ORDER BY ordinal_position) FROM col_ddl"#
              AND NOT i.indisprimary
              AND NOT EXISTS (SELECT 1 FROM pg_constraint c WHERE c.conindid = i.indexrelid)"#
     );
-    let idx_result = client
-        .simple_query(&idx_sql)
-        .await
-        .map_err(|e| AppError::QueryFailed(e.to_string()))?;
+    let idx_result = client.simple_query(&idx_sql).await.map_err(query_failed)?;
     for line in collect_lines(&idx_result) {
         ddl.push('\n');
         ddl.push_str(&line);
@@ -116,10 +106,7 @@ SELECT string_agg(col_def, E',\n' ORDER BY ordinal_position) FROM col_ddl"#
            WHERE n.nspname = '{schema}' AND c.relname = '{table}'
              AND NOT t.tgisinternal"#
     );
-    let trig_result = client
-        .simple_query(&trig_sql)
-        .await
-        .map_err(|e| AppError::QueryFailed(e.to_string()))?;
+    let trig_result = client.simple_query(&trig_sql).await.map_err(query_failed)?;
     for line in collect_lines(&trig_result) {
         ddl.push('\n');
         ddl.push_str(&line);
@@ -132,10 +119,7 @@ SELECT string_agg(col_def, E',\n' ORDER BY ordinal_position) FROM col_ddl"#
            JOIN pg_namespace n ON n.oid = c.relnamespace
            WHERE n.nspname = '{schema}' AND c.relname = '{table}'"#
     );
-    let rls_result = client
-        .simple_query(&rls_sql)
-        .await
-        .map_err(|e| AppError::QueryFailed(e.to_string()))?;
+    let rls_result = client.simple_query(&rls_sql).await.map_err(query_failed)?;
     for line in collect_lines(&rls_result) {
         ddl.push('\n');
         ddl.push_str(&line);
@@ -154,10 +138,7 @@ SELECT string_agg(col_def, E',\n' ORDER BY ordinal_position) FROM col_ddl"#
            JOIN pg_namespace n ON n.oid = c.relnamespace
            WHERE n.nspname = '{schema}' AND c.relname = '{table}'"#
     );
-    let pol_result = client
-        .simple_query(&pol_sql)
-        .await
-        .map_err(|e| AppError::QueryFailed(e.to_string()))?;
+    let pol_result = client.simple_query(&pol_sql).await.map_err(query_failed)?;
     for line in collect_lines(&pol_result) {
         ddl.push('\n');
         ddl.push_str(&line);
@@ -171,10 +152,7 @@ SELECT string_agg(col_def, E',\n' ORDER BY ordinal_position) FROM col_ddl"#
            JOIN pg_namespace n ON n.oid = c.relnamespace
            WHERE n.nspname = '{schema}' AND c.relname = '{table}' AND d.objsubid = 0"#
     );
-    let cmt_result = client
-        .simple_query(&cmt_sql)
-        .await
-        .map_err(|e| AppError::QueryFailed(e.to_string()))?;
+    let cmt_result = client.simple_query(&cmt_sql).await.map_err(query_failed)?;
     for line in collect_lines(&cmt_result) {
         ddl.push('\n');
         ddl.push_str(&line);
@@ -193,7 +171,7 @@ SELECT string_agg(col_def, E',\n' ORDER BY ordinal_position) FROM col_ddl"#
     let col_cmt_result = client
         .simple_query(&col_cmt_sql)
         .await
-        .map_err(|e| AppError::QueryFailed(e.to_string()))?;
+        .map_err(query_failed)?;
     for line in collect_lines(&col_cmt_result) {
         ddl.push_str(&line);
         ddl.push('\n');
@@ -206,10 +184,7 @@ async fn generate_view_ddl(client: &Client, schema: &str, view: &str) -> Result<
     let sql = format!(
         r#"SELECT 'CREATE OR REPLACE VIEW "{schema}"."{view}" AS' || E'\n' || pg_get_viewdef('"{schema}"."{view}"'::regclass, true) || ';'"#
     );
-    let result = client
-        .simple_query(&sql)
-        .await
-        .map_err(|e| AppError::QueryFailed(e.to_string()))?;
+    let result = client.simple_query(&sql).await.map_err(query_failed)?;
     for msg in &result {
         if let SimpleQueryMessage::Row(row) = msg {
             return Ok(row.get(0).unwrap_or("").to_string());
@@ -228,10 +203,7 @@ async fn generate_matview_ddl(
            FROM pg_matviews
            WHERE schemaname = '{schema}' AND matviewname = '{matview}'"#
     );
-    let result = client
-        .simple_query(&sql)
-        .await
-        .map_err(|e| AppError::QueryFailed(e.to_string()))?;
+    let result = client.simple_query(&sql).await.map_err(query_failed)?;
 
     let mut ddl = String::new();
     for msg in &result {
@@ -247,16 +219,13 @@ async fn generate_matview_ddl(
            JOIN pg_namespace n ON n.oid = tbl.relnamespace
            WHERE n.nspname = '{schema}' AND tbl.relname = '{matview}'"#
     );
-    let idx_result = client
-        .simple_query(&idx_sql)
-        .await
-        .map_err(|e| AppError::QueryFailed(e.to_string()))?;
+    let idx_result = client.simple_query(&idx_sql).await.map_err(query_failed)?;
     for msg in &idx_result {
-        if let SimpleQueryMessage::Row(row) = msg {
-            if let Some(line) = row.get(0) {
-                ddl.push('\n');
-                ddl.push_str(line);
-            }
+        if let SimpleQueryMessage::Row(row) = msg
+            && let Some(line) = row.get(0)
+        {
+            ddl.push('\n');
+            ddl.push_str(line);
         }
     }
 
@@ -275,10 +244,7 @@ async fn generate_function_ddl(
            WHERE n.nspname = '{schema}' AND p.proname = '{func_name}'
            LIMIT 1"#
     );
-    let result = client
-        .simple_query(&sql)
-        .await
-        .map_err(|e| AppError::QueryFailed(e.to_string()))?;
+    let result = client.simple_query(&sql).await.map_err(query_failed)?;
     for msg in &result {
         if let SimpleQueryMessage::Row(row) = msg {
             return Ok(row.get(0).unwrap_or("").to_string());

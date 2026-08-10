@@ -32,16 +32,16 @@ export function ResultsToolbar(props: ToolbarProps) {
     hasExplain,
     isExecuting,
     isEditing,
-    editState,
     editableTable,
     isCommitting,
     editError,
+    pending,
+    sessionMatchesEditor,
+    confirmingApply,
     onEnterEdit,
-    onCommit,
-    onDeleteRows,
-    onConfirmDelete,
-    onCancelDelete,
-    pendingDeleteCount,
+    onRequestApply,
+    onConfirmApply,
+    onCancelApply,
     onDiscard,
     onCancel,
     virtualQuery,
@@ -140,26 +140,31 @@ export function ResultsToolbar(props: ToolbarProps) {
                 : searchTerm
                   ? `${filteredCount.toLocaleString()} / ${result.rows.length.toLocaleString()} rows`
                   : `${result.rows.length.toLocaleString()} rows`}
-              {result.capped && !virtualQuery && (
-                <span className="text-warning ml-1">(capped at 500K)</span>
+              {result.capped && (
+                <span
+                  className="text-warning ml-1"
+                  title="The result hit the in-memory limit. Rows beyond it were not kept — narrow the query to see them."
+                >
+                  (truncated)
+                </span>
               )}
             </span>
             <span className="text-muted-foreground/50">&bull;</span>
             <Clock className="h-3 w-3" />
             <span>{result.time.toFixed(0)}ms</span>
-            {isEditing && editState?.cellEdits.size ? (
+            {isEditing && pending.updates ? (
               <>
                 <span className="text-muted-foreground/50">&bull;</span>
                 <span className="text-amber-500 font-medium">
-                  {editState.cellEdits.size} edit{editState.cellEdits.size !== 1 ? "s" : ""}
+                  {pending.updates} edit{pending.updates !== 1 ? "s" : ""}
                 </span>
               </>
             ) : null}
-            {isEditing && editState?.deletedRows.size ? (
+            {isEditing && pending.deletes ? (
               <>
                 <span className="text-muted-foreground/50">&bull;</span>
                 <span className="text-destructive font-medium">
-                  {editState.deletedRows.size} delete{editState.deletedRows.size !== 1 ? "s" : ""}
+                  {pending.deletes} delete{pending.deletes !== 1 ? "s" : ""}
                 </span>
               </>
             ) : null}
@@ -183,14 +188,14 @@ export function ResultsToolbar(props: ToolbarProps) {
         {/* Edit mode controls */}
         {isEditing ? (
           <ToolbarEdit
-            editState={editState}
+            pending={pending}
+            sessionMatchesEditor={sessionMatchesEditor}
+            confirmingApply={confirmingApply}
             editError={editError}
             isCommitting={isCommitting}
-            pendingDeleteCount={pendingDeleteCount}
-            onCommit={onCommit}
-            onDeleteRows={onDeleteRows}
-            onConfirmDelete={onConfirmDelete}
-            onCancelDelete={onCancelDelete}
+            onRequestApply={onRequestApply}
+            onConfirmApply={onConfirmApply}
+            onCancelApply={onCancelApply}
             onDiscard={onDiscard}
           />
         ) : (

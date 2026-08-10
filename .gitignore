@@ -24,16 +24,15 @@ dist-ssr
 *.sw?
 
 # Rust/Tauri build output
-/target
-/src-tauri/target
+target/
+**/gen/schemas/
 
 # Local sled databases
-project_db
-query_db
-
-/src-tauri/project_db# Local databases (should never be committed)
-src-tauri/project_db/
-src-tauri/query_db/
+project_db/
+query_db/
 
 *.db
 .claude
+
+# Agent working notes
+docs/superpowers/

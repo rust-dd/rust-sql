@@ -1,6 +1,6 @@
 use tokio_postgres::Client;
 
-use crate::common::enums::AppError;
+use crate::common::enums::{AppError, query_failed};
 
 use super::{FunctionInfo, ObjectStats};
 
@@ -14,7 +14,7 @@ pub async fn load_views(client: &Client, schema: &str) -> Result<Vec<String>, Ap
             &[&schema],
         )
         .await
-        .map_err(|e| AppError::QueryFailed(e.to_string()))?;
+        .map_err(query_failed)?;
 
     Ok(rows.iter().map(|r| r.get::<_, String>(0)).collect())
 }
@@ -32,7 +32,7 @@ pub async fn load_materialized_views(
             &[&schema],
         )
         .await
-        .map_err(|e| AppError::QueryFailed(e.to_string()))?;
+        .map_err(query_failed)?;
 
     Ok(rows.iter().map(|r| r.get::<_, String>(0)).collect())
 }
@@ -52,7 +52,7 @@ pub async fn load_functions(client: &Client, schema: &str) -> Result<Vec<Functio
             &[&schema],
         )
         .await
-        .map_err(|e| AppError::QueryFailed(e.to_string()))?;
+        .map_err(query_failed)?;
 
     Ok(rows
         .iter()
@@ -81,7 +81,7 @@ pub async fn load_trigger_functions(
             &[&schema],
         )
         .await
-        .map_err(|e| AppError::QueryFailed(e.to_string()))?;
+        .map_err(query_failed)?;
 
     Ok(rows
         .iter()
@@ -112,7 +112,7 @@ pub async fn load_view_info(
             &[&schema, &view],
         )
         .await
-        .map_err(|e| AppError::QueryFailed(e.to_string()))?;
+        .map_err(query_failed)?;
 
     if let Some(row) = rows.first() {
         Ok(vec![
@@ -144,7 +144,7 @@ pub async fn load_matview_info(
     let rows = client
         .query(sql, &[&schema, &matview])
         .await
-        .map_err(|e| AppError::QueryFailed(e.to_string()))?;
+        .map_err(query_failed)?;
 
     if let Some(row) = rows.first() {
         Ok(vec![
@@ -183,7 +183,7 @@ pub async fn load_function_info(
             &[&schema, &func_name],
         )
         .await
-        .map_err(|e| AppError::QueryFailed(e.to_string()))?;
+        .map_err(query_failed)?;
 
     let keys = [
         "language",

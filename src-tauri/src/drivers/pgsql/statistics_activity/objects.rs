@@ -1,6 +1,6 @@
 use tokio_postgres::Client;
 
-use crate::common::enums::AppError;
+use crate::common::enums::{AppError, query_failed};
 
 use super::super::{FKDetail, ForeignKeyInfo, ObjectStats};
 
@@ -32,7 +32,7 @@ pub async fn load_table_statistics(
             &[&schema, &table],
         )
         .await
-        .map_err(|e| AppError::QueryFailed(e.to_string()))?;
+        .map_err(query_failed)?;
 
     let keys = [
         "row_estimate",
@@ -106,7 +106,7 @@ pub async fn load_fk_details(
     let rows = client
         .query(&sql, &[&schema, &table])
         .await
-        .map_err(|e| AppError::QueryFailed(e.to_string()))?;
+        .map_err(query_failed)?;
 
     Ok(rows
         .iter()
@@ -150,7 +150,7 @@ pub async fn load_foreign_keys(
             &[&schema],
         )
         .await
-        .map_err(|e| AppError::QueryFailed(e.to_string()))?;
+        .map_err(query_failed)?;
 
     Ok(rows
         .iter()
@@ -188,7 +188,7 @@ pub async fn load_table_bloat(
             &[],
         )
         .await
-        .map_err(|e| AppError::QueryFailed(e.to_string()))?;
+        .map_err(query_failed)?;
 
     Ok(rows
         .iter()

@@ -1,4 +1,5 @@
 use crate::AppState;
+use crate::common::enums::AppError;
 use crate::common::pgsql::{PgsqlLoadColumns, PgsqlLoadSchemas, PgsqlLoadTables};
 use crate::drivers::pgsql::{
     ColumnDetail, ConstraintDetail, FunctionInfo, IndexDetail, PolicyDetail, RuleDetail,
@@ -7,6 +8,7 @@ use crate::drivers::pgsql::{
     load_tables, load_tablespaces, load_trigger_functions, load_triggers, load_views,
 };
 
+use tauri::ipc::Response;
 use tauri::{AppHandle, Manager, Result, State};
 
 use super::pool_connection::acquire_client;
@@ -216,4 +218,18 @@ pub async fn pgsql_load_trigger_functions(
     load_trigger_functions(&client, schema)
         .await
         .map_err(Into::into)
+}
+
+/// Snapshot of a schema for the editor's language features. Runs on the meta
+/// pool: this is catalog traffic, not a user query.
+#[tauri::command(rename_all = "snake_case")]
+pub async fn pgsql_load_schema_index(
+    project_id: &str,
+    schema: &str,
+    app_state: State<'_, AppState>,
+) -> Result<Response> {
+    let client = acquire_client(&app_state.meta_clients, project_id).await?;
+    let result = crate::drivers::pgsql::schema_index::load_schema_index(&client, schema).await?;
+    let json = sonic_rs::to_string(&result).map_err(|e| AppError::QueryFailed(e.to_string()))?;
+    Ok(Response::new(json))
 }

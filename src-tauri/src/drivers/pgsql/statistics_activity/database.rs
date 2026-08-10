@@ -1,6 +1,6 @@
 use tokio_postgres::Client;
 
-use crate::common::enums::AppError;
+use crate::common::enums::{AppError, query_failed};
 
 use super::super::DbStat;
 
@@ -24,7 +24,7 @@ pub async fn load_activity(client: &Client) -> Result<Vec<Vec<String>>, AppError
             &[],
         )
         .await
-        .map_err(|e| AppError::QueryFailed(e.to_string()))?;
+        .map_err(query_failed)?;
 
     Ok(rows
         .iter()
@@ -73,7 +73,7 @@ pub async fn load_database_stats(client: &Client) -> Result<Vec<DbStat>, AppErro
             &[],
         )
         .await
-        .map_err(|e| AppError::QueryFailed(e.to_string()))?;
+        .map_err(query_failed)?;
 
     Ok(rows
         .iter()
@@ -109,7 +109,7 @@ pub async fn load_table_stats(client: &Client) -> Result<Vec<Vec<String>>, AppEr
             &[],
         )
         .await
-        .map_err(|e| AppError::QueryFailed(e.to_string()))?;
+        .map_err(query_failed)?;
 
     Ok(rows
         .iter()
@@ -142,7 +142,7 @@ pub async fn load_active_locks(
             &[],
         )
         .await
-        .map_err(|e| AppError::QueryFailed(e.to_string()))?;
+        .map_err(query_failed)?;
 
     Ok(rows
         .iter()
@@ -176,7 +176,7 @@ pub async fn load_index_usage(
             &[],
         )
         .await
-        .map_err(|e| AppError::QueryFailed(e.to_string()))?;
+        .map_err(query_failed)?;
 
     Ok(rows
         .iter()

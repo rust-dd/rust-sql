@@ -1,10 +1,11 @@
 import L from "leaflet";
 import { useEffect, useMemo, useRef } from "react";
 import "leaflet/dist/leaflet.css";
+import type { CellValue } from "@/lib/wire";
 
 interface ResultsMapProps {
   columns: string[];
-  rows: string[][];
+  rows: CellValue[][];
 }
 
 const WKT_PREFIX =
@@ -106,7 +107,7 @@ function parseGeoJSON(json: string, rowIndex: number): ParsedGeom | null {
   return null;
 }
 
-function detectGeomColumnIndex(columns: string[], rows: string[][]): number {
+function detectGeomColumnIndex(columns: string[], rows: CellValue[][]): number {
   const sample = rows.slice(0, 10);
   for (let ci = 0; ci < columns.length; ci++) {
     const colName = columns[ci].toLowerCase();
@@ -134,7 +135,7 @@ function detectGeomColumnIndex(columns: string[], rows: string[][]): number {
   return -1;
 }
 
-export function hasGeometryColumn(columns: string[], rows: string[][]): boolean {
+export function hasGeometryColumn(columns: string[], rows: CellValue[][]): boolean {
   return detectGeomColumnIndex(columns, rows) >= 0;
 }
 

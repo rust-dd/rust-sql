@@ -19,23 +19,37 @@ export function StatusBar() {
 
   useEffect(() => {
     let cancelled = false;
+    let inFlight = false;
+
     const load = async () => {
+      // A sample walks the process tree and reads every pool's status. Skipping
+      // while one is outstanding keeps a slow sample from queueing up more.
+      if (inFlight || document.hidden) return;
+      inFlight = true;
       try {
         const usage = await getSystemResourceUsage();
         if (!cancelled) setResources(usage);
       } catch {
         // Ignore metrics polling errors to keep footer stable.
+      } finally {
+        inFlight = false;
       }
     };
 
     void load();
-    const id = window.setInterval(() => {
-      void load();
-    }, 1000);
+    // Two seconds rather than one: this is a footer readout, and each sample
+    // costs a process-tree walk plus a lock on both connection pools.
+    const id = window.setInterval(() => void load(), 2000);
+    // Nothing to show while the window is hidden, so stop paying for it.
+    const onVisibility = () => {
+      if (!document.hidden) void load();
+    };
+    document.addEventListener("visibilitychange", onVisibility);
 
     return () => {
       cancelled = true;
       window.clearInterval(id);
+      document.removeEventListener("visibilitychange", onVisibility);
     };
   }, []);
 

@@ -1,6 +1,7 @@
 import { Loader2, X, XCircle } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { DriverFactory } from "@/lib/database-driver";
+import { cellText } from "@/lib/wire";
 import { useProjectStore } from "@/stores/project-store";
 import { useActiveTab } from "@/stores/tab-store";
 import { useUIStore } from "@/stores/ui-store";
@@ -39,16 +40,16 @@ export function ResultsPanel() {
   const vq = activeTab?.virtualQuery;
 
   const handleCancel = useCallback(async () => {
-    if (!activeTab?.projectId || !activeTab.isExecuting) return;
+    if (!activeTab?.projectId || !activeTab.isExecuting || !activeTab.execId) return;
     const d = useProjectStore.getState().projects[activeTab.projectId];
     if (!d) return;
     try {
       const driver = DriverFactory.getDriver(d.driver);
-      await driver.cancelQuery?.(activeTab.projectId);
+      await driver.cancelQuery?.(activeTab.execId);
     } catch (err) {
       console.error("Failed to cancel query:", err);
     }
-  }, [activeTab?.projectId, activeTab?.isExecuting]);
+  }, [activeTab?.projectId, activeTab?.isExecuting, activeTab?.execId]);
 
   const { gridRef, handlePageNeeded, handleViewportRowChange, restoreRowIndex } = useVirtualPaging({
     vq,
@@ -57,24 +58,27 @@ export function ResultsPanel() {
 
   const {
     isEditing,
-    editState,
     editError,
     setEditError,
     isCommitting,
-    pendingDeleteCount,
+    confirmingApply,
+    pending,
+    sessionMatchesEditor,
     editableTable,
     fkMap,
+    editedCells,
+    deletedRowIndices,
     handleFKNavigate,
     handleEnterEdit,
     handleDiscard,
-    handleCommit,
-    handleDeleteRows,
-    handleConfirmDelete,
-    handleCancelDelete,
+    handleRequestApply,
+    handleConfirmApply,
+    handleCancelApply,
     handleCellEdit,
     handleRowDelete,
     handleRowRestore,
   } = useEditMode({
+    tabId: activeTab?.id,
     projectId: activeTab?.projectId,
     editorValue: activeTab?.editorValue,
     result,
@@ -84,7 +88,9 @@ export function ResultsPanel() {
     if (isEditing) return result?.rows ?? [];
     if (!result || !debouncedSearch.trim()) return result?.rows ?? [];
     const term = debouncedSearch.toLowerCase();
-    return result.rows.filter((row) => row.some((cell) => cell.toLowerCase().includes(term)));
+    return result.rows.filter((row) =>
+      row.some((cell) => cellText(cell).toLowerCase().includes(term)),
+    );
   }, [result, debouncedSearch, isEditing]);
 
   const explainResult = activeTab?.explainResult;
@@ -100,16 +106,16 @@ export function ResultsPanel() {
     hasExplain,
     isExecuting: !!isExecuting,
     isEditing,
-    editState,
     editableTable: !!editableTable && !vq,
     isCommitting,
     editError,
+    pending,
+    sessionMatchesEditor,
+    confirmingApply,
     onEnterEdit: handleEnterEdit,
-    onCommit: handleCommit,
-    onDeleteRows: handleDeleteRows,
-    onConfirmDelete: handleConfirmDelete,
-    onCancelDelete: handleCancelDelete,
-    pendingDeleteCount,
+    onRequestApply: handleRequestApply,
+    onConfirmApply: handleConfirmApply,
+    onCancelApply: handleCancelApply,
     onDiscard: handleDiscard,
     onCancel: handleCancel,
     virtualQuery: vq,
@@ -243,8 +249,8 @@ export function ResultsPanel() {
           columns={result.columns}
           rows={filteredRows}
           isEditing={isEditing}
-          cellEdits={editState?.cellEdits}
-          deletedRows={editState?.deletedRows}
+          cellEdits={editedCells}
+          deletedRows={deletedRowIndices}
           onCellEdit={handleCellEdit}
           onRowDelete={handleRowDelete}
           onRowRestore={handleRowRestore}

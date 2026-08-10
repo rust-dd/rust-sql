@@ -130,28 +130,38 @@ pub async fn project_db_delete(project_id: &str, app_state: State<'_, AppState>)
     .await
     .map_err(|e| AppError::DatabaseError(e.to_string()))?;
 
-    // Remove persisted virtual snapshots tied to this project.
-    conn.execute(
-        "DELETE FROM virtual_query_pages
-         WHERE query_id IN (
-             SELECT query_id FROM virtual_query_snapshots WHERE project_id = ?1
-         )",
-        libsql::params![project_id],
-    )
-    .await
-    .map_err(|e| AppError::DatabaseError(e.to_string()))?;
-    conn.execute(
-        "DELETE FROM virtual_query_snapshots WHERE project_id = ?1",
-        libsql::params![project_id],
-    )
-    .await
-    .map_err(|e| AppError::DatabaseError(e.to_string()))?;
-
     // Best-effort cleanup for in-memory connection state.
     app_state.clients.lock().await.remove(project_id);
     app_state.meta_clients.lock().await.remove(project_id);
-    app_state.cancel_tokens.lock().await.remove(project_id);
     app_state.client_ssl.lock().await.remove(project_id);
+
+    // Cancel tokens are keyed by exec id, so drop every one belonging to this
+    // project rather than looking the project id up as a key.
+    app_state
+        .cancel_tokens
+        .lock()
+        .await
+        .retain(|_, (owner, _)| owner != project_id);
+
+    // A LISTEN task and an SSH tunnel outlive the project otherwise: the task
+    // keeps polling a connection that is gone, and the tunnel holds its port.
+    // Listener handles are keyed "<project>:<channel>", so every channel of
+    // this project has to go.
+    {
+        let mut handles = app_state.notify_handles.lock().await;
+        let prefix = format!("{}:", project_id);
+        let owned: Vec<String> = handles
+            .keys()
+            .filter(|key| key.starts_with(&prefix))
+            .cloned()
+            .collect();
+        for key in owned {
+            if let Some(handle) = handles.remove(&key) {
+                handle.abort();
+            }
+        }
+    }
+    app_state.ssh_tunnels.lock().await.remove(project_id);
 
     Ok(())
 }

@@ -1,19 +1,13 @@
-export type PanelView = "grid" | "record" | "history" | "explain" | "diff" | "map";
+import type { CellValue } from "@/lib/wire";
 
-export interface EditState {
-  schema: string;
-  table: string;
-  pkColumns: string[];
-  cellEdits: Map<string, string>;
-  deletedRows: Set<number>;
-}
+export type PanelView = "grid" | "record" | "history" | "explain" | "diff" | "map";
 
 export interface ToolbarProps {
   panelView: PanelView;
   setPanelView: (v: PanelView) => void;
-  result: { rows: string[][]; time: number; capped?: boolean } | null;
+  result: { rows: CellValue[][]; time: number; capped?: boolean } | null;
   columns: string[];
-  filteredRows: string[][];
+  filteredRows: CellValue[][];
   searchTerm: string;
   setSearchTerm: (v: string) => void;
   filteredCount: number;
@@ -22,16 +16,16 @@ export interface ToolbarProps {
   hasExplain: boolean;
   isExecuting: boolean;
   isEditing: boolean;
-  editState: EditState | null;
   editableTable: boolean;
   isCommitting: boolean;
   editError: string | null;
+  pending: { updates: number; deletes: number };
+  sessionMatchesEditor: boolean;
+  confirmingApply: boolean;
   onEnterEdit: () => void;
-  onCommit: () => void;
-  onDeleteRows: () => void;
-  onConfirmDelete: () => void;
-  onCancelDelete: () => void;
-  pendingDeleteCount: number;
+  onRequestApply: () => void;
+  onConfirmApply: () => void;
+  onCancelApply: () => void;
   onDiscard: () => void;
   onCancel?: () => void;
   virtualQuery?: { queryId: string; totalRows: number; time: number; pageSize: number };

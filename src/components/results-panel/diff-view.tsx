@@ -1,6 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { Diff, Loader2 } from "lucide-react";
 import { useRef, useState } from "react";
+import { type CellValue, decodeResult, encodeResult, encodeRow } from "@/lib/wire";
 
 export function DiffView({
   pinnedColumns,
@@ -9,13 +10,13 @@ export function DiffView({
   currentRows,
 }: {
   pinnedColumns: string[];
-  pinnedRows: string[][];
+  pinnedRows: CellValue[][];
   currentColumns: string[];
-  currentRows: string[][];
+  currentRows: CellValue[][];
 }) {
   const [diffResult, setDiffResult] = useState<{
-    added: string[][];
-    removed: string[][];
+    added: CellValue[][];
+    removed: CellValue[][];
     unchangedCount: number;
   } | null>(null);
   const [computing, setComputing] = useState(false);
@@ -32,44 +33,32 @@ export function DiffView({
     setComputing(true);
     setDiffResult(null);
 
-    // Pack rows into the compact wire format for Rust
-    const CELL_SEP = "\x1F";
-    const ROW_SEP = "\x1E";
-    const packRows = (columns: string[], rows: string[][]) => {
-      const header = columns.join(CELL_SEP);
-      if (rows.length === 0) return header;
-      return header + ROW_SEP + rows.map((r) => r.join(CELL_SEP)).join(ROW_SEP);
-    };
-
-    const pinnedPacked = packRows(pinnedColumns, pinnedRows);
-    const currentPacked = packRows(currentColumns, currentRows);
+    // compute_diff compares rows as opaque strings, so the escaped encoding
+    // round-trips through it unchanged while keeping NULL apart from "".
+    const pinnedPacked = encodeResult(pinnedColumns, pinnedRows);
+    const currentPacked = encodeResult(currentColumns, currentRows);
 
     invoke<[string, string, number]>("compute_diff", {
       pinned_packed: pinnedPacked,
       current_packed: currentPacked,
     })
       .then(([addedPacked, removedPacked, unchangedCount]) => {
-        const unpackRows = (packed: string): string[][] => {
-          if (!packed) return [];
-          const parts = packed.split(ROW_SEP);
-          // Skip header (index 0)
-          return parts.slice(1).map((r) => r.split(CELL_SEP));
-        };
+        // Both payloads carry a header line that decodeResult strips.
         setDiffResult({
-          added: unpackRows(addedPacked),
-          removed: unpackRows(removedPacked),
+          added: decodeResult(addedPacked).rows,
+          removed: decodeResult(removedPacked).rows,
           unchangedCount,
         });
         setComputing(false);
       })
       .catch(() => {
         // Fallback: compute in JS if Rust command fails
-        const pinnedSet = new Set(pinnedRows.map((r) => r.join(CELL_SEP)));
-        const currentSet = new Set(currentRows.map((r) => r.join(CELL_SEP)));
+        const pinnedSet = new Set(pinnedRows.map(encodeRow));
+        const currentSet = new Set(currentRows.map(encodeRow));
         setDiffResult({
-          added: currentRows.filter((r) => !pinnedSet.has(r.join(CELL_SEP))),
-          removed: pinnedRows.filter((r) => !currentSet.has(r.join(CELL_SEP))),
-          unchangedCount: currentRows.filter((r) => pinnedSet.has(r.join(CELL_SEP))).length,
+          added: currentRows.filter((r) => !pinnedSet.has(encodeRow(r))),
+          removed: pinnedRows.filter((r) => !currentSet.has(encodeRow(r))),
+          unchangedCount: currentRows.filter((r) => pinnedSet.has(encodeRow(r))).length,
         });
         setComputing(false);
       });

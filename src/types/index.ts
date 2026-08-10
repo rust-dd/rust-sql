@@ -1,3 +1,8 @@
+import type { EditSession } from "@/lib/mutations";
+import type { CellValue } from "@/lib/wire";
+
+export type { CellValue, EditSession };
+
 export interface ProjectDetails {
   driver: DriverType;
   username: string;
@@ -38,6 +43,8 @@ export interface Tab {
   title: string;
   editorValue: string;
   isExecuting: boolean;
+  /** Identifies the in-flight query so cancel targets this tab's query only. */
+  execId?: string;
   result?: QueryResult;
   explainResult?: ExplainPlan;
   virtualQuery?: VirtualQuery;
@@ -46,6 +53,8 @@ export interface Tab {
   splitEditorValue?: string;
   splitResult?: QueryResult;
   isSplitExecuting?: boolean;
+  /** Pending inline row edits. Lives on the tab so it cannot leak across tabs. */
+  editSession?: EditSession;
 }
 
 export interface ExplainNode {
@@ -83,7 +92,7 @@ export interface ExplainPlan {
 
 export interface QueryResult {
   columns: string[];
-  rows: string[][];
+  rows: CellValue[][];
   time: number;
   capped?: boolean;
 }

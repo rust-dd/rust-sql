@@ -20,7 +20,9 @@ use tracing::Level;
 pub struct AppState {
     pub clients: Arc<Mutex<BTreeMap<String, Arc<Pool>>>>,
     pub meta_clients: Arc<Mutex<BTreeMap<String, Arc<Pool>>>>,
-    pub cancel_tokens: Arc<Mutex<BTreeMap<String, CancelToken>>>,
+    /// Keyed by exec id, not project: a project can have several queries in
+    /// flight and cancelling must hit the one the user asked for.
+    pub cancel_tokens: Arc<Mutex<BTreeMap<String, (String, CancelToken)>>>,
     pub client_ssl: Arc<Mutex<BTreeMap<String, bool>>>,
     pub local_db: libsql::Database,
     pub resource_monitor: Arc<Mutex<utils::ResourceMonitor>>,
@@ -104,7 +106,9 @@ fn main() {
             drivers::pgsql::pgsql_load_available_extensions,
             drivers::pgsql::pgsql_load_enum_types,
             drivers::pgsql::pgsql_table_action,
+            drivers::pgsql::pgsql_apply_row_mutations,
             drivers::pgsql::pgsql_load_pg_settings,
+            drivers::pgsql::pgsql_load_schema_index,
             terminal::terminal_spawn,
             terminal::terminal_write,
             terminal::terminal_resize,

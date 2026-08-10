@@ -20,6 +20,7 @@ import {
   useState,
 } from "react";
 import "@glideapps/glide-data-grid/dist/index.css";
+import type { CellValue } from "@/lib/wire";
 import { useUIStore } from "@/stores/ui-store";
 import type { VirtualQuery } from "@/types";
 import {
@@ -35,7 +36,7 @@ import {
 
 interface ResultsGridProps {
   columns: string[];
-  rows: string[][];
+  rows: CellValue[][];
   isEditing?: boolean;
   cellEdits?: Map<string, string>;
   deletedRows?: Set<number>;
@@ -233,8 +234,8 @@ export function ResultsGrid({
 
       if (fkColIndices.has(colIdx) && onFKNavigate) {
         const colName = columns[colIdx];
-        const value = rows[rowIdx]?.[colIdx] ?? "";
-        if (value && value !== "null") {
+        const value = rows[rowIdx]?.[colIdx];
+        if (value) {
           onFKNavigate(colName, value);
         }
       }

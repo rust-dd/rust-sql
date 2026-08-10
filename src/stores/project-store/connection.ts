@@ -1,6 +1,7 @@
 import { toast } from "sonner";
 import type { StateCreator } from "zustand";
 import { DriverFactory } from "@/lib/database-driver";
+import { useSchemaIndexStore } from "@/stores/schema-index-store";
 import { ProjectConnectionStatus as PCS } from "@/types";
 import type { ProjectState } from "./index";
 
@@ -50,11 +51,20 @@ export const createConnectionSlice: StateCreator<
           driver.loadDatabases?.(projectId),
           driver.loadTablespaces?.(projectId),
         ]);
+        const schemas = sc.status === "fulfilled" ? sc.value : [];
         set((s) => {
-          s.schemas[projectId] = sc.status === "fulfilled" ? sc.value : [];
+          s.schemas[projectId] = schemas;
           s.serverDatabases[projectId] = dbs.status === "fulfilled" && dbs.value ? dbs.value : [];
           s.serverTablespaces[projectId] = tsp.status === "fulfilled" && tsp.value ? tsp.value : [];
         });
+
+        // Warm the schema the editor will almost certainly complete against, so
+        // the first suggestion does not arrive a round trip late. Other schemas
+        // load when something actually refers to them.
+        const preferred = schemas.includes("public") ? "public" : schemas[0];
+        if (preferred) {
+          void useSchemaIndexStore.getState().ensureIndex(projectId, preferred);
+        }
       }
     } catch (err: unknown) {
       const msg =

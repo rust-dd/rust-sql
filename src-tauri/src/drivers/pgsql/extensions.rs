@@ -1,4 +1,4 @@
-use crate::common::enums::AppError;
+use crate::common::enums::{AppError, query_failed};
 
 pub async fn load_extensions(
     client: &deadpool_postgres::Client,
@@ -18,7 +18,7 @@ pub async fn load_extensions(
             &[],
         )
         .await
-        .map_err(|e| AppError::QueryFailed(e.to_string()))?;
+        .map_err(query_failed)?;
 
     Ok(rows
         .iter()
@@ -42,7 +42,7 @@ pub async fn load_available_extensions(
             &[],
         )
         .await
-        .map_err(|e| AppError::QueryFailed(e.to_string()))?;
+        .map_err(query_failed)?;
 
     Ok(rows
         .iter()
@@ -68,7 +68,7 @@ pub async fn load_enum_types(
             &[],
         )
         .await
-        .map_err(|e| AppError::QueryFailed(e.to_string()))?;
+        .map_err(query_failed)?;
 
     Ok(rows
         .iter()
@@ -96,7 +96,7 @@ pub async fn load_pg_settings(
             &[],
         )
         .await
-        .map_err(|e| AppError::QueryFailed(e.to_string()))?;
+        .map_err(query_failed)?;
 
     Ok(rows
         .iter()

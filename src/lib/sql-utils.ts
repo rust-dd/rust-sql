@@ -1,3 +1,5 @@
+import type { CellValue } from "@/lib/wire";
+
 /**
  * Parse a simple SELECT query to extract the target table.
  * Returns null for complex queries (JOINs, subqueries, UNIONs, CTEs).
@@ -24,52 +26,12 @@ export function quoteIdent(name: string): string {
   return `"${name.replace(/"/g, '""')}"`;
 }
 
-export function quoteLiteral(value: string): string {
-  if (value.toLowerCase() === "null") return "NULL";
+/**
+ * Only a real SQL NULL becomes the NULL keyword. The text value "null" is
+ * quoted like any other string — earlier releases conflated the two and wrote
+ * NULL over genuine "null" values.
+ */
+export function quoteLiteral(value: CellValue): string {
+  if (value === null) return "NULL";
   return `'${value.replace(/'/g, "''")}'`;
-}
-
-export function generateUpdate(
-  schema: string,
-  table: string,
-  columns: string[],
-  originalRow: string[],
-  changes: Map<number, string>,
-  pkColumns: string[],
-): string {
-  const target = `${quoteIdent(schema)}.${quoteIdent(table)}`;
-
-  const setClauses: string[] = [];
-  for (const [colIdx, newValue] of changes) {
-    setClauses.push(`${quoteIdent(columns[colIdx])} = ${quoteLiteral(newValue)}`);
-  }
-
-  const where = buildPKWhere(columns, originalRow, pkColumns);
-  return `UPDATE ${target} SET ${setClauses.join(", ")} WHERE ${where}`;
-}
-
-export function generateDelete(
-  schema: string,
-  table: string,
-  columns: string[],
-  originalRow: string[],
-  pkColumns: string[],
-): string {
-  const target = `${quoteIdent(schema)}.${quoteIdent(table)}`;
-  const where = buildPKWhere(columns, originalRow, pkColumns);
-  return `DELETE FROM ${target} WHERE ${where}`;
-}
-
-function buildPKWhere(columns: string[], row: string[], pkColumns: string[]): string {
-  return pkColumns
-    .map((pk) => {
-      const idx = columns.indexOf(pk);
-      if (idx === -1) return null;
-      const val = row[idx];
-      return val.toLowerCase() === "null"
-        ? `${quoteIdent(pk)} IS NULL`
-        : `${quoteIdent(pk)} = ${quoteLiteral(val)}`;
-    })
-    .filter(Boolean)
-    .join(" AND ");
 }

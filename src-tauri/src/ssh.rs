@@ -47,35 +47,35 @@ async fn connect_ssh(
         .await
         .map_err(|e| format!("SSH connection to {}:{} failed: {}", ssh_host, ssh_port, e))?;
 
-    if let Some(key_path) = ssh_key_path {
-        if !key_path.is_empty() {
-            match keys::load_secret_key(key_path, ssh_password) {
-                Ok(key) => {
-                    let key = PrivateKeyWithHashAlg::new(Arc::new(key), None);
-                    let result = handle
-                        .authenticate_publickey(ssh_user, key)
-                        .await
-                        .map_err(|e| format!("SSH key auth failed: {}", e))?;
-                    if result.success() {
-                        return Ok(handle);
-                    }
+    if let Some(key_path) = ssh_key_path
+        && !key_path.is_empty()
+    {
+        match keys::load_secret_key(key_path, ssh_password) {
+            Ok(key) => {
+                let key = PrivateKeyWithHashAlg::new(Arc::new(key), None);
+                let result = handle
+                    .authenticate_publickey(ssh_user, key)
+                    .await
+                    .map_err(|e| format!("SSH key auth failed: {}", e))?;
+                if result.success() {
+                    return Ok(handle);
                 }
-                Err(e) => {
-                    tracing::warn!("Failed to load SSH key {}: {}", key_path, e);
-                }
+            }
+            Err(e) => {
+                tracing::warn!("Failed to load SSH key {}: {}", key_path, e);
             }
         }
     }
 
-    if let Some(password) = ssh_password {
-        if !password.is_empty() {
-            let result = handle
-                .authenticate_password(ssh_user, password)
-                .await
-                .map_err(|e| format!("SSH password auth failed: {}", e))?;
-            if result.success() {
-                return Ok(handle);
-            }
+    if let Some(password) = ssh_password
+        && !password.is_empty()
+    {
+        let result = handle
+            .authenticate_password(ssh_user, password)
+            .await
+            .map_err(|e| format!("SSH password auth failed: {}", e))?;
+        if result.success() {
+            return Ok(handle);
         }
     }
 

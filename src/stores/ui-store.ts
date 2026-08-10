@@ -1,10 +1,11 @@
 import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
+import type { CellValue } from "@/lib/wire";
 import type { QueryResult } from "@/types";
 
 interface PinnedResult {
   columns: string[];
-  rows: string[][];
+  rows: CellValue[][];
   label: string;
 }
 

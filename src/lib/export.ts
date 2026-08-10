@@ -1,46 +1,58 @@
 import { save } from "@tauri-apps/plugin-dialog";
 import { writeTextFile } from "@tauri-apps/plugin-fs";
+import type { CellValue } from "@/lib/wire";
 
 export type ExportFormat = "csv" | "json" | "sql" | "markdown" | "xml";
 
-function escapeCSV(value: string): string {
+function escapeCSVText(value: string): string {
   if (value.includes(",") || value.includes('"') || value.includes("\n")) {
     return `"${value.replace(/"/g, '""')}"`;
   }
   return value;
 }
 
-function escapeSQL(value: string): string {
-  if (value === "null" || value === "NULL") return "NULL";
-  return `'${value.replace(/'/g, "''")}'`;
+/** SQL NULL becomes an unquoted empty field, the usual CSV convention. */
+function escapeCSV(cell: CellValue): string {
+  return cell === null ? "" : escapeCSVText(cell);
 }
 
-function escapeXML(value: string): string {
-  return value
+/**
+ * Only a real SQL NULL becomes the NULL keyword. The text value "null" is
+ * exported as a quoted literal, which earlier releases silently turned into NULL.
+ */
+function escapeSQL(cell: CellValue): string {
+  if (cell === null) return "NULL";
+  return `'${cell.replace(/'/g, "''")}'`;
+}
+
+function escapeXML(cell: CellValue): string {
+  if (cell === null) return "";
+  return cell
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;");
 }
 
-export function toCSV(columns: string[], rows: string[][]): string {
-  const header = columns.map(escapeCSV).join(",");
+export function toCSV(columns: string[], rows: CellValue[][]): string {
+  const header = columns.map(escapeCSVText).join(",");
   const body = rows.map((r) => r.map(escapeCSV).join(",")).join("\n");
   return `${header}\n${body}`;
 }
 
-export function toJSON(columns: string[], rows: string[][]): string {
+/** SQL NULL is exported as JSON null rather than the string "null". */
+export function toJSON(columns: string[], rows: CellValue[][]): string {
   const objects = rows.map((row) => {
-    const obj: Record<string, string> = {};
+    const obj: Record<string, CellValue> = {};
     columns.forEach((col, i) => {
-      obj[col] = row[i];
+      obj[col] = row[i] ?? null;
     });
     return obj;
   });
   return JSON.stringify(objects, null, 2);
 }
 
-export function toSQL(columns: string[], rows: string[][], tableName = "table_name"): string {
+export function toSQL(columns: string[], rows: CellValue[][], tableName = "table_name"): string {
   if (rows.length === 0) return `-- No rows to export`;
   const colList = columns.map((c) => `"${c}"`).join(", ");
   return rows
@@ -51,16 +63,16 @@ export function toSQL(columns: string[], rows: string[][], tableName = "table_na
     .join("\n");
 }
 
-export function toMarkdown(columns: string[], rows: string[][]): string {
+export function toMarkdown(columns: string[], rows: CellValue[][]): string {
   const header = `| ${columns.join(" | ")} |`;
   const separator = `| ${columns.map(() => "---").join(" | ")} |`;
   const body = rows
-    .map((r) => `| ${r.map((c) => c.replace(/\|/g, "\\|")).join(" | ")} |`)
+    .map((r) => `| ${r.map((c) => (c === null ? "" : c.replace(/\|/g, "\\|"))).join(" | ")} |`)
     .join("\n");
   return `${header}\n${separator}\n${body}`;
 }
 
-export function toXML(columns: string[], rows: string[][]): string {
+export function toXML(columns: string[], rows: CellValue[][]): string {
   const lines = ['<?xml version="1.0" encoding="UTF-8"?>', "<resultset>"];
   for (const row of rows) {
     lines.push("  <row>");
@@ -75,7 +87,7 @@ export function toXML(columns: string[], rows: string[][]): string {
 
 const formatters: Record<
   ExportFormat,
-  (cols: string[], rows: string[][], table?: string) => string
+  (cols: string[], rows: CellValue[][], table?: string) => string
 > = {
   csv: toCSV,
   json: toJSON,
@@ -103,7 +115,7 @@ const filterNames: Record<ExportFormat, string> = {
 export async function exportResults(
   format: ExportFormat,
   columns: string[],
-  rows: string[][],
+  rows: CellValue[][],
   tableName?: string,
 ) {
   const content = formatters[format](columns, rows, tableName);
@@ -122,7 +134,7 @@ export async function exportResults(
 export function copyToClipboard(
   format: ExportFormat,
   columns: string[],
-  rows: string[][],
+  rows: CellValue[][],
   tableName?: string,
 ): Promise<void> {
   const content = formatters[format](columns, rows, tableName);

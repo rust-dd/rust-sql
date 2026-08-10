@@ -12,7 +12,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { useProjectStore } from "@/stores/project-store";
 import { useQueryStore } from "@/stores/query-store";
-import { useActiveTab, useTabStore } from "@/stores/tab-store";
+import { tabIdAt, useActiveTab, useActiveTabId, useTabStore } from "@/stores/tab-store";
 
 const TIMEOUT_OPTIONS = [
   { label: "No limit", value: 0 },
@@ -35,6 +35,7 @@ export function EditorToolbar({
 }) {
   const activeTab = useActiveTab();
   const selectedTabIndex = useTabStore((s) => s.selectedTabIndex);
+  const activeTabId = useActiveTabId();
   const updateContent = useTabStore((s) => s.updateContent);
   const toggleSplit = useTabStore((s) => s.toggleSplit);
   const setQueryTimeout = useTabStore((s) => s.setQueryTimeout);
@@ -75,7 +76,8 @@ export function EditorToolbar({
         tabWidth: 2,
         keywordCase: "upper",
       });
-      updateContent(selectedTabIndex, formatted);
+      const tabId = tabIdAt(selectedTabIndex);
+      if (tabId) updateContent(tabId, formatted);
     } catch {
       // silently ignore formatting errors
     }
@@ -112,7 +114,7 @@ export function EditorToolbar({
           variant={activeTab?.isSplit ? "outline" : "ghost"}
           size="sm"
           className="h-7 gap-1.5 text-xs px-2"
-          onClick={() => toggleSplit(selectedTabIndex)}
+          onClick={() => activeTabId && toggleSplit(activeTabId)}
           title="Toggle split editor"
         >
           <Columns2 className="h-3.5 w-3.5" />
@@ -125,7 +127,7 @@ export function EditorToolbar({
           <Timer className="h-3 w-3 text-muted-foreground" />
           <select
             value={activeTab.queryTimeout ?? 0}
-            onChange={(e) => setQueryTimeout(selectedTabIndex, Number(e.target.value))}
+            onChange={(e) => activeTabId && setQueryTimeout(activeTabId, Number(e.target.value))}
             className="h-7 bg-transparent border border-border/40 rounded text-xs font-mono text-muted-foreground px-1.5 outline-none focus:border-border cursor-pointer"
             title="Query timeout"
           >

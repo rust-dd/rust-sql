@@ -1,6 +1,8 @@
 use std::{collections::BTreeMap, sync::Arc, time::Duration};
 
-use deadpool_postgres::{Manager as PgManager, ManagerConfig, Pool, RecyclingMethod, Timeouts};
+use deadpool_postgres::{
+    Manager as PgManager, ManagerConfig, Pool, RecyclingMethod, Runtime, Timeouts,
+};
 
 use crate::AppState;
 use crate::common::enums::{AppError, ProjectConnectionStatus};
@@ -46,6 +48,8 @@ pub(crate) fn create_pg_pool(
         ..Timeouts::default()
     };
 
+    // deadpool needs to know which runtime drives its timers; without this the
+    // builder rejects any pool that sets a timeout.
     if use_ssl {
         let tls_connector = TlsConnector::builder()
             .build()
@@ -55,6 +59,7 @@ pub(crate) fn create_pg_pool(
         Pool::builder(manager)
             .max_size(max_size)
             .timeouts(timeouts)
+            .runtime(Runtime::Tokio1)
             .build()
             .map_err(|e| AppError::ConnectionFailed(e.to_string()))
     } else {
@@ -62,6 +67,7 @@ pub(crate) fn create_pg_pool(
         Pool::builder(manager)
             .max_size(max_size)
             .timeouts(timeouts)
+            .runtime(Runtime::Tokio1)
             .build()
             .map_err(|e| AppError::ConnectionFailed(e.to_string()))
     }
@@ -288,4 +294,24 @@ pub async fn pgsql_connector(
     }
 
     Ok(ProjectConnectionStatus::Connected)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Building a pool only happens on connect, which no other test reaches.
+    /// A misconfigured builder therefore surfaced as a runtime connection
+    /// failure rather than a compile or test error.
+    #[test]
+    fn pools_build_with_their_timeouts_configured() {
+        let cfg = Config::new();
+        assert!(create_pg_pool(&cfg, false, QUERY_POOL_SIZE).is_ok());
+    }
+
+    #[test]
+    fn tls_pools_build_too() {
+        let cfg = Config::new();
+        assert!(create_pg_pool(&cfg, true, META_POOL_SIZE).is_ok());
+    }
 }

@@ -1,15 +1,17 @@
+import type { CellValue } from "@/lib/wire";
+
 // Virtual pagination page cache
-// Each query gets a Map of pageIndex → rows (string[][])
+// Each query gets a Map of pageIndex → rows (CellValue[][])
 // Max pages per query controlled by evictDistant()
 
-const cache = new Map<string, Map<number, string[][]>>();
+const cache = new Map<string, Map<number, CellValue[][]>>();
 
-export function setPage(queryId: string, pageIndex: number, rows: string[][]): void {
+export function setPage(queryId: string, pageIndex: number, rows: CellValue[][]): void {
   if (!cache.has(queryId)) cache.set(queryId, new Map());
   cache.get(queryId)?.set(pageIndex, rows);
 }
 
-export function getRow(queryId: string, rowIndex: number, pageSize: number): string[] | null {
+export function getRow(queryId: string, rowIndex: number, pageSize: number): CellValue[] | null {
   const pages = cache.get(queryId);
   if (!pages) return null;
   const pageIndex = Math.floor(rowIndex / pageSize);

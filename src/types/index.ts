@@ -1,3 +1,7 @@
+import type { CellValue } from "@/lib/wire";
+
+export type { CellValue };
+
 export interface ProjectDetails {
   driver: DriverType;
   username: string;
@@ -83,7 +87,7 @@ export interface ExplainPlan {
 
 export interface QueryResult {
   columns: string[];
-  rows: string[][];
+  rows: CellValue[][];
   time: number;
   capped?: boolean;
 }

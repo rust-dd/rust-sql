@@ -8,6 +8,7 @@ import {
   quoteIdent,
   quoteLiteral,
 } from "@/lib/sql-utils";
+import type { CellValue } from "@/lib/wire";
 import { useProjectStore } from "@/stores/project-store";
 import { useTabStore } from "@/stores/tab-store";
 import type { EditState } from "./types";
@@ -16,7 +17,7 @@ interface UseEditModeArgs {
   projectId: string | undefined;
   editorValue: string | undefined;
   result:
-    | { columns: string[]; rows: string[][]; time: number; capped?: boolean }
+    | { columns: string[]; rows: CellValue[][]; time: number; capped?: boolean }
     | null
     | undefined;
 }

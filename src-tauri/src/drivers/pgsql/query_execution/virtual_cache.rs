@@ -4,8 +4,9 @@ use tokio_postgres::Client;
 
 use crate::common::enums::AppError;
 
-use super::super::{CELL_SEP, CachedQuery, ROW_SEP, VirtualCache};
-use super::helpers::{join_sep, pack_rows_vec, process_simple_messages};
+use super::super::wire::{Cell, pack_columns, pack_rows};
+use super::super::{CachedQuery, ROW_SEP, VirtualCache};
+use super::helpers::process_simple_messages;
 
 /// Execute a query in one shot using simple_query protocol.
 /// Pre-packs results into page-sized strings cached in-memory.
@@ -39,7 +40,7 @@ pub async fn execute_virtual(
         fallback.push_str(&columns[0]);
         fallback.push(ROW_SEP);
         if let Some(r) = all_rows.first() {
-            fallback.push_str(&join_sep(r, CELL_SEP));
+            fallback.push_str(&pack_rows(std::slice::from_ref(r)));
         }
         let elapsed = start.elapsed().as_millis() as f32;
         return Ok((String::new(), 0, fallback, elapsed));
@@ -48,17 +49,14 @@ pub async fn execute_virtual(
     let total_rows = all_rows.len();
 
     // Pre-pack into pages — use rayon only for large results (>50K rows)
-    let chunks: Vec<&[Vec<String>]> = all_rows.chunks(page_size).collect();
+    let chunks: Vec<&[Vec<Cell>]> = all_rows.chunks(page_size).collect();
     let pages: Vec<String> = if total_rows > 50_000 {
-        chunks
-            .par_iter()
-            .map(|chunk| pack_rows_vec(chunk))
-            .collect()
+        chunks.par_iter().map(|chunk| pack_rows(chunk)).collect()
     } else {
-        chunks.iter().map(|chunk| pack_rows_vec(chunk)).collect()
+        chunks.iter().map(|chunk| pack_rows(chunk)).collect()
     };
 
-    let columns_packed = join_sep(&columns, CELL_SEP);
+    let columns_packed = pack_columns(&columns);
     let first_page_packed = pages.first().cloned().unwrap_or_default();
 
     {

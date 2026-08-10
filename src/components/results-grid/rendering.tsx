@@ -6,6 +6,7 @@ import {
   type Theme,
 } from "@glideapps/glide-data-grid";
 import * as virtualCache from "@/lib/virtual-cache";
+import type { CellValue } from "@/lib/wire";
 import type { VirtualQuery } from "@/types";
 
 export const MIN_COL_WIDTH = 80;
@@ -36,7 +37,12 @@ export function buildModifiedOverride(theme: string) {
 
 export const FK_OVERRIDE = { textDark: "hsl(220, 70%, 50%)", textLight: "hsl(220, 70%, 65%)" };
 
-export function computeGridColumns(columns: string[], rows: string[][]): GridColumn[] {
+/// SQL NULL is drawn muted and labelled, so it never looks like an empty string
+/// or like a column holding the text "null".
+export const NULL_OVERRIDE = { textDark: "hsl(250, 10%, 50%)", textLight: "hsl(250, 10%, 55%)" };
+export const NULL_DISPLAY = "NULL";
+
+export function computeGridColumns(columns: string[], rows: CellValue[][]): GridColumn[] {
   const sampleRows = rows.slice(0, 100);
   return columns.map((col, colIdx) => {
     let maxLen = col.length + 2;
@@ -62,7 +68,7 @@ export function computeFkColIndices(
 }
 
 export interface CellContentContext {
-  rows: string[][];
+  rows: CellValue[][];
   cellEdits?: Map<string, string>;
   deletedRows?: Set<number>;
   isEditing?: boolean;
@@ -72,6 +78,19 @@ export interface CellContentContext {
   deletedOverride: typeof DELETED_OVERRIDE;
   modifiedOverride: ReturnType<typeof buildModifiedOverride>;
   fkOverride: typeof FK_OVERRIDE;
+}
+
+/// A non-editable cell that keeps SQL NULL visually distinct from "".
+function readonlyCell(raw: CellValue | undefined): GridCell {
+  const isNull = raw === null;
+  return {
+    kind: GridCellKind.Text,
+    data: raw ?? "",
+    displayData: isNull ? NULL_DISPLAY : (raw ?? ""),
+    allowOverlay: false,
+    readonly: true,
+    themeOverride: isNull ? NULL_OVERRIDE : undefined,
+  };
 }
 
 export function buildCellContent(cell: Item, ctx: CellContentContext): GridCell {
@@ -97,47 +116,35 @@ export function buildCellContent(cell: Item, ctx: CellContentContext): GridCell 
       onPageNeeded?.(pageIndex);
       const fallbackRow = rows[rowIdx];
       if (!fallbackRow) return LOADING_CELL;
-      const value = fallbackRow[colIdx] ?? "";
-      return {
-        kind: GridCellKind.Text,
-        data: value,
-        displayData: value,
-        allowOverlay: false,
-        readonly: true,
-      };
+      return readonlyCell(fallbackRow[colIdx]);
     }
-    const value = row[colIdx] ?? "";
-    return {
-      kind: GridCellKind.Text,
-      data: value,
-      displayData: value,
-      allowOverlay: false,
-      readonly: true,
-    };
+    return readonlyCell(row[colIdx]);
   }
 
   const key = `${rowIdx}:${colIdx}`;
   const isModified = cellEdits?.has(key);
   const isDeleted = deletedRows?.has(rowIdx);
-  const isFK = fkColIndices.has(colIdx) && !isEditing;
-  const value = isModified ? (cellEdits?.get(key) ?? "") : (rows[rowIdx]?.[colIdx] ?? "");
+  const raw = isModified ? (cellEdits?.get(key) ?? "") : rows[rowIdx]?.[colIdx];
+  const isNull = raw === null;
+  const value = raw ?? "";
+  const isFK = fkColIndices.has(colIdx) && !isEditing && !isNull;
 
-  const baseCell: GridCell = {
+  return {
     kind: GridCellKind.Text,
     data: value,
-    displayData: isFK && value !== "null" ? `${value} →` : value,
+    displayData: isNull ? NULL_DISPLAY : isFK ? `${value} →` : value,
     allowOverlay: !!isEditing && !isDeleted,
     readonly: !isEditing || !!isDeleted,
     themeOverride: isDeleted
       ? deletedOverride
       : isModified
         ? modifiedOverride
-        : isFK && value !== "null"
-          ? fkOverride
-          : undefined,
+        : isNull
+          ? NULL_OVERRIDE
+          : isFK
+            ? fkOverride
+            : undefined,
   };
-
-  return baseCell;
 }
 
 export function buildGridTheme(theme: string): Partial<Theme> {

@@ -11,6 +11,7 @@ pub mod metadata_views_functions;
 pub mod query_execution;
 pub mod roles_schema_objects;
 pub mod statistics_activity;
+pub mod wire;
 
 pub use commands::*;
 pub use ddl_generation::*;
@@ -33,10 +34,7 @@ pub fn get_pool(
         .ok_or_else(|| AppError::ClientNotConnected(project_id.to_string()))
 }
 
-/// Cell separator for packed format (Unit Separator, ASCII 0x1F)
-pub(crate) const CELL_SEP: char = '\x1F';
-/// Row separator for packed format (Record Separator, ASCII 0x1E)
-pub(crate) const ROW_SEP: char = '\x1E';
+pub(crate) use wire::{CELL_SEP, ROW_SEP};
 
 /// A cached query: pre-packed page strings for zero-copy serving.
 /// Each page is a single large String (~1-2 MB) so the OS reclaims RSS on drop.

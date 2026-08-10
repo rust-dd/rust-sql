@@ -1,3 +1,5 @@
+import type { CellValue } from "@/lib/wire";
+
 /**
  * Parse a simple SELECT query to extract the target table.
  * Returns null for complex queries (JOINs, subqueries, UNIONs, CTEs).
@@ -24,8 +26,13 @@ export function quoteIdent(name: string): string {
   return `"${name.replace(/"/g, '""')}"`;
 }
 
-export function quoteLiteral(value: string): string {
-  if (value.toLowerCase() === "null") return "NULL";
+/**
+ * Only a real SQL NULL becomes the NULL keyword. The text value "null" is
+ * quoted like any other string — earlier releases conflated the two and wrote
+ * NULL over genuine "null" values.
+ */
+export function quoteLiteral(value: CellValue): string {
+  if (value === null) return "NULL";
   return `'${value.replace(/'/g, "''")}'`;
 }
 
@@ -33,7 +40,7 @@ export function generateUpdate(
   schema: string,
   table: string,
   columns: string[],
-  originalRow: string[],
+  originalRow: CellValue[],
   changes: Map<number, string>,
   pkColumns: string[],
 ): string {
@@ -52,7 +59,7 @@ export function generateDelete(
   schema: string,
   table: string,
   columns: string[],
-  originalRow: string[],
+  originalRow: CellValue[],
   pkColumns: string[],
 ): string {
   const target = `${quoteIdent(schema)}.${quoteIdent(table)}`;
@@ -60,13 +67,13 @@ export function generateDelete(
   return `DELETE FROM ${target} WHERE ${where}`;
 }
 
-function buildPKWhere(columns: string[], row: string[], pkColumns: string[]): string {
+function buildPKWhere(columns: string[], row: CellValue[], pkColumns: string[]): string {
   return pkColumns
     .map((pk) => {
       const idx = columns.indexOf(pk);
       if (idx === -1) return null;
       const val = row[idx];
-      return val.toLowerCase() === "null"
+      return val === null
         ? `${quoteIdent(pk)} IS NULL`
         : `${quoteIdent(pk)} = ${quoteLiteral(val)}`;
     })

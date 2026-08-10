@@ -1,9 +1,10 @@
 import { Button } from "@/components/ui/button";
+import type { CellValue } from "@/lib/wire";
 import { useUIStore } from "@/stores/ui-store";
 
 interface ResultsRecordProps {
   columns: string[];
-  rows: string[][];
+  rows: CellValue[][];
 }
 
 export function ResultsRecord({ columns, rows }: ResultsRecordProps) {

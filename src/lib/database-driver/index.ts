@@ -1,3 +1,4 @@
+import { type CellValue, decodeResult } from "@/lib/wire";
 import type {
   ColumnDetail,
   ConstraintDetail,
@@ -16,17 +17,13 @@ import type {
 
 // Wire types from Rust (tuples)
 export type WireTableInfo = [string, string];
-export type WireQueryResult = [string[], string[][], number];
+export type WireQueryResult = [string[], CellValue[][], number];
 export type WirePackedResult = [string, number]; // [packed_string, elapsed_ms]
 
-export const CELL_SEP = "\x1F"; // Unit Separator
-export const ROW_SEP = "\x1E"; // Record Separator
+export { CELL_SEP, type CellValue, ESC, ROW_SEP } from "@/lib/wire";
 
 export function unpackResult(packed: string, time: number): WireQueryResult {
-  if (!packed) return [[], [], time];
-  const parts = packed.split(ROW_SEP);
-  const columns = parts[0].split(CELL_SEP);
-  const rows = parts.slice(1).map((r) => r.split(CELL_SEP));
+  const { columns, rows } = decodeResult(packed);
   return [columns, rows, time];
 }
 export type WireColumnDetail = [string, string, boolean, string | null];
@@ -53,7 +50,7 @@ export type QueryStreamEvent =
 
 export interface StreamCallbacks {
   onColumns: (columns: string[], totalRows: number) => void;
-  onChunk: (rows: string[][]) => void;
+  onChunk: (rows: CellValue[][]) => void;
   onDone: (elapsed: number, capped: boolean) => void;
 }
 

@@ -2,10 +2,11 @@ import { Copy, Download } from "lucide-react";
 import { useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { copyToClipboard, type ExportFormat, exportResults } from "@/lib/export";
+import type { CellValue } from "@/lib/wire";
 
 interface ToolbarExportProps {
   columns: string[];
-  filteredRows: string[][];
+  filteredRows: CellValue[][];
   hasResult: boolean;
 }
 

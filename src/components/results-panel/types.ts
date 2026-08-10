@@ -1,3 +1,4 @@
+import type { CellValue } from "@/lib/wire";
 export type PanelView = "grid" | "record" | "history" | "explain" | "diff" | "map";
 
 export interface EditState {
@@ -11,9 +12,9 @@ export interface EditState {
 export interface ToolbarProps {
   panelView: PanelView;
   setPanelView: (v: PanelView) => void;
-  result: { rows: string[][]; time: number; capped?: boolean } | null;
+  result: { rows: CellValue[][]; time: number; capped?: boolean } | null;
   columns: string[];
-  filteredRows: string[][];
+  filteredRows: CellValue[][];
   searchTerm: string;
   setSearchTerm: (v: string) => void;
   filteredCount: number;

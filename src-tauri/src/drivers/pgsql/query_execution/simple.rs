@@ -3,16 +3,17 @@ use tokio_postgres::Client;
 
 use crate::common::enums::AppError;
 
-use super::super::{CELL_SEP, ROW_SEP};
-use super::helpers::{join_sep, pack_rows_vec, process_simple_messages};
+use super::super::ROW_SEP;
+use super::super::wire::{Cell, pack_columns, pack_rows};
+use super::helpers::process_simple_messages;
 
-/// Execute a timed query and return (columns, rows_as_strings, elapsed_ms).
+/// Execute a timed query and return (columns, rows, elapsed_ms).
 /// Uses simple_query protocol — PG returns all values as text, no type conversion needed.
 /// Supports multi-statement: returns the last result set that had rows.
 pub async fn execute_query(
     client: &Client,
     sql: &str,
-) -> Result<(Vec<String>, Vec<Vec<String>>, f32), AppError> {
+) -> Result<(Vec<String>, Vec<Vec<Cell>>, f32), AppError> {
     let start = Instant::now();
     let messages = client
         .simple_query(sql)
@@ -25,7 +26,6 @@ pub async fn execute_query(
 }
 
 /// Execute a timed query and return results in compact packed string format.
-/// Format: "col1\x1Fcol2\x1E row1val1\x1Frow1val2\x1E row2val1\x1Frow2val2"
 /// Uses simple_query protocol with multi-statement support.
 pub async fn execute_query_packed(client: &Client, sql: &str) -> Result<(String, f32), AppError> {
     let start = Instant::now();
@@ -40,8 +40,8 @@ pub async fn execute_query_packed(client: &Client, sql: &str) -> Result<(String,
         return Ok((String::new(), start.elapsed().as_millis() as f32));
     }
 
-    let header = join_sep(&columns, CELL_SEP);
-    let body = pack_rows_vec(&rows);
+    let header = pack_columns(&columns);
+    let body = pack_rows(&rows);
 
     let packed = if body.is_empty() {
         header

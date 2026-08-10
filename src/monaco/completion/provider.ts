@@ -17,6 +17,7 @@ import { useTabStore } from "@/stores/tab-store";
 import { buildCompletions } from "./build";
 import { readExpectation, readScope, toMonacoItem } from "./service";
 import { SQL_SNIPPETS } from "./snippets";
+import type { Catalog } from "./types";
 
 /** Beyond this the parse stops being cheap enough to run per request. */
 const MAX_PARSED_CHARS = 200_000;
@@ -29,46 +30,75 @@ function getParser(): PostgreSQL {
   return parser;
 }
 
+const EMPTY_CATALOG: Catalog = {
+  defaultSchema: "public",
+  schemas: () => [],
+  relations: () => [],
+  relation: () => undefined,
+  functions: () => [],
+};
+
+/**
+ * Snippets and a small keyword set, for when parsing or the catalog fails.
+ *
+ * Monaco swallows a provider exception and shows an empty widget, which reads
+ * as "completion is broken" with nothing to go on. Degrading to something
+ * useful, and saying so on the console, beats silence.
+ */
+function fallbackItems(monaco: typeof Monaco, position: Monaco.Position) {
+  const range = {
+    startLineNumber: position.lineNumber,
+    startColumn: position.column,
+    endLineNumber: position.lineNumber,
+    endColumn: position.column,
+  };
+  return buildCompletions({
+    expectation: { kinds: [], qualifier: [], range },
+    keywords: [],
+    scope: [],
+    catalog: EMPTY_CATALOG,
+    snippets: SQL_SNIPPETS,
+  }).map((item) => toMonacoItem(monaco, item));
+}
+
 export function registerCompletion(monaco: typeof Monaco): Monaco.IDisposable {
   return monaco.languages.registerCompletionItemProvider("pgsql", {
     triggerCharacters: ["."],
     provideCompletionItems: (model, position, _context, token) => {
-      const sql = model.getValue();
-      if (sql.length > MAX_PARSED_CHARS) return { suggestions: [] };
+      try {
+        const sql = model.getValue();
+        if (sql.length > MAX_PARSED_CHARS) return { suggestions: [] };
 
-      const caret = { lineNumber: position.lineNumber, column: position.column };
-      const sqlParser = getParser();
-      const suggestion = sqlParser.getSuggestionAtCaretPosition(sql, caret);
-      if (!suggestion || token.isCancellationRequested) return { suggestions: [] };
+        const caret = { lineNumber: position.lineNumber, column: position.column };
+        const sqlParser = getParser();
+        const suggestion = sqlParser.getSuggestionAtCaretPosition(sql, caret);
+        if (token.isCancellationRequested) return { suggestions: [] };
+        if (!suggestion) return { suggestions: fallbackItems(monaco, position) };
 
-      const entities = sqlParser.getAllEntities(sql, caret);
-      if (token.isCancellationRequested) return { suggestions: [] };
+        const entities = sqlParser.getAllEntities(sql, caret);
+        if (token.isCancellationRequested) return { suggestions: [] };
 
-      const { tabs, selectedTabIndex } = useTabStore.getState();
-      const projectId = tabs[selectedTabIndex]?.projectId;
+        const { tabs, selectedTabIndex } = useTabStore.getState();
+        const projectId = tabs[selectedTabIndex]?.projectId;
 
-      const schemas = projectId ? (useProjectStore.getState().schemas[projectId] ?? []) : [];
-      const defaultSchema = schemas.includes("public") ? "public" : (schemas[0] ?? "public");
+        const schemas = projectId ? (useProjectStore.getState().schemas[projectId] ?? []) : [];
+        const defaultSchema = schemas.includes("public") ? "public" : (schemas[0] ?? "public");
 
-      const items = buildCompletions({
-        expectation: readExpectation(suggestion.syntax as never, caret),
-        keywords: suggestion.keywords ?? [],
-        // Without a connected project there is no catalog, but the grammar's
-        // keywords and the snippets are still worth offering.
-        scope: projectId ? readScope(entities as never) : [],
-        catalog: projectId
-          ? catalogFor(projectId, defaultSchema)
-          : {
-              defaultSchema,
-              schemas: () => [],
-              relations: () => [],
-              relation: () => undefined,
-              functions: () => [],
-            },
-        snippets: SQL_SNIPPETS,
-      });
+        const items = buildCompletions({
+          expectation: readExpectation(suggestion.syntax as never, caret),
+          keywords: suggestion.keywords ?? [],
+          // Without a connected project there is no catalog, but the grammar's
+          // keywords and the snippets are still worth offering.
+          scope: projectId ? readScope(entities as never) : [],
+          catalog: projectId ? catalogFor(projectId, defaultSchema) : EMPTY_CATALOG,
+          snippets: SQL_SNIPPETS,
+        });
 
-      return { suggestions: items.map((item) => toMonacoItem(monaco, item)) };
+        return { suggestions: items.map((item) => toMonacoItem(monaco, item)) };
+      } catch (error) {
+        console.error("[rsql] SQL completion failed", error);
+        return { suggestions: fallbackItems(monaco, position) };
+      }
     },
   });
 }

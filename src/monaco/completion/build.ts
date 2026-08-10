@@ -88,21 +88,26 @@ function columnItems(
   );
 }
 
-function relationItems(
-  relations: IndexedRelation[],
-  range: CompletionRange,
-  schema: string | undefined,
-): CompletionItem[] {
+/**
+ * Only ever the bare relation name, never schema-qualified: the replacement
+ * range covers what is being typed after any qualifier, so a schema the user
+ * already wrote is still in the buffer. Inserting it again produced
+ * `noexapp.noexapp.agent_memory_preferences`.
+ */
+function relationItems(relations: IndexedRelation[], range: CompletionRange): CompletionItem[] {
   return relations.map((relation) => {
     const alias = suggestAlias(relation.name);
-    const qualified = schema
-      ? `${quoteIfNeeded(schema)}.${quoteIfNeeded(relation.name)}`
-      : quoteIfNeeded(relation.name);
-    return item("relation", relation.name, `${qualified} \${1:${alias}}`, range, {
-      detail: relation.kind === "table" ? "table" : relation.kind,
-      documentation: relation.comment ?? undefined,
-      isSnippet: true,
-    });
+    return item(
+      "relation",
+      relation.name,
+      `${quoteIfNeeded(relation.name)} \${1:${alias}}`,
+      range,
+      {
+        detail: relation.kind === "table" ? "table" : relation.kind,
+        documentation: relation.comment ?? undefined,
+        isSnippet: true,
+      },
+    );
   });
 }
 
@@ -148,10 +153,7 @@ function qualifiedCompletions(input: CompletionInput): CompletionItem[] {
   const schemas = catalog.schemas();
   const schema = schemas.find((s) => s.toLowerCase() === qualifier.toLowerCase());
   if (schema) {
-    return [
-      ...relationItems(catalog.relations(schema), range, schema),
-      ...functionItems(input, schema),
-    ];
+    return [...relationItems(catalog.relations(schema), range), ...functionItems(input, schema)];
   }
 
   return [];
@@ -171,7 +173,7 @@ function unqualifiedCompletions(input: CompletionInput): CompletionItem[] {
   }
 
   if (kinds.has("table") || kinds.has("view")) {
-    items.push(...relationItems(catalog.relations(catalog.defaultSchema), range, undefined));
+    items.push(...relationItems(catalog.relations(catalog.defaultSchema), range));
     for (const schema of catalog.schemas()) {
       if (schema === catalog.defaultSchema) continue;
       items.push(item("schema", schema, quoteIfNeeded(schema), range, { detail: "schema" }));

@@ -111,6 +111,12 @@ describe("parser to completions", () => {
     expect(relations(items)).toEqual(["users", "orders"]);
   });
 
+  it("inserts only the table name after a schema qualifier", () => {
+    const items = complete("SELECT * FROM public.|");
+    const users = items.find((i) => i.label === "users");
+    expect(users?.insertText).toBe("users ${1:u}");
+  });
+
   it("resolves a schema-qualified table and its alias together", () => {
     const items = complete("SELECT u.| FROM public.users u");
     expect(columns(items)).toEqual(["id", "email"]);

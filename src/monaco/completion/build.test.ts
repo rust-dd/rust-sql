@@ -100,6 +100,15 @@ describe("qualified completions", () => {
     expect(labels(items)).toContain("invoices");
   });
 
+  it("does not repeat a schema the user already typed", () => {
+    // `billing.` is already in the buffer, so inserting billing.invoices gave
+    // billing.billing.invoices.
+    const invoices = buildCompletions(input({ qualifier: ["billing"] })).find(
+      (i) => i.label === "invoices",
+    );
+    expect(invoices?.insertText).toBe("invoices ${1:i}");
+  });
+
   it("offers nothing for an unknown qualifier rather than guessing", () => {
     const items = buildCompletions(
       input({ qualifier: ["zzz"], scope: [{ name: "users", alias: "u" }] }),

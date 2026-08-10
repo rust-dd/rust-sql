@@ -1,3 +1,4 @@
+import type { MutationReport, RowMutation } from "@/lib/mutations";
 import { type CellValue, decodeResult } from "@/lib/wire";
 import type {
   ColumnDetail,
@@ -149,6 +150,13 @@ export interface DatabaseDriver {
   loadAvailableExtensions?(projectId: string): Promise<string[][]>;
   loadEnumTypes?(projectId: string): Promise<string[][]>;
   loadPgSettings?(projectId: string): Promise<string[][]>;
+  applyRowMutations?(
+    projectId: string,
+    schema: string,
+    table: string,
+    mutations: RowMutation[],
+    timeoutMs?: number,
+  ): Promise<MutationReport>;
   tableAction?(
     projectId: string,
     action: string,

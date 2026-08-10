@@ -58,24 +58,27 @@ export function ResultsPanel() {
 
   const {
     isEditing,
-    editState,
     editError,
     setEditError,
     isCommitting,
-    pendingDeleteCount,
+    confirmingApply,
+    pending,
+    sessionMatchesEditor,
     editableTable,
     fkMap,
+    editedCells,
+    deletedRowIndices,
     handleFKNavigate,
     handleEnterEdit,
     handleDiscard,
-    handleCommit,
-    handleDeleteRows,
-    handleConfirmDelete,
-    handleCancelDelete,
+    handleRequestApply,
+    handleConfirmApply,
+    handleCancelApply,
     handleCellEdit,
     handleRowDelete,
     handleRowRestore,
   } = useEditMode({
+    tabId: activeTab?.id,
     projectId: activeTab?.projectId,
     editorValue: activeTab?.editorValue,
     result,
@@ -103,16 +106,16 @@ export function ResultsPanel() {
     hasExplain,
     isExecuting: !!isExecuting,
     isEditing,
-    editState,
     editableTable: !!editableTable && !vq,
     isCommitting,
     editError,
+    pending,
+    sessionMatchesEditor,
+    confirmingApply,
     onEnterEdit: handleEnterEdit,
-    onCommit: handleCommit,
-    onDeleteRows: handleDeleteRows,
-    onConfirmDelete: handleConfirmDelete,
-    onCancelDelete: handleCancelDelete,
-    pendingDeleteCount,
+    onRequestApply: handleRequestApply,
+    onConfirmApply: handleConfirmApply,
+    onCancelApply: handleCancelApply,
     onDiscard: handleDiscard,
     onCancel: handleCancel,
     virtualQuery: vq,
@@ -246,8 +249,8 @@ export function ResultsPanel() {
           columns={result.columns}
           rows={filteredRows}
           isEditing={isEditing}
-          cellEdits={editState?.cellEdits}
-          deletedRows={editState?.deletedRows}
+          cellEdits={editedCells}
+          deletedRows={deletedRowIndices}
           onCellEdit={handleCellEdit}
           onRowDelete={handleRowDelete}
           onRowRestore={handleRowRestore}

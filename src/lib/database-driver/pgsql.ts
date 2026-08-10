@@ -1,5 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
+import type { MutationReport, RowMutation } from "@/lib/mutations";
+import { decodeColumns, decodePage } from "@/lib/wire";
 import type { DbGrant, PgRole, ProjectConnectionStatus, SchemaObject, TableGrant } from "@/types";
 import type {
   DatabaseDriver,
@@ -18,7 +20,6 @@ import type {
   WireTriggerFunctionInfo,
 } from "./index";
 import {
-  CELL_SEP,
   parseColumnDetails,
   parseConstraintDetails,
   parseFunctionInfo,
@@ -27,7 +28,6 @@ import {
   parseRuleDetails,
   parseTriggerDetails,
   parseTriggerFunctionInfo,
-  ROW_SEP,
   unpackResult,
 } from "./index";
 
@@ -149,14 +149,12 @@ export class PostgreSQLDriver implements DatabaseDriver {
       const p = event.payload;
       switch (p.type) {
         case "columns": {
-          const cols = p.columns ? p.columns.split(CELL_SEP) : [];
-          onColumns(cols, p.total_rows);
+          onColumns(decodeColumns(p.columns), p.total_rows);
           break;
         }
         case "chunk": {
           if (p.data) {
-            const rows = p.data.split(ROW_SEP).map((r) => r.split(CELL_SEP));
-            onChunk(rows);
+            onChunk(decodePage(p.data));
           }
           break;
         }
@@ -350,6 +348,21 @@ export class PostgreSQLDriver implements DatabaseDriver {
   }
   async loadPgSettings(projectId: string) {
     return invoke<string[][]>("pgsql_load_pg_settings", { project_id: projectId });
+  }
+  async applyRowMutations(
+    projectId: string,
+    schema: string,
+    table: string,
+    mutations: RowMutation[],
+    timeoutMs?: number,
+  ) {
+    return invoke<MutationReport>("pgsql_apply_row_mutations", {
+      project_id: projectId,
+      schema,
+      table,
+      mutations,
+      timeout_ms: timeoutMs ?? null,
+    });
   }
   async tableAction(
     projectId: string,

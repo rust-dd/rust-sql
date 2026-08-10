@@ -1,13 +1,6 @@
 import type { CellValue } from "@/lib/wire";
-export type PanelView = "grid" | "record" | "history" | "explain" | "diff" | "map";
 
-export interface EditState {
-  schema: string;
-  table: string;
-  pkColumns: string[];
-  cellEdits: Map<string, string>;
-  deletedRows: Set<number>;
-}
+export type PanelView = "grid" | "record" | "history" | "explain" | "diff" | "map";
 
 export interface ToolbarProps {
   panelView: PanelView;
@@ -23,16 +16,16 @@ export interface ToolbarProps {
   hasExplain: boolean;
   isExecuting: boolean;
   isEditing: boolean;
-  editState: EditState | null;
   editableTable: boolean;
   isCommitting: boolean;
   editError: string | null;
+  pending: { updates: number; deletes: number };
+  sessionMatchesEditor: boolean;
+  confirmingApply: boolean;
   onEnterEdit: () => void;
-  onCommit: () => void;
-  onDeleteRows: () => void;
-  onConfirmDelete: () => void;
-  onCancelDelete: () => void;
-  pendingDeleteCount: number;
+  onRequestApply: () => void;
+  onConfirmApply: () => void;
+  onCancelApply: () => void;
   onDiscard: () => void;
   onCancel?: () => void;
   virtualQuery?: { queryId: string; totalRows: number; time: number; pageSize: number };

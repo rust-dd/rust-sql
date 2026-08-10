@@ -1,6 +1,8 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { immer } from "zustand/middleware/immer";
+import type { EditSession } from "@/lib/mutations";
+import type { CellValue } from "@/lib/wire";
 import type { ExplainPlan, QueryResult, Tab, VirtualQuery } from "@/types";
 
 let nextId = 1;
@@ -38,6 +40,18 @@ interface TabState {
   setSplitResult: (index: number, result: QueryResult) => void;
   setSplitExecuting: (index: number, executing: boolean) => void;
   setQueryTimeout: (index: number, timeout: number) => void;
+
+  startEditSession: (tabId: string, session: EditSession) => void;
+  discardEditSession: (tabId: string) => void;
+  setCellEdit: (tabId: string, key: string, column: string, value: CellValue | undefined) => void;
+  setRowDeleted: (tabId: string, key: string, deleted: boolean) => void;
+}
+
+/// Edit-session actions address tabs by id, never by index: the index a caller
+/// captured can point at a different tab by the time the action runs.
+function withTab(state: TabState, tabId: string, apply: (tab: Tab) => void): void {
+  const tab = state.tabs.find((t) => t.id === tabId);
+  if (tab) apply(tab);
 }
 
 function makeSingletonTab(
@@ -211,6 +225,52 @@ export const useTabStore = create<TabState>()(
       setQueryTimeout: (index, timeout) =>
         set((s) => {
           s.tabs[index].queryTimeout = timeout;
+        }),
+
+      startEditSession: (tabId, session) =>
+        set((s) => {
+          withTab(s, tabId, (tab) => {
+            tab.editSession = session;
+          });
+        }),
+
+      discardEditSession: (tabId) =>
+        set((s) => {
+          withTab(s, tabId, (tab) => {
+            tab.editSession = undefined;
+          });
+        }),
+
+      // `undefined` means the cell was returned to its original value, so the
+      // pending edit is dropped rather than recorded as a no-op assignment.
+      setCellEdit: (tabId, key, column, value) =>
+        set((s) => {
+          withTab(s, tabId, (tab) => {
+            const session = tab.editSession;
+            if (!session) return;
+            if (value === undefined) {
+              const columns = session.edits[key];
+              if (!columns) return;
+              delete columns[column];
+              if (Object.keys(columns).length === 0) delete session.edits[key];
+              return;
+            }
+            session.edits[key] ??= {};
+            session.edits[key][column] = value;
+          });
+        }),
+
+      setRowDeleted: (tabId, key, deleted) =>
+        set((s) => {
+          withTab(s, tabId, (tab) => {
+            const session = tab.editSession;
+            if (!session) return;
+            const marked = session.deletes.includes(key);
+            if (deleted && !marked) session.deletes.push(key);
+            if (!deleted && marked) {
+              session.deletes = session.deletes.filter((k) => k !== key);
+            }
+          });
         }),
     })),
     {

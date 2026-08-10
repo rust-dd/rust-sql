@@ -1,4 +1,4 @@
-import { Loader2, Save, Trash2, X } from "lucide-react";
+import { Check, Loader2, X } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -7,84 +7,100 @@ import {
   DialogHeader,
   DialogTitle,
 } from "../ui/dialog";
-import type { EditState } from "./types";
 
 interface ToolbarEditProps {
-  editState: EditState | null;
+  pending: { updates: number; deletes: number };
+  sessionMatchesEditor: boolean;
   editError: string | null;
   isCommitting: boolean;
-  pendingDeleteCount: number;
-  onCommit: () => void;
-  onDeleteRows: () => void;
-  onConfirmDelete: () => void;
-  onCancelDelete: () => void;
+  confirmingApply: boolean;
+  onRequestApply: () => void;
+  onConfirmApply: () => void;
+  onCancelApply: () => void;
   onDiscard: () => void;
 }
 
+function summarize({ updates, deletes }: { updates: number; deletes: number }): string {
+  const parts: string[] = [];
+  if (updates > 0) parts.push(`${updates} update${updates === 1 ? "" : "s"}`);
+  if (deletes > 0) parts.push(`${deletes} deletion${deletes === 1 ? "" : "s"}`);
+  return parts.join(" and ");
+}
+
 export function ToolbarEdit({
-  editState,
+  pending,
+  sessionMatchesEditor,
   editError,
   isCommitting,
-  pendingDeleteCount,
-  onCommit,
-  onDeleteRows,
-  onConfirmDelete,
-  onCancelDelete,
+  confirmingApply,
+  onRequestApply,
+  onConfirmApply,
+  onCancelApply,
   onDiscard,
 }: ToolbarEditProps) {
+  const total = pending.updates + pending.deletes;
+  const summary = summarize(pending);
+
   return (
     <>
       {editError && (
-        <span className="text-xs text-destructive max-w-[200px] truncate" title={editError}>
+        <span className="text-xs text-destructive max-w-[240px] truncate" title={editError}>
           {editError}
+        </span>
+      )}
+      {!sessionMatchesEditor && (
+        <span
+          className="text-xs text-destructive max-w-[240px] truncate"
+          title="The editor no longer targets the table this edit was started on. Discard the edit or restore the original query."
+        >
+          Query changed — cannot apply
         </span>
       )}
       <button
         type="button"
-        onClick={onCommit}
-        disabled={(editState?.cellEdits.size ?? 0) === 0 || isCommitting}
+        onClick={onRequestApply}
+        disabled={total === 0 || isCommitting || !sessionMatchesEditor}
         className="flex items-center gap-1 px-2.5 py-1 rounded text-xs font-mono bg-success text-success-foreground hover:bg-success/90 transition-colors disabled:opacity-50"
       >
-        {isCommitting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />}
-        Commit
-      </button>
-      <button
-        type="button"
-        onClick={onDeleteRows}
-        disabled={(editState?.deletedRows.size ?? 0) === 0 || isCommitting}
-        className="flex items-center gap-1 px-2.5 py-1 rounded text-xs font-mono border border-destructive/50 text-destructive hover:bg-destructive/10 transition-colors disabled:opacity-50"
-      >
-        <Trash2 className="h-3 w-3" />
-        Delete ({editState?.deletedRows.size ?? 0})
+        {isCommitting ? (
+          <Loader2 className="h-3 w-3 animate-spin" />
+        ) : (
+          <Check className="h-3 w-3" />
+        )}
+        Apply{total > 0 ? ` (${total})` : ""}
       </button>
       <Dialog
-        open={pendingDeleteCount > 0}
+        open={confirmingApply}
         onOpenChange={(open) => {
-          if (!open) onCancelDelete();
+          if (!open) onCancelApply();
         }}
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Delete rows</DialogTitle>
+            <DialogTitle>Apply changes</DialogTitle>
             <DialogDescription>
-              Are you sure you want to permanently delete {pendingDeleteCount} row
-              {pendingDeleteCount !== 1 ? "s" : ""}? This action cannot be undone.
+              This will apply {summary} in a single transaction. Deletions cannot be undone. If any
+              statement does not match exactly one row, nothing is changed.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <button
               type="button"
-              onClick={onCancelDelete}
+              onClick={onCancelApply}
               className="px-3 py-1.5 rounded-lg text-xs font-mono text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
             >
               Cancel
             </button>
             <button
               type="button"
-              onClick={onConfirmDelete}
-              className="px-3 py-1.5 rounded-lg text-xs font-mono bg-destructive text-destructive-foreground hover:bg-destructive/90 transition-colors"
+              onClick={onConfirmApply}
+              className={`px-3 py-1.5 rounded-lg text-xs font-mono text-destructive-foreground transition-colors ${
+                pending.deletes > 0
+                  ? "bg-destructive hover:bg-destructive/90"
+                  : "bg-success hover:bg-success/90"
+              }`}
             >
-              Yes, delete {pendingDeleteCount} row{pendingDeleteCount !== 1 ? "s" : ""}
+              Apply {summary}
             </button>
           </DialogFooter>
         </DialogContent>

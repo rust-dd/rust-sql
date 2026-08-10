@@ -1,6 +1,7 @@
+import type { EditSession } from "@/lib/mutations";
 import type { CellValue } from "@/lib/wire";
 
-export type { CellValue };
+export type { CellValue, EditSession };
 
 export interface ProjectDetails {
   driver: DriverType;
@@ -50,6 +51,8 @@ export interface Tab {
   splitEditorValue?: string;
   splitResult?: QueryResult;
   isSplitExecuting?: boolean;
+  /** Pending inline row edits. Lives on the tab so it cannot leak across tabs. */
+  editSession?: EditSession;
 }
 
 export interface ExplainNode {

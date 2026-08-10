@@ -1,8 +1,9 @@
-pub(crate) const CELL_SEP: char = '\x1F';
+pub(crate) use super::wire::CELL_SEP;
 pub(crate) const SNAPSHOT_PAGE_WRITE_RETRIES: usize = 3;
 
 pub mod admin_commands;
 pub mod metadata_commands;
+pub mod mutation_commands;
 pub mod object_info_commands;
 pub mod pool_connection;
 pub mod pubsub_commands;
@@ -12,6 +13,7 @@ pub mod statistics_commands;
 
 pub use admin_commands::*;
 pub use metadata_commands::*;
+pub use mutation_commands::*;
 pub use object_info_commands::*;
 pub use pool_connection::*;
 pub use pubsub_commands::*;

@@ -92,16 +92,18 @@ export function useEditMode({ tabId, projectId, editorValue, result }: UseEditMo
 
       const d = useProjectStore.getState().projects[pid];
       if (!d) return;
-      const newTabIdx = useTabStore.getState().tabs.length - 1;
-      useTabStore.getState().setExecuting(newTabIdx, true);
+      const tabs = useTabStore.getState().tabs;
+      const newTabId = tabs[tabs.length - 1]?.id;
+      if (!newTabId) return;
+      useTabStore.getState().setExecuting(newTabId, true);
       const driver = DriverFactory.getDriver(d.driver);
       driver
         .runQuery(pid, sql)
         .then(([cols, rows, time]) => {
-          useTabStore.getState().updateResult(newTabIdx, { columns: cols, rows, time });
+          useTabStore.getState().updateResult(newTabId, { columns: cols, rows, time });
         })
         .catch(() => {
-          useTabStore.getState().setExecuting(newTabIdx, false);
+          useTabStore.getState().setExecuting(newTabId, false);
         });
     },
     [fkMap, projectId],
@@ -192,10 +194,7 @@ export function useEditMode({ tabId, projectId, editorValue, result }: UseEditMo
       );
 
       const [cols, rows, time] = await driver.runQuery(projectId, editorValue ?? "");
-      const refreshedIdx = useTabStore.getState().tabs.findIndex((t) => t.id === tabId);
-      if (refreshedIdx >= 0) {
-        useTabStore.getState().updateResult(refreshedIdx, { columns: cols, rows, time });
-      }
+      useTabStore.getState().updateResult(tabId, { columns: cols, rows, time });
 
       useTabStore.getState().discardEditSession(tabId);
     } catch (err: any) {

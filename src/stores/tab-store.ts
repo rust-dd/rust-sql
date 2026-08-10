@@ -28,18 +28,18 @@ interface TabState {
   closeAllTabs: () => void;
   closeOtherTabs: (index: number) => void;
   selectTab: (index: number) => void;
-  updateContent: (index: number, value: string) => void;
-  updateResult: (index: number, result: QueryResult) => void;
-  setResult: (index: number, result: QueryResult) => void;
-  setExecuting: (index: number, executing: boolean) => void;
-  setProjectId: (index: number, projectId: string) => void;
-  setExplainResult: (index: number, plan: ExplainPlan | undefined) => void;
-  setVirtualQuery: (index: number, vq: VirtualQuery | undefined) => void;
-  toggleSplit: (index: number) => void;
-  updateSplitContent: (index: number, value: string) => void;
-  setSplitResult: (index: number, result: QueryResult) => void;
-  setSplitExecuting: (index: number, executing: boolean) => void;
-  setQueryTimeout: (index: number, timeout: number) => void;
+  updateContent: (tabId: string, value: string) => void;
+  updateResult: (tabId: string, result: QueryResult) => void;
+  setResult: (tabId: string, result: QueryResult) => void;
+  setExecuting: (tabId: string, executing: boolean) => void;
+  setProjectId: (tabId: string, projectId: string) => void;
+  setExplainResult: (tabId: string, plan: ExplainPlan | undefined) => void;
+  setVirtualQuery: (tabId: string, vq: VirtualQuery | undefined) => void;
+  toggleSplit: (tabId: string) => void;
+  updateSplitContent: (tabId: string, value: string) => void;
+  setSplitResult: (tabId: string, result: QueryResult) => void;
+  setSplitExecuting: (tabId: string, executing: boolean) => void;
+  setQueryTimeout: (tabId: string, timeout: number) => void;
 
   startEditSession: (tabId: string, session: EditSession) => void;
   discardEditSession: (tabId: string) => void;
@@ -47,8 +47,9 @@ interface TabState {
   setRowDeleted: (tabId: string, key: string, deleted: boolean) => void;
 }
 
-/// Edit-session actions address tabs by id, never by index: the index a caller
-/// captured can point at a different tab by the time the action runs.
+/// Tabs are addressed by id, never by index: an index captured before an await
+/// can point at a different tab, or past the end, by the time the action runs.
+/// A tab that has since been closed makes the action a no-op.
 function withTab(state: TabState, tabId: string, apply: (tab: Tab) => void): void {
   const tab = state.tabs.find((t) => t.id === tabId);
   if (tab) apply(tab);
@@ -170,61 +171,84 @@ export const useTabStore = create<TabState>()(
           s.selectedTabIndex = index;
         }),
 
-      updateContent: (index, value) =>
+      updateContent: (tabId, value) =>
         set((s) => {
-          s.tabs[index].editorValue = value;
+          withTab(s, tabId, (tab) => {
+            tab.editorValue = value;
+          });
         }),
-      updateResult: (index, result) =>
+      updateResult: (tabId, result) =>
         set((s) => {
-          s.tabs[index].result = result;
-          s.tabs[index].isExecuting = false;
+          withTab(s, tabId, (tab) => {
+            tab.result = result;
+            tab.isExecuting = false;
+          });
         }),
-      setResult: (index, result) =>
+      setResult: (tabId, result) =>
         set((s) => {
-          s.tabs[index].result = result;
+          withTab(s, tabId, (tab) => {
+            tab.result = result;
+          });
         }),
-      setExecuting: (index, executing) =>
+      setExecuting: (tabId, executing) =>
         set((s) => {
-          s.tabs[index].isExecuting = executing;
+          withTab(s, tabId, (tab) => {
+            tab.isExecuting = executing;
+          });
         }),
-      setProjectId: (index, projectId) =>
+      setProjectId: (tabId, projectId) =>
         set((s) => {
-          s.tabs[index].projectId = projectId;
+          withTab(s, tabId, (tab) => {
+            tab.projectId = projectId;
+          });
         }),
-      setExplainResult: (index, plan) =>
+      setExplainResult: (tabId, plan) =>
         set((s) => {
-          s.tabs[index].explainResult = plan;
+          withTab(s, tabId, (tab) => {
+            tab.explainResult = plan;
+          });
         }),
-      setVirtualQuery: (index, vq) =>
+      setVirtualQuery: (tabId, vq) =>
         set((s) => {
-          s.tabs[index].virtualQuery = vq;
+          withTab(s, tabId, (tab) => {
+            tab.virtualQuery = vq;
+          });
         }),
 
-      toggleSplit: (index) => {
+      toggleSplit: (tabId) => {
         set((s) => {
-          const tab = s.tabs[index];
-          if (!tab || tab.type !== "query") return;
-          tab.isSplit = !tab.isSplit;
-          tab.splitEditorValue = tab.splitEditorValue ?? "";
+          withTab(s, tabId, (tab) => {
+            if (tab.type !== "query") return;
+            tab.isSplit = !tab.isSplit;
+            tab.splitEditorValue = tab.splitEditorValue ?? "";
+          });
         });
       },
 
-      updateSplitContent: (index, value) =>
+      updateSplitContent: (tabId, value) =>
         set((s) => {
-          s.tabs[index].splitEditorValue = value;
+          withTab(s, tabId, (tab) => {
+            tab.splitEditorValue = value;
+          });
         }),
-      setSplitResult: (index, result) =>
+      setSplitResult: (tabId, result) =>
         set((s) => {
-          s.tabs[index].splitResult = result;
-          s.tabs[index].isSplitExecuting = false;
+          withTab(s, tabId, (tab) => {
+            tab.splitResult = result;
+            tab.isSplitExecuting = false;
+          });
         }),
-      setSplitExecuting: (index, executing) =>
+      setSplitExecuting: (tabId, executing) =>
         set((s) => {
-          s.tabs[index].isSplitExecuting = executing;
+          withTab(s, tabId, (tab) => {
+            tab.isSplitExecuting = executing;
+          });
         }),
-      setQueryTimeout: (index, timeout) =>
+      setQueryTimeout: (tabId, timeout) =>
         set((s) => {
-          s.tabs[index].queryTimeout = timeout;
+          withTab(s, tabId, (tab) => {
+            tab.queryTimeout = timeout;
+          });
         }),
 
       startEditSession: (tabId, session) =>
@@ -316,4 +340,13 @@ export const useTabStore = create<TabState>()(
 
 export function useActiveTab(): Tab | undefined {
   return useTabStore((s) => s.tabs[s.selectedTabIndex]);
+}
+
+export function useActiveTabId(): string | undefined {
+  return useTabStore((s) => s.tabs[s.selectedTabIndex]?.id);
+}
+
+/// Id of a tab by position, for the few callers that still hold an index.
+export function tabIdAt(index: number): string | undefined {
+  return useTabStore.getState().tabs[index]?.id;
 }

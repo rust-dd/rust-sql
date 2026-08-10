@@ -24,7 +24,7 @@ import { useAppStartup } from "@/hooks/use-app-startup";
 import { useQueryLifecycle } from "@/hooks/use-query-lifecycle";
 import { checkForUpdates } from "@/lib/updater";
 import { useProjectStore } from "@/stores/project-store";
-import { useActiveTab, useTabStore } from "@/stores/tab-store";
+import { useActiveTab, useActiveTabId, useTabStore } from "@/stores/tab-store";
 import { useUIStore } from "@/stores/ui-store";
 import type { ProjectDetails } from "@/types";
 import "@/monaco/setup";
@@ -40,8 +40,7 @@ export default function App() {
   const projects = useProjectStore((s) => s.projects);
   const saveConnection = useProjectStore((s) => s.saveConnection);
   const updateConnection = useProjectStore((s) => s.updateConnection);
-
-  const selectedTabIndex = useTabStore((s) => s.selectedTabIndex);
+  const activeTabId = useActiveTabId();
   const activeTab = useActiveTab();
   const updateContent = useTabStore((s) => s.updateContent);
 
@@ -206,7 +205,7 @@ export default function App() {
                   >
                     <QueryEditor
                       value={activeTab.editorValue}
-                      onChange={(v) => updateContent(selectedTabIndex, v)}
+                      onChange={(v) => activeTabId && updateContent(activeTabId, v)}
                       onExecute={() => void runQuery()}
                       onExplain={() => void runExplain()}
                     />
@@ -225,7 +224,7 @@ export default function App() {
                     <QueryEditor
                       value={activeTab.splitEditorValue ?? ""}
                       onChange={(v) =>
-                        useTabStore.getState().updateSplitContent(selectedTabIndex, v)
+                        activeTabId && useTabStore.getState().updateSplitContent(activeTabId, v)
                       }
                       onExecute={() => void runSplitQuery()}
                     />
@@ -270,7 +269,7 @@ export default function App() {
               <div style={{ height: `${editorHeight}%` }} className="flex flex-col overflow-hidden">
                 <QueryEditor
                   value={activeTab?.editorValue ?? ""}
-                  onChange={(v) => updateContent(selectedTabIndex, v)}
+                  onChange={(v) => activeTabId && updateContent(activeTabId, v)}
                   onExecute={() => void runQuery()}
                   onExplain={() => void runExplain()}
                 />

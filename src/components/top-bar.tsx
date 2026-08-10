@@ -1,7 +1,7 @@
 import { Database, Download, Moon, Search, Sun } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useProjectStore } from "@/stores/project-store";
-import { useActiveTab, useTabStore } from "@/stores/tab-store";
+import { tabIdAt, useActiveTab, useTabStore } from "@/stores/tab-store";
 import { useUIStore } from "@/stores/ui-store";
 import { ProjectConnectionStatus } from "@/types";
 
@@ -49,7 +49,8 @@ export function TopBar({
                 value={activeProject ?? ""}
                 onChange={(e) => {
                   if (e.target.value) {
-                    setProjectId(selectedTabIndex, e.target.value);
+                    const tabId = tabIdAt(selectedTabIndex);
+                    if (tabId) setProjectId(tabId, e.target.value);
                   }
                 }}
               >

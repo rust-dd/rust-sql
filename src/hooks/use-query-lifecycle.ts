@@ -1,13 +1,8 @@
 import { useCallback, useEffect } from "react";
 import { DriverFactory } from "@/lib/database-driver";
-import {
-  CELL_SEP,
-  isQueryCancelledError,
-  notifyQueryComplete,
-  PAGE_SIZE,
-  ROW_SEP,
-} from "@/lib/query-helpers";
+import { isQueryCancelledError, notifyQueryComplete, PAGE_SIZE } from "@/lib/query-helpers";
 import * as virtualCache from "@/lib/virtual-cache";
+import { decodeColumns, decodePage, decodeResult } from "@/lib/wire";
 import { useHistoryStore } from "@/stores/history-store";
 import { useProjectStore } from "@/stores/project-store";
 import { useTabStore } from "@/stores/tab-store";
@@ -29,9 +24,13 @@ export function useQueryLifecycle({ setCommandPaletteOpen }: UseQueryLifecycleAr
   const connectProject = useProjectStore((s) => s.connect);
 
   const runQuery = useCallback(async () => {
-    const { tabs, selectedTabIndex: idx } = useTabStore.getState();
-    const tab = tabs[idx];
+    const { tabs, selectedTabIndex } = useTabStore.getState();
+    const tab = tabs[selectedTabIndex];
     if (!tab?.projectId || !tab.editorValue.trim()) return;
+
+    // Captured before the first await: the tab may move or close while the
+    // query runs, and an index would then address someone else's tab.
+    const tabId = tab.id;
 
     const d = useProjectStore.getState().projects[tab.projectId];
     if (!d) return;
@@ -43,7 +42,7 @@ export function useQueryLifecycle({ setCommandPaletteOpen }: UseQueryLifecycleAr
       if (newStatus !== "Connected") return;
     }
 
-    setExecuting(idx, true);
+    setExecuting(tabId, true);
     const startTime = Date.now();
     try {
       const driver = DriverFactory.getDriver(d.driver);
@@ -52,7 +51,7 @@ export function useQueryLifecycle({ setCommandPaletteOpen }: UseQueryLifecycleAr
       if (prevVQ?.queryId) {
         await driver.closeVirtual?.(tab.projectId, prevVQ.queryId).catch(() => {});
         virtualCache.clearQuery(prevVQ.queryId);
-        setVirtualQuery(idx, undefined);
+        setVirtualQuery(tabId, undefined);
       }
 
       const timeoutMs = tab.queryTimeout || undefined;
@@ -69,12 +68,10 @@ export function useQueryLifecycle({ setCommandPaletteOpen }: UseQueryLifecycleAr
         );
 
         if (!colsPacked) {
-          const parts = pagePacked ? pagePacked.split(ROW_SEP) : [];
-          const columns = parts[0] ? parts[0].split(CELL_SEP) : [];
-          const rows = parts.slice(1).map((r) => r.split(CELL_SEP));
+          const { columns, rows } = decodeResult(pagePacked);
 
           await driver.closeVirtual?.(tab.projectId, queryId).catch(() => {});
-          updateResult(idx, { columns, rows, time: elapsed });
+          updateResult(tabId, { columns, rows, time: elapsed });
           notifyQueryComplete(tab.editorValue, elapsed, true, rows.length);
 
           addHistoryEntry({
@@ -87,18 +84,16 @@ export function useQueryLifecycle({ setCommandPaletteOpen }: UseQueryLifecycleAr
             timestamp: startTime,
           });
         } else {
-          const columns = colsPacked.split(CELL_SEP);
-          const firstPage = pagePacked
-            ? pagePacked.split(ROW_SEP).map((r) => r.split(CELL_SEP))
-            : [];
+          const columns = decodeColumns(colsPacked);
+          const firstPage = decodePage(pagePacked);
 
           if (totalRows <= PAGE_SIZE) {
             await driver.closeVirtual?.(tab.projectId, queryId).catch(() => {});
-            updateResult(idx, { columns, rows: firstPage, time: elapsed });
+            updateResult(tabId, { columns, rows: firstPage, time: elapsed });
             notifyQueryComplete(tab.editorValue, elapsed, true, firstPage.length);
           } else {
             virtualCache.setPage(queryId, 0, firstPage);
-            setVirtualQuery(idx, {
+            setVirtualQuery(tabId, {
               queryId,
               columns,
               totalRows,
@@ -106,7 +101,7 @@ export function useQueryLifecycle({ setCommandPaletteOpen }: UseQueryLifecycleAr
               colCount: columns.length,
               time: elapsed,
             });
-            updateResult(idx, { columns, rows: firstPage, time: elapsed });
+            updateResult(tabId, { columns, rows: firstPage, time: elapsed });
             notifyQueryComplete(tab.editorValue, elapsed, true, totalRows);
           }
 
@@ -122,7 +117,7 @@ export function useQueryLifecycle({ setCommandPaletteOpen }: UseQueryLifecycleAr
         }
       } else {
         const [cols, rows, time] = await driver.runQuery(tab.projectId, tab.editorValue, timeoutMs);
-        updateResult(idx, { columns: cols, rows, time });
+        updateResult(tabId, { columns: cols, rows, time });
         notifyQueryComplete(tab.editorValue, time, true, rows.length);
         addHistoryEntry({
           projectId: tab.projectId,
@@ -138,7 +133,7 @@ export function useQueryLifecycle({ setCommandPaletteOpen }: UseQueryLifecycleAr
       const elapsed = Date.now() - startTime;
       const errorMsg = err?.message ?? String(err);
       const cancelled = isQueryCancelledError(errorMsg);
-      updateResult(idx, {
+      updateResult(tabId, {
         columns: [cancelled ? "Info" : "Error"],
         rows: [[cancelled ? "Query cancelled" : errorMsg]],
         time: 0,
@@ -156,14 +151,19 @@ export function useQueryLifecycle({ setCommandPaletteOpen }: UseQueryLifecycleAr
         error: cancelled ? "Query cancelled" : errorMsg,
         timestamp: startTime,
       });
+    } finally {
+      // Without this a failure inside the error path would leave the tab
+      // spinning on "Executing query..." with no way back.
+      setExecuting(tabId, false);
     }
     useUIStore.getState().setSelectedRow(0);
   }, [setExecuting, updateResult, setVirtualQuery, addHistoryEntry, connectProject]);
 
   const runExplain = useCallback(async () => {
-    const { tabs, selectedTabIndex: idx } = useTabStore.getState();
-    const tab = tabs[idx];
+    const { tabs, selectedTabIndex } = useTabStore.getState();
+    const tab = tabs[selectedTabIndex];
     if (!tab?.projectId || !tab.editorValue.trim()) return;
+    const tabId = tab.id;
 
     const d = useProjectStore.getState().projects[tab.projectId];
     if (!d) return;
@@ -175,7 +175,7 @@ export function useQueryLifecycle({ setCommandPaletteOpen }: UseQueryLifecycleAr
       if (newStatus !== "Connected") return;
     }
 
-    setExecuting(idx, true);
+    setExecuting(tabId, true);
     try {
       const driver = DriverFactory.getDriver(d.driver);
       // Strip trailing semicolons — wrapping in EXPLAIN(...) doesn't accept them
@@ -197,24 +197,24 @@ export function useQueryLifecycle({ setCommandPaletteOpen }: UseQueryLifecycleAr
         }
       }
       if (Array.isArray(plans) && plans.length > 0) {
-        setExplainResult(idx, plans[0]);
+        setExplainResult(tabId, plans[0]);
       }
     } catch (err: any) {
       const errorMsg = err?.message ?? String(err);
       const cancelled = isQueryCancelledError(errorMsg);
-      updateResult(idx, {
+      updateResult(tabId, {
         columns: [cancelled ? "Info" : "Explain Error"],
         rows: [[cancelled ? "Explain cancelled" : errorMsg]],
         time: 0,
       });
-      setExplainResult(idx, undefined);
+      setExplainResult(tabId, undefined);
     }
-    setExecuting(idx, false);
+    setExecuting(tabId, false);
   }, [setExecuting, updateResult, setExplainResult, connectProject]);
 
   const cancelQuery = useCallback(async () => {
-    const { tabs, selectedTabIndex: idx } = useTabStore.getState();
-    const tab = tabs[idx];
+    const { tabs, selectedTabIndex } = useTabStore.getState();
+    const tab = tabs[selectedTabIndex];
     if (!tab?.projectId || !tab.isExecuting) return;
 
     const d = useProjectStore.getState().projects[tab.projectId];
@@ -229,9 +229,10 @@ export function useQueryLifecycle({ setCommandPaletteOpen }: UseQueryLifecycleAr
   }, []);
 
   const runSplitQuery = useCallback(async () => {
-    const { tabs, selectedTabIndex: idx } = useTabStore.getState();
-    const tab = tabs[idx];
+    const { tabs, selectedTabIndex } = useTabStore.getState();
+    const tab = tabs[selectedTabIndex];
     if (!tab?.projectId || !tab.splitEditorValue?.trim()) return;
+    const tabId = tab.id;
 
     const d = useProjectStore.getState().projects[tab.projectId];
     if (!d) return;
@@ -243,15 +244,15 @@ export function useQueryLifecycle({ setCommandPaletteOpen }: UseQueryLifecycleAr
       if (newStatus !== "Connected") return;
     }
 
-    setSplitExecuting(idx, true);
+    setSplitExecuting(tabId, true);
     try {
       const driver = DriverFactory.getDriver(d.driver);
       const [cols, rows, time] = await driver.runQuery(tab.projectId, tab.splitEditorValue);
-      setSplitResult(idx, { columns: cols, rows, time });
+      setSplitResult(tabId, { columns: cols, rows, time });
     } catch (err: any) {
       const errorMsg = err?.message ?? String(err);
       const cancelled = isQueryCancelledError(errorMsg);
-      setSplitResult(idx, {
+      setSplitResult(tabId, {
         columns: [cancelled ? "Info" : "Error"],
         rows: [[cancelled ? "Query cancelled" : errorMsg]],
         time: 0,

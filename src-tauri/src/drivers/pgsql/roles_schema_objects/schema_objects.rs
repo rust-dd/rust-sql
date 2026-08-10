@@ -1,4 +1,4 @@
-use crate::common::enums::AppError;
+use crate::common::enums::{AppError, query_failed};
 
 #[derive(Debug, Clone, serde::Serialize)]
 pub struct SchemaObject {
@@ -31,7 +31,7 @@ pub async fn extract_schema_objects(
             &[&schema],
         )
         .await
-        .map_err(|e| AppError::QueryFailed(e.to_string()))?;
+        .map_err(query_failed)?;
 
     for row in &rows {
         objects.push(SchemaObject {
@@ -47,7 +47,7 @@ pub async fn extract_schema_objects(
             &[&schema],
         )
         .await
-        .map_err(|e| AppError::QueryFailed(e.to_string()))?;
+        .map_err(query_failed)?;
 
     for row in &rows {
         objects.push(SchemaObject {
@@ -63,7 +63,7 @@ pub async fn extract_schema_objects(
             &[&schema],
         )
         .await
-        .map_err(|e| AppError::QueryFailed(e.to_string()))?;
+        .map_err(query_failed)?;
 
     for row in &rows {
         objects.push(SchemaObject {
@@ -83,7 +83,7 @@ pub async fn extract_schema_objects(
             &[&schema],
         )
         .await
-        .map_err(|e| AppError::QueryFailed(e.to_string()))?;
+        .map_err(query_failed)?;
 
     for row in &rows {
         objects.push(SchemaObject {
@@ -99,7 +99,7 @@ pub async fn extract_schema_objects(
             &[&schema],
         )
         .await
-        .map_err(|e| AppError::QueryFailed(e.to_string()))?;
+        .map_err(query_failed)?;
 
     for row in &rows {
         objects.push(SchemaObject {
@@ -137,7 +137,7 @@ pub async fn discover_notify_channels(
             &[],
         )
         .await
-        .map_err(|e| AppError::QueryFailed(e.to_string()))?;
+        .map_err(query_failed)?;
 
     Ok(rows.iter().map(|r| r.get::<_, String>(0)).collect())
 }

@@ -1,7 +1,7 @@
 use std::time::Instant;
 use tokio_postgres::Client;
 
-use crate::common::enums::AppError;
+use crate::common::enums::{AppError, query_failed};
 
 use super::super::ROW_SEP;
 use super::super::wire::{Cell, pack_columns, pack_rows};
@@ -15,10 +15,7 @@ pub async fn execute_query(
     sql: &str,
 ) -> Result<(Vec<String>, Vec<Vec<Cell>>, f32), AppError> {
     let start = Instant::now();
-    let messages = client
-        .simple_query(sql)
-        .await
-        .map_err(|e| AppError::QueryFailed(e.to_string()))?;
+    let messages = client.simple_query(sql).await.map_err(query_failed)?;
 
     let (columns, rows) = process_simple_messages(messages);
     let elapsed = start.elapsed().as_millis() as f32;
@@ -29,10 +26,7 @@ pub async fn execute_query(
 /// Uses simple_query protocol with multi-statement support.
 pub async fn execute_query_packed(client: &Client, sql: &str) -> Result<(String, f32), AppError> {
     let start = Instant::now();
-    let messages = client
-        .simple_query(sql)
-        .await
-        .map_err(|e| AppError::QueryFailed(e.to_string()))?;
+    let messages = client.simple_query(sql).await.map_err(query_failed)?;
 
     let (columns, rows) = process_simple_messages(messages);
 

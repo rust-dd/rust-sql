@@ -25,8 +25,8 @@ pub async fn pgsql_csv_import(
     column_mapping: Vec<(usize, String)>,
     app_state: State<'_, AppState>,
 ) -> Result<usize> {
-    let client = acquire_client(&app_state.clients, project_id).await?;
-    import_csv_to_table(&client, file_path, schema, table, &column_mapping)
+    let mut client = acquire_client(&app_state.clients, project_id).await?;
+    import_csv_to_table(&mut client, file_path, schema, table, &column_mapping)
         .await
         .map_err(Into::into)
 }

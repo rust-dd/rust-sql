@@ -2,7 +2,7 @@ use futures_util::{TryStreamExt, pin_mut};
 use std::time::Instant;
 use tokio_postgres::{Client, SimpleQueryMessage};
 
-use crate::common::enums::AppError;
+use crate::common::enums::{AppError, query_failed};
 
 use super::super::wire::{ROW_SEP, pack_columns, push_row};
 use super::super::{CachedQuery, VirtualCache};
@@ -77,10 +77,7 @@ pub async fn execute_virtual(
 ) -> Result<(String, usize, String, f32, bool), AppError> {
     let start = Instant::now();
 
-    let stream = client
-        .simple_query_raw(sql)
-        .await
-        .map_err(|e| AppError::QueryFailed(e.to_string()))?;
+    let stream = client.simple_query_raw(sql).await.map_err(query_failed)?;
     pin_mut!(stream);
 
     let mut accum = PageAccumulator::default();
@@ -88,11 +85,7 @@ pub async fn execute_virtual(
     let mut total_affected: u64 = 0;
     let mut capped = false;
 
-    while let Some(message) = stream
-        .try_next()
-        .await
-        .map_err(|e| AppError::QueryFailed(e.to_string()))?
-    {
+    while let Some(message) = stream.try_next().await.map_err(query_failed)? {
         match message {
             SimpleQueryMessage::Row(row) => {
                 accum.push(&row, page_size);

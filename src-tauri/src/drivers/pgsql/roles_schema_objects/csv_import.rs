@@ -1,4 +1,5 @@
-use crate::common::enums::AppError;
+use crate::common::enums::{AppError, error_chain, query_failed};
+use crate::drivers::pgsql::mutation::quote_ident;
 
 pub async fn parse_csv_preview(
     file_path: &str,
@@ -26,49 +27,95 @@ pub async fn parse_csv_preview(
     Ok((headers, rows))
 }
 
-pub async fn import_csv_to_table(
+/// Build the INSERT, casting each text parameter to the column's own type.
+///
+/// CSV fields are text, and binding them straight at a non-text column made
+/// tokio-postgres refuse to serialize the parameter, so importing into a table
+/// with any numeric, date or boolean column failed outright. Casting on the
+/// server side is the same recipe the row-mutation builder uses.
+fn build_insert(schema: &str, table: &str, columns: &[(String, String)]) -> String {
+    let assignments: Vec<String> = columns
+        .iter()
+        .enumerate()
+        .map(|(i, (_, ty))| format!("${}::text::{}", i + 1, ty))
+        .collect();
+
+    format!(
+        "INSERT INTO {}.{} ({}) VALUES ({})",
+        quote_ident(schema),
+        quote_ident(table),
+        columns
+            .iter()
+            .map(|(name, _)| quote_ident(name))
+            .collect::<Vec<_>>()
+            .join(", "),
+        assignments.join(", "),
+    )
+}
+
+async fn column_types(
     client: &deadpool_postgres::Client,
+    schema: &str,
+    table: &str,
+    wanted: &[(usize, String)],
+) -> Result<Vec<(String, String)>, AppError> {
+    let rows = client
+        .query(
+            "SELECT attname::text, format_type(atttypid, atttypmod)
+             FROM pg_attribute
+             WHERE attrelid = format('%I.%I', $1::text, $2::text)::regclass
+               AND attnum > 0
+               AND NOT attisdropped",
+            &[&schema, &table],
+        )
+        .await
+        .map_err(query_failed)?;
+
+    let known: std::collections::BTreeMap<String, String> = rows
+        .into_iter()
+        .map(|row| (row.get::<_, String>(0), row.get::<_, String>(1)))
+        .collect();
+
+    wanted
+        .iter()
+        .map(|(_, name)| {
+            known
+                .get(name)
+                .map(|ty| (name.clone(), ty.clone()))
+                .ok_or_else(|| AppError::QueryFailed(format!("Unknown column \"{}\"", name)))
+        })
+        .collect()
+}
+
+pub async fn import_csv_to_table(
+    client: &mut deadpool_postgres::Client,
     file_path: &str,
     schema: &str,
     table: &str,
     column_mapping: &[(usize, String)],
 ) -> Result<usize, AppError> {
-    let mut rdr = csv::ReaderBuilder::new()
-        .has_headers(true)
-        .from_path(file_path)
-        .map_err(|e| AppError::QueryFailed(format!("Failed to read CSV: {}", e)))?;
-
     if column_mapping.is_empty() {
         return Err(AppError::QueryFailed(
             "No column mapping provided".to_string(),
         ));
     }
 
-    let col_names: Vec<String> = column_mapping
-        .iter()
-        .map(|(_, name)| format!("\"{}\"", name))
-        .collect();
-    let placeholders: Vec<String> = (1..=column_mapping.len())
-        .map(|i| format!("${}", i))
-        .collect();
+    let mut rdr = csv::ReaderBuilder::new()
+        .has_headers(true)
+        .from_path(file_path)
+        .map_err(|e| AppError::QueryFailed(format!("Failed to read CSV: {}", e)))?;
 
-    let insert_sql = format!(
-        "INSERT INTO \"{}\".\"{}\" ({}) VALUES ({})",
-        schema,
-        table,
-        col_names.join(", "),
-        placeholders.join(", "),
-    );
+    let columns = column_types(client, schema, table, column_mapping).await?;
+    let insert_sql = build_insert(schema, table, &columns);
 
-    let statement = client
-        .prepare(&insert_sql)
-        .await
-        .map_err(|e| AppError::QueryFailed(format!("Failed to prepare statement: {}", e)))?;
+    // A real transaction rather than a bare BEGIN: a parse error midway used to
+    // return without rolling back, handing a connection back to the pool with a
+    // transaction still open.
+    let tx = client.transaction().await.map_err(query_failed)?;
 
-    client
-        .execute("BEGIN", &[])
-        .await
-        .map_err(|e| AppError::QueryFailed(e.to_string()))?;
+    let statement = tx.prepare(&insert_sql).await.map_err(|e| {
+        AppError::QueryFailed(format!("Failed to prepare statement: {}", error_chain(&e)))
+    })?;
 
     let mut imported = 0usize;
     for result in rdr.records() {
@@ -76,9 +123,15 @@ pub async fn import_csv_to_table(
             AppError::QueryFailed(format!("CSV parse error at row {}: {}", imported + 1, e))
         })?;
 
-        let values: Vec<String> = column_mapping
+        // An absent or empty field becomes NULL rather than an empty string,
+        // which is what a numeric or date column needs and what an empty CSV
+        // field conventionally means.
+        let values: Vec<Option<String>> = column_mapping
             .iter()
-            .map(|(idx, _)| record.get(*idx).unwrap_or("").to_string())
+            .map(|(idx, _)| match record.get(*idx) {
+                Some("") | None => None,
+                Some(value) => Some(value.to_string()),
+            })
             .collect();
 
         let params: Vec<&(dyn tokio_postgres::types::ToSql + Sync)> = values
@@ -86,23 +139,49 @@ pub async fn import_csv_to_table(
             .map(|v| v as &(dyn tokio_postgres::types::ToSql + Sync))
             .collect();
 
-        match client.execute(&statement, &params).await {
-            Ok(_) => imported += 1,
-            Err(e) => {
-                client.execute("ROLLBACK", &[]).await.ok();
-                return Err(AppError::QueryFailed(format!(
-                    "Import failed at row {}: {}",
-                    imported + 1,
-                    e
-                )));
-            }
-        }
+        tx.execute(&statement, &params).await.map_err(|e| {
+            AppError::QueryFailed(format!(
+                "Import failed at row {}: {}",
+                imported + 1,
+                error_chain(&e)
+            ))
+        })?;
+        imported += 1;
     }
 
-    client
-        .execute("COMMIT", &[])
+    tx.commit()
         .await
-        .map_err(|e| AppError::QueryFailed(format!("Failed to commit: {}", e)))?;
+        .map_err(|e| AppError::QueryFailed(format!("Failed to commit: {}", error_chain(&e))))?;
 
     Ok(imported)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn columns() -> Vec<(String, String)> {
+        vec![
+            ("id".to_string(), "integer".to_string()),
+            ("name".to_string(), "text".to_string()),
+        ]
+    }
+
+    #[test]
+    fn each_parameter_is_cast_to_its_column_type() {
+        let sql = build_insert("public", "t", &columns());
+        assert_eq!(
+            sql,
+            "INSERT INTO \"public\".\"t\" (\"id\", \"name\") \
+             VALUES ($1::text::integer, $2::text::text)"
+        );
+    }
+
+    #[test]
+    fn identifiers_are_escaped() {
+        let cols = vec![("we\"ird".to_string(), "text".to_string())];
+        let sql = build_insert("my schema", "my\"table", &cols);
+        assert!(sql.contains("\"my schema\".\"my\"\"table\""));
+        assert!(sql.contains("\"we\"\"ird\""));
+    }
 }

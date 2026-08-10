@@ -1,7 +1,7 @@
 use std::time::Instant;
 use tokio_postgres::{Client, SimpleQueryMessage};
 
-use crate::common::enums::AppError;
+use crate::common::enums::{AppError, query_failed};
 
 use super::super::wire::{Cell, pack_columns, pack_rows};
 use super::helpers::{column_names, process_simple_messages, row_cells};
@@ -37,10 +37,7 @@ pub async fn execute_query_streamed(
     let event_name = format!("query-stream-{}", stream_id);
 
     // Begin transaction + declare cursor for memory-efficient streaming
-    client
-        .batch_execute("BEGIN")
-        .await
-        .map_err(|e| AppError::QueryFailed(e.to_string()))?;
+    client.batch_execute("BEGIN").await.map_err(query_failed)?;
 
     let cursor_sql = format!("DECLARE _rsql_cur NO SCROLL CURSOR FOR {}", sql);
     match client.batch_execute(&cursor_sql).await {
@@ -119,10 +116,7 @@ pub async fn execute_query_streamed(
             client.batch_execute("ROLLBACK").await.ok();
 
             // Re-execute with simple_query for multi-statement support
-            let messages = client
-                .simple_query(sql)
-                .await
-                .map_err(|e| AppError::QueryFailed(e.to_string()))?;
+            let messages = client.simple_query(sql).await.map_err(query_failed)?;
 
             let (columns, rows) = process_simple_messages(messages);
 

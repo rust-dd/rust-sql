@@ -1,5 +1,5 @@
 use crate::AppState;
-use crate::common::enums::AppError;
+use crate::common::enums::{AppError, query_failed};
 use crate::drivers::pgsql::mutation::{
     BuiltStatement, ColumnTypes, MutationKind, RowMutation, build_statement,
 };
@@ -32,7 +32,7 @@ async fn load_column_types(
             &[&schema, &table],
         )
         .await
-        .map_err(|e| AppError::QueryFailed(e.to_string()))?;
+        .map_err(query_failed)?;
 
     if rows.is_empty() {
         return Err(AppError::QueryFailed(format!(
@@ -90,17 +90,14 @@ pub async fn pgsql_apply_row_mutations(
         .map(|mutation| build_statement(schema, table, mutation, &types))
         .collect::<std::result::Result<_, AppError>>()?;
 
-    let tx = client
-        .transaction()
-        .await
-        .map_err(|e| AppError::QueryFailed(e.to_string()))?;
+    let tx = client.transaction().await.map_err(query_failed)?;
 
     // Transaction-scoped, so it cannot leak into the pooled session the way a
     // session-level SET followed by RESET can when the reset never runs.
     if let Some(ms) = timeout_ms.filter(|ms| *ms > 0) {
         tx.batch_execute(&format!("SET LOCAL statement_timeout = {}", ms))
             .await
-            .map_err(|e| AppError::QueryFailed(e.to_string()))?;
+            .map_err(query_failed)?;
     }
 
     let mut updated = 0usize;
@@ -116,7 +113,7 @@ pub async fn pgsql_apply_row_mutations(
         let affected = tx
             .execute(statement.sql.as_str(), &params)
             .await
-            .map_err(|e| AppError::QueryFailed(e.to_string()))?;
+            .map_err(query_failed)?;
 
         if affected != 1 {
             let key = describe_key(&mutation.pk);
@@ -140,9 +137,7 @@ pub async fn pgsql_apply_row_mutations(
         }
     }
 
-    tx.commit()
-        .await
-        .map_err(|e| AppError::QueryFailed(e.to_string()))?;
+    tx.commit().await.map_err(query_failed)?;
 
     Ok(MutationReport { updated, deleted })
 }

@@ -1,5 +1,5 @@
 use crate::AppState;
-use crate::common::enums::AppError;
+use crate::common::enums::{AppError, query_failed};
 use crate::drivers::pgsql::discover_notify_channels;
 
 use futures_util::StreamExt;
@@ -159,10 +159,7 @@ pub async fn pgsql_notify_send(
         channel.replace('\'', "''"),
         payload.replace('\'', "''"),
     );
-    client
-        .batch_execute(&sql)
-        .await
-        .map_err(|e| AppError::QueryFailed(e.to_string()))?;
+    client.batch_execute(&sql).await.map_err(query_failed)?;
     Ok(true)
 }
 

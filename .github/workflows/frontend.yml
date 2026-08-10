@@ -10,6 +10,9 @@ jobs:
   check:
     runs-on: ubuntu-latest
 
+    env:
+      NODE_OPTIONS: --max-old-space-size=4096
+
     steps:
       - uses: actions/checkout@v4
 
@@ -33,3 +36,9 @@ jobs:
 
       - name: Test
         run: yarn test
+
+      # The release build was the only thing that bundled, so a failure that
+      # only shows up there — an out-of-memory crash, a module that will not
+      # resolve — reached a tag before anyone saw it.
+      - name: Build
+        run: yarn build

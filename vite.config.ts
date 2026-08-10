@@ -15,6 +15,22 @@ export default defineConfig(async () => ({
     },
   },
 
+  build: {
+    rollupOptions: {
+      output: {
+        // The SQL grammar is ANTLR-generated and megabytes of it; bundling it
+        // into the single app chunk pushed rollup past the default Node heap
+        // and the release build ran out of memory. Splitting also keeps the
+        // editor and grid out of the chunk that changes on every edit.
+        manualChunks: {
+          "sql-parser": ["dt-sql-parser"],
+          monaco: ["monaco-editor", "monaco-sql-languages"],
+          grid: ["@glideapps/glide-data-grid"],
+        },
+      },
+    },
+  },
+
   // Vite options tailored for Tauri development and only applied in `tauri dev` or `tauri build`
   //
   // 1. prevent Vite from obscuring rust errors

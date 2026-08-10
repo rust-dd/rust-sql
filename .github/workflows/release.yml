@@ -28,6 +28,12 @@ jobs:
             args: ""
     runs-on: ${{ matrix.platform }}
 
+    env:
+      # Rolling the editor and the ANTLR SQL grammar into a bundle needs more
+      # than the ~2 GB a runner defaults to, and the failure is an out-of-memory
+      # crash rather than anything that names itself.
+      NODE_OPTIONS: --max-old-space-size=4096
+
     steps:
       - uses: actions/checkout@v4
 

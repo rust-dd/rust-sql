@@ -12,15 +12,26 @@
 import { PostgreSQL } from "dt-sql-parser";
 import type * as Monaco from "monaco-editor";
 import { useProjectStore } from "@/stores/project-store";
-import { catalogFor } from "@/stores/schema-index-store";
+import { catalogFor, useSchemaIndexStore } from "@/stores/schema-index-store";
 import { useTabStore } from "@/stores/tab-store";
 import { buildCompletions } from "./build";
+import { neededSchema, withTimeout } from "./pending";
 import { readExpectation, readScope, toMonacoItem } from "./service";
 import { SQL_SNIPPETS } from "./snippets";
 import type { Catalog, CompletionRange } from "./types";
 
 /** Beyond this the parse stops being cheap enough to run per request. */
 const MAX_PARSED_CHARS = 200_000;
+
+/**
+ * How long a request will wait for a schema snapshot it has never seen.
+ *
+ * Only the first request against a schema waits at all; the rest read memory.
+ * Waiting is what makes Monaco show its own "Loading..." in the widget, which
+ * is the difference between "the schema is still coming" and "there are no
+ * tables here". Past this the request answers with whatever it has.
+ */
+const INDEX_WAIT_MS = 3_000;
 
 /**
  * What can begin a statement.
@@ -102,7 +113,7 @@ export function registerCompletion(monaco: typeof Monaco): Monaco.IDisposable {
   registration?.dispose();
   registration = monaco.languages.registerCompletionItemProvider("pgsql", {
     triggerCharacters: ["."],
-    provideCompletionItems: (model, position, _context, token) => {
+    provideCompletionItems: async (model, position, _context, token) => {
       // The span the editor considers to be the word under the caret. Used
       // whenever the parser reports no range of its own.
       const typed = model.getWordUntilPosition(position);
@@ -134,17 +145,36 @@ export function registerCompletion(monaco: typeof Monaco): Monaco.IDisposable {
         const schemas = projectId ? (useProjectStore.getState().schemas[projectId] ?? []) : [];
         const defaultSchema = schemas.includes("public") ? "public" : (schemas[0] ?? "public");
 
+        const expectation = readExpectation(suggestion.syntax as never, caret, wordRange);
+        const scope = projectId ? readScope(entities as never) : [];
+
+        let pending = false;
+        if (projectId) {
+          const wanted = neededSchema(expectation, scope, schemas, defaultSchema);
+          const store = useSchemaIndexStore.getState();
+          if (wanted && store.isPending(projectId, wanted)) {
+            await withTimeout(store.ensureIndex(projectId, wanted), INDEX_WAIT_MS);
+            if (token.isCancellationRequested) return { suggestions: [] };
+            pending = useSchemaIndexStore.getState().isPending(projectId, wanted);
+          }
+        }
+
         const items = buildCompletions({
-          expectation: readExpectation(suggestion.syntax as never, caret, wordRange),
+          expectation,
           keywords: suggestion.keywords ?? [],
           // Without a connected project there is no catalog, but the grammar's
           // keywords and the snippets are still worth offering.
-          scope: projectId ? readScope(entities as never) : [],
+          scope,
           catalog: projectId ? catalogFor(projectId, defaultSchema) : EMPTY_CATALOG,
           snippets: SQL_SNIPPETS,
         });
 
-        return { suggestions: items.map((item) => toMonacoItem(monaco, item)) };
+        return {
+          suggestions: items.map((item) => toMonacoItem(monaco, item)),
+          // Still waiting on the catalog: ask again on the next keystroke
+          // instead of filtering this partial list forever.
+          incomplete: pending,
+        };
       } catch (error) {
         console.error("[rsql] SQL completion failed", error);
         return { suggestions: fallbackItems(monaco, wordRange) };

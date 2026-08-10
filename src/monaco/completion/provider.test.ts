@@ -56,7 +56,7 @@ describe("registerCompletion", () => {
     expect((registered[0] as { triggerCharacters: string[] }).triggerCharacters).toEqual(["."]);
   });
 
-  it("offers statement openers and snippets for an empty document", () => {
+  it("offers statement openers and snippets for an empty document", async () => {
     const { monaco, registered } = fakeMonaco();
     registerCompletion(monaco);
     const provider = registered[0] as {
@@ -65,14 +65,14 @@ describe("registerCompletion", () => {
         position: unknown,
         context: unknown,
         token: unknown,
-      ) => { suggestions: { label: string }[] };
+      ) => Promise<{ suggestions: { label: string }[] }>;
     };
 
     const model = {
       getValue: () => "",
       getWordUntilPosition: () => ({ startColumn: 1, endColumn: 1 }),
     };
-    const result = provider.provideCompletionItems(
+    const result = await provider.provideCompletionItems(
       model,
       { lineNumber: 1, column: 1 },
       {},
@@ -84,7 +84,7 @@ describe("registerCompletion", () => {
     expect(labels).toContain("sel");
   });
 
-  it("reports a failure rather than returning an empty list silently", () => {
+  it("reports a failure rather than returning an empty list silently", async () => {
     const { monaco, registered } = fakeMonaco();
     registerCompletion(monaco);
     const provider = registered[0] as {
@@ -93,7 +93,7 @@ describe("registerCompletion", () => {
         position: unknown,
         context: unknown,
         token: unknown,
-      ) => { suggestions: { label: string }[] };
+      ) => Promise<{ suggestions: { label: string }[] }>;
     };
 
     const spy = vi.spyOn(console, "error").mockImplementation(() => {});
@@ -103,7 +103,7 @@ describe("registerCompletion", () => {
       },
       getWordUntilPosition: () => ({ startColumn: 1, endColumn: 1 }),
     };
-    const result = provider.provideCompletionItems(
+    const result = await provider.provideCompletionItems(
       model,
       { lineNumber: 1, column: 1 },
       {},

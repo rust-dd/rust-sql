@@ -30,6 +30,8 @@ interface SchemaIndexState {
   ensureIndex: (projectId: string, schema: string) => Promise<void>;
   invalidateProject: (projectId: string) => void;
   getIndex: (projectId: string, schema: string) => SchemaIndex | undefined;
+  /** True while a snapshot is in flight, or when one has never been taken. */
+  isPending: (projectId: string, schema: string) => boolean;
 }
 
 export const useSchemaIndexStore = create<SchemaIndexState>()((set, get) => ({
@@ -78,6 +80,12 @@ export const useSchemaIndexStore = create<SchemaIndexState>()((set, get) => ({
   },
 
   getIndex: (projectId, schema) => get().indexes[key(projectId, schema)],
+
+  isPending: (projectId, schema) => {
+    const k = key(projectId, schema);
+    const { indexes, loading, stale } = get();
+    return loading[k] === true || !indexes[k] || stale[k] === true;
+  },
 }));
 
 /**

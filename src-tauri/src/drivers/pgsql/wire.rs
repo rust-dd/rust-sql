@@ -32,11 +32,7 @@ pub(crate) fn push_cell(out: &mut String, cell: Option<&str>) {
 
     // Separators are ASCII, so a byte scan cannot produce false hits inside
     // multi-byte characters and lets the common case skip the escape pass.
-    if value
-        .as_bytes()
-        .iter()
-        .any(|b| matches!(b, 0x1D | 0x1E | 0x1F))
-    {
+    if value.as_bytes().iter().any(|b| matches!(b, 0x1D..=0x1F)) {
         for ch in value.chars() {
             match ch {
                 CELL_SEP => {

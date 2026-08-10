@@ -4,7 +4,7 @@ use tokio_postgres::{Client, SimpleQueryMessage};
 
 use crate::common::enums::AppError;
 
-use super::super::wire::{CELL_SEP, ROW_SEP, pack_columns, push_row};
+use super::super::wire::{ROW_SEP, pack_columns, push_row};
 use super::super::{CachedQuery, VirtualCache};
 use super::helpers::{column_names, row_cells};
 
@@ -115,12 +115,10 @@ pub async fn execute_virtual(
         }
     }
 
-    let result = if !accum.is_empty() {
-        accum.finish()
-    } else if let Some(previous) = last {
-        previous
+    let result = if accum.is_empty() {
+        last.unwrap_or_default()
     } else {
-        PageAccumulator::default()
+        accum.finish()
     };
 
     let elapsed = start.elapsed().as_millis() as f32;
@@ -189,11 +187,14 @@ pub async fn close_virtual(
 
 #[cfg(test)]
 mod tests {
+    use super::super::super::wire::CELL_SEP;
     use super::*;
 
     fn accumulate(rows: &[Vec<Option<&str>>], page_size: usize) -> PageAccumulator {
-        let mut accum = PageAccumulator::default();
-        accum.columns = vec!["a".to_string()];
+        let mut accum = PageAccumulator {
+            columns: vec!["a".to_string()],
+            ..Default::default()
+        };
         for row in rows {
             if accum.rows_in_page == page_size {
                 accum.packed_bytes += accum.current.len();

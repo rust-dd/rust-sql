@@ -153,7 +153,7 @@ pub async fn pgsql_table_action(
         }
     };
 
-    execute_query(&client, &sql).await.map_err(|e| e)?;
+    execute_query(&client, &sql).await?;
 
     Ok(format!("{action} completed successfully."))
 }

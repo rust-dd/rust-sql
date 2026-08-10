@@ -224,7 +224,7 @@ pub async fn pgsql_connector(
                 port_str.parse().unwrap_or(5432),
             )
             .await
-            .map_err(|e| AppError::ConnectionFailed(e))?;
+            .map_err(AppError::ConnectionFailed)?;
 
             let local_port = tunnel.local_port;
             app_state

@@ -36,10 +36,10 @@ jobs:
         with:
           node-version: lts/*
 
-      - name: Install Rust nightly
-        uses: dtolnay/rust-toolchain@nightly
-        with:
-          targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
+      # Toolchain version comes from src-tauri/rust-toolchain.toml.
+      - name: Install Rust targets
+        if: matrix.platform == 'macos-latest'
+        run: rustup target add aarch64-apple-darwin x86_64-apple-darwin
 
       - name: Install dependencies (ubuntu only)
         if: matrix.platform == 'ubuntu-22.04'
@@ -54,6 +54,9 @@ jobs:
 
       - name: Install frontend dependencies
         run: yarn install --frozen-lockfile
+
+      - name: Version consistency
+        run: node scripts/check-version.mjs
 
       - name: Resolve release tag
         id: release_meta

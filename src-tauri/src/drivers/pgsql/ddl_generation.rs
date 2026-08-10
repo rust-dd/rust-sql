@@ -60,12 +60,11 @@ SELECT string_agg(col_def, E',\n' ORDER BY ordinal_position) FROM col_ddl"#
     fn collect_lines(messages: &[SimpleQueryMessage]) -> Vec<String> {
         let mut out = Vec::new();
         for msg in messages {
-            if let SimpleQueryMessage::Row(row) = msg {
-                if let Some(line) = row.get(0) {
-                    if !line.is_empty() {
-                        out.push(line.to_string());
-                    }
-                }
+            if let SimpleQueryMessage::Row(row) = msg
+                && let Some(line) = row.get(0)
+                && !line.is_empty()
+            {
+                out.push(line.to_string());
             }
         }
         out
@@ -252,11 +251,11 @@ async fn generate_matview_ddl(
         .await
         .map_err(|e| AppError::QueryFailed(e.to_string()))?;
     for msg in &idx_result {
-        if let SimpleQueryMessage::Row(row) = msg {
-            if let Some(line) = row.get(0) {
-                ddl.push('\n');
-                ddl.push_str(line);
-            }
+        if let SimpleQueryMessage::Row(row) = msg
+            && let Some(line) = row.get(0)
+        {
+            ddl.push('\n');
+            ddl.push_str(line);
         }
     }
 

@@ -108,6 +108,7 @@ fn main() {
             drivers::pgsql::pgsql_table_action,
             drivers::pgsql::pgsql_apply_row_mutations,
             drivers::pgsql::pgsql_load_pg_settings,
+            drivers::pgsql::pgsql_load_schema_index,
             terminal::terminal_spawn,
             terminal::terminal_write,
             terminal::terminal_resize,

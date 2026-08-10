@@ -11,6 +11,7 @@ pub mod metadata_views_functions;
 pub mod mutation;
 pub mod query_execution;
 pub mod roles_schema_objects;
+pub mod schema_index;
 pub mod statistics_activity;
 pub mod wire;
 

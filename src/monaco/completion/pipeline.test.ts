@@ -49,20 +49,35 @@ const CATALOG: Catalog = {
   functions: () => [],
 };
 
+/** Stand-in for Monaco's own idea of the word under the caret. */
+function wordRangeAt(line: string, lineNumber: number, column: number) {
+  const before = line.slice(0, column - 1);
+  const word = /[A-Za-z0-9_]*$/.exec(before)?.[0] ?? "";
+  return {
+    startLineNumber: lineNumber,
+    startColumn: column - word.length,
+    endLineNumber: lineNumber,
+    endColumn: column,
+  };
+}
+
 /** `|` marks the caret. */
 function complete(marked: string) {
   const offset = marked.indexOf("|");
   const sql = marked.replace("|", "");
   const before = sql.slice(0, offset);
   const lines = before.split("\n");
-  const position = { lineNumber: lines.length, column: lines[lines.length - 1].length + 1 };
+  const lineNumber = lines.length;
+  const column = lines[lines.length - 1].length + 1;
+  const position = { lineNumber, column };
+  const wordRange = wordRangeAt(lines[lines.length - 1], lineNumber, column);
 
   const parser = new PostgreSQL();
   const suggestion = parser.getSuggestionAtCaretPosition(sql, position);
   const entities = parser.getAllEntities(sql, position);
 
   return buildCompletions({
-    expectation: readExpectation((suggestion?.syntax ?? []) as never, position),
+    expectation: readExpectation((suggestion?.syntax ?? []) as never, position, wordRange),
     keywords: suggestion?.keywords ?? [],
     scope: readScope(entities as never),
     catalog: CATALOG,
@@ -121,5 +136,29 @@ describe("parser to completions", () => {
   it("does not offer a table's columns for a CTE of the same shape", () => {
     // `recent` is not in the catalog, so silence is correct here.
     expect(complete("WITH recent AS (SELECT * FROM orders) SELECT r.| FROM recent r")).toEqual([]);
+  });
+});
+
+describe("typing the first word of a statement", () => {
+  it("offers SELECT while it is being typed", () => {
+    const items = complete("SEL|");
+    expect(items.some((i) => i.label === "SELECT")).toBe(true);
+  });
+
+  it("replaces what was typed rather than inserting beside it", () => {
+    // Without the editor's word range this collapsed to an empty span, so
+    // accepting SELECT after typing SEL produced SELSELECT.
+    const select = complete("SEL|").find((i) => i.label === "SELECT");
+    expect(select?.range).toMatchObject({ startColumn: 1, endColumn: 4 });
+  });
+
+  it("still replaces correctly further into a line", () => {
+    const select = complete("SELECT 1;\nSEL|").find((i) => i.label === "SELECT");
+    expect(select?.range).toMatchObject({ startLineNumber: 2, startColumn: 1, endColumn: 4 });
+  });
+
+  it("keeps an empty span after a qualifier dot", () => {
+    const items = complete("SELECT u.| FROM users u");
+    expect(items[0]?.range).toMatchObject({ startColumn: 10, endColumn: 10 });
   });
 });

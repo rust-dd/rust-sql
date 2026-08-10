@@ -17,10 +17,45 @@ import { useTabStore } from "@/stores/tab-store";
 import { buildCompletions } from "./build";
 import { readExpectation, readScope, toMonacoItem } from "./service";
 import { SQL_SNIPPETS } from "./snippets";
-import type { Catalog } from "./types";
+import type { Catalog, CompletionRange } from "./types";
 
 /** Beyond this the parse stops being cheap enough to run per request. */
 const MAX_PARSED_CHARS = 200_000;
+
+/**
+ * What can begin a statement.
+ *
+ * The parser answers with 62 statement-initial keywords as soon as there is one
+ * character to anchor on, but returns nothing at all for a wholly empty
+ * document — which is exactly where someone starts typing SELECT. This covers
+ * that one case; every other position is answered by the grammar.
+ */
+const STATEMENT_START_KEYWORDS = [
+  "SELECT",
+  "WITH",
+  "INSERT",
+  "UPDATE",
+  "DELETE",
+  "CREATE",
+  "ALTER",
+  "DROP",
+  "TRUNCATE",
+  "EXPLAIN",
+  "ANALYZE",
+  "VACUUM",
+  "GRANT",
+  "REVOKE",
+  "COMMENT",
+  "REFRESH",
+  "BEGIN",
+  "COMMIT",
+  "ROLLBACK",
+  "SET",
+  "SHOW",
+  "CALL",
+  "COPY",
+  "VALUES",
+];
 
 /** Reused: constructing a parser rebuilds ANTLR state for nothing. */
 let parser: PostgreSQL | null = null;
@@ -45,26 +80,39 @@ const EMPTY_CATALOG: Catalog = {
  * as "completion is broken" with nothing to go on. Degrading to something
  * useful, and saying so on the console, beats silence.
  */
-function fallbackItems(monaco: typeof Monaco, position: Monaco.Position) {
-  const range = {
-    startLineNumber: position.lineNumber,
-    startColumn: position.column,
-    endLineNumber: position.lineNumber,
-    endColumn: position.column,
-  };
+function fallbackItems(monaco: typeof Monaco, range: CompletionRange) {
   return buildCompletions({
     expectation: { kinds: [], qualifier: [], range },
-    keywords: [],
+    keywords: STATEMENT_START_KEYWORDS,
     scope: [],
     catalog: EMPTY_CATALOG,
     snippets: SQL_SNIPPETS,
   }).map((item) => toMonacoItem(monaco, item));
 }
 
+/**
+ * The live registration. Registering is idempotent because the module is
+ * re-executed on hot reload, and without this every save added another provider
+ * and every suggestion appeared once more. Disposing rather than refusing means
+ * a reload replaces the provider instead of leaving the stale one in charge.
+ */
+let registration: Monaco.IDisposable | null = null;
+
 export function registerCompletion(monaco: typeof Monaco): Monaco.IDisposable {
-  return monaco.languages.registerCompletionItemProvider("pgsql", {
+  registration?.dispose();
+  registration = monaco.languages.registerCompletionItemProvider("pgsql", {
     triggerCharacters: ["."],
     provideCompletionItems: (model, position, _context, token) => {
+      // The span the editor considers to be the word under the caret. Used
+      // whenever the parser reports no range of its own.
+      const typed = model.getWordUntilPosition(position);
+      const wordRange: CompletionRange = {
+        startLineNumber: position.lineNumber,
+        startColumn: typed.startColumn,
+        endLineNumber: position.lineNumber,
+        endColumn: typed.endColumn,
+      };
+
       try {
         const sql = model.getValue();
         if (sql.length > MAX_PARSED_CHARS) return { suggestions: [] };
@@ -73,7 +121,9 @@ export function registerCompletion(monaco: typeof Monaco): Monaco.IDisposable {
         const sqlParser = getParser();
         const suggestion = sqlParser.getSuggestionAtCaretPosition(sql, caret);
         if (token.isCancellationRequested) return { suggestions: [] };
-        if (!suggestion) return { suggestions: fallbackItems(monaco, position) };
+        // An empty document parses to nothing, so the grammar cannot say what
+        // may start a statement. Answer that one case ourselves.
+        if (!suggestion) return { suggestions: fallbackItems(monaco, wordRange) };
 
         const entities = sqlParser.getAllEntities(sql, caret);
         if (token.isCancellationRequested) return { suggestions: [] };
@@ -85,7 +135,7 @@ export function registerCompletion(monaco: typeof Monaco): Monaco.IDisposable {
         const defaultSchema = schemas.includes("public") ? "public" : (schemas[0] ?? "public");
 
         const items = buildCompletions({
-          expectation: readExpectation(suggestion.syntax as never, caret),
+          expectation: readExpectation(suggestion.syntax as never, caret, wordRange),
           keywords: suggestion.keywords ?? [],
           // Without a connected project there is no catalog, but the grammar's
           // keywords and the snippets are still worth offering.
@@ -97,8 +147,10 @@ export function registerCompletion(monaco: typeof Monaco): Monaco.IDisposable {
         return { suggestions: items.map((item) => toMonacoItem(monaco, item)) };
       } catch (error) {
         console.error("[rsql] SQL completion failed", error);
-        return { suggestions: fallbackItems(monaco, position) };
+        return { suggestions: fallbackItems(monaco, wordRange) };
       }
     },
   });
+
+  return registration;
 }

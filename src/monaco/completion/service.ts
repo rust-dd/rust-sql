@@ -41,10 +41,17 @@ interface SyntaxSuggestion {
  * The parser reports the words already typed before the caret. A trailing dot
  * means everything before it is a qualifier, and the range to replace is the
  * empty span after the dot rather than the dot itself.
+ *
+ * `wordRange` is the span the editor itself thinks is being typed, and is used
+ * whenever the parser offers none. While the first word of a statement is being
+ * typed the parser reports no syntax entries at all, and replacing an empty span
+ * there would insert next to what the user typed instead of completing it —
+ * `SEL` accepting `SELECT` would leave `SELSELECT`.
  */
 export function readExpectation(
   syntax: SyntaxSuggestion[],
   position: { lineNumber: number; column: number },
+  wordRange?: CompletionRange,
 ): CaretExpectation {
   const kinds: ExpectedKind[] = [];
   for (const entry of syntax) {
@@ -54,7 +61,7 @@ export function readExpectation(
 
   const words = syntax[0]?.wordRanges ?? [];
   const qualifier: string[] = [];
-  let range: CompletionRange = {
+  let range: CompletionRange = wordRange ?? {
     startLineNumber: position.lineNumber,
     startColumn: position.column,
     endLineNumber: position.lineNumber,
@@ -64,6 +71,12 @@ export function readExpectation(
   if (words.length > 0) {
     const last = words[words.length - 1];
     if (last.text === ".") {
+      range = {
+        startLineNumber: position.lineNumber,
+        startColumn: position.column,
+        endLineNumber: position.lineNumber,
+        endColumn: position.column,
+      };
       for (const word of words.slice(0, -1)) {
         if (word.text !== ".") qualifier.push(word.text.replace(/"/g, ""));
       }

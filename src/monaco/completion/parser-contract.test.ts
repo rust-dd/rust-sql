@@ -66,6 +66,24 @@ describe("what the parser reports at the caret", () => {
     ]);
   });
 
+  it("answers nothing at all for an empty document", () => {
+    // This is why the provider carries its own statement-start keywords: with
+    // no text to anchor on, the grammar cannot say what may begin a statement,
+    // so relying on it alone left a fresh tab with no SELECT.
+    const parser = new PostgreSQL();
+    const suggestion = parser.getSuggestionAtCaretPosition("", { lineNumber: 1, column: 1 });
+    expect(suggestion).toBeFalsy();
+  });
+
+  it("offers statement-initial keywords as soon as one character exists", () => {
+    expect(at("S|").keywords).toContain("SELECT");
+  });
+
+  it("reports no syntax entry while the first word is being typed", () => {
+    // Hence the need to fall back to the editor's own word range there.
+    expect(at("SEL|").syntax).toEqual([]);
+  });
+
   it("reports a CTE reference as a relation, so it must be resolved separately", () => {
     const { entities } = at("WITH recent AS (SELECT * FROM orders) SELECT | FROM recent r");
     const names = entities.filter((e) => e.entityContextType === "table").map((e) => e.text);

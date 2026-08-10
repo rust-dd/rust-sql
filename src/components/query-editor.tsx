@@ -70,10 +70,12 @@ export function QueryEditor({ value, onChange, onExecute, onExplain }: QueryEdit
             suggestOnTriggerCharacters: true,
             // The document's own words competed with real schema suggestions.
             wordBasedSuggestions: "off",
-            // Enter breaks the line; Tab accepts. With Enter bound to accept,
-            // every newline typed while the widget was open inserted whatever
-            // happened to be highlighted.
-            acceptSuggestionOnEnter: "off",
+            // Enter accepts only when the suggestion would actually change the
+            // text, and breaks the line otherwise. Bound to accept
+            // unconditionally, every newline typed with the widget open
+            // inserted whatever happened to be highlighted; never accepting
+            // meant reaching for Tab even mid-word. Tab always accepts.
+            acceptSuggestionOnEnter: "smart",
             tabCompletion: "on",
             suggest: {
               showKeywords: true,

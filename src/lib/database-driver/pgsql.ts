@@ -2,6 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import type { MutationReport, RowMutation } from "@/lib/mutations";
 import { decodeColumns, decodePage } from "@/lib/wire";
+import type { SchemaIndex } from "@/monaco/completion/types";
 import type { DbGrant, PgRole, ProjectConnectionStatus, SchemaObject, TableGrant } from "@/types";
 import type {
   DatabaseDriver,
@@ -347,6 +348,12 @@ export class PostgreSQLDriver implements DatabaseDriver {
   }
   async loadAvailableExtensions(projectId: string) {
     return invoke<string[][]>("pgsql_load_available_extensions", { project_id: projectId });
+  }
+  async loadSchemaIndex(projectId: string, schema: string) {
+    return invoke<SchemaIndex>("pgsql_load_schema_index", {
+      project_id: projectId,
+      schema,
+    });
   }
   async loadEnumTypes(projectId: string) {
     return invoke<string[][]>("pgsql_load_enum_types", { project_id: projectId });

@@ -64,17 +64,22 @@ export function QueryEditor({ value, onChange, onExecute, onExplain }: QueryEdit
             quickSuggestions: {
               other: true,
               comments: false,
-              strings: true,
+              // A literal is not a place to complete identifiers.
+              strings: false,
             },
             suggestOnTriggerCharacters: true,
-            wordBasedSuggestions: "currentDocument",
-            acceptSuggestionOnEnter: "on",
+            // The document's own words competed with real schema suggestions.
+            wordBasedSuggestions: "off",
+            // Enter breaks the line; Tab accepts. With Enter bound to accept,
+            // every newline typed while the widget was open inserted whatever
+            // happened to be highlighted.
+            acceptSuggestionOnEnter: "off",
             tabCompletion: "on",
             suggest: {
               showKeywords: true,
               showSnippets: true,
               showFunctions: true,
-              showVariables: true,
+              showWords: false,
               preview: true,
               filterGraceful: true,
             },

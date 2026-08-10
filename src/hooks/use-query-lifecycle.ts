@@ -1,10 +1,12 @@
 import { useCallback, useEffect } from "react";
 import { DriverFactory } from "@/lib/database-driver";
+import { changesSchema } from "@/lib/ddl-detect";
 import { isQueryCancelledError, notifyQueryComplete, PAGE_SIZE } from "@/lib/query-helpers";
 import * as virtualCache from "@/lib/virtual-cache";
 import { decodeColumns, decodePage, decodeResult } from "@/lib/wire";
 import { useHistoryStore } from "@/stores/history-store";
 import { useProjectStore } from "@/stores/project-store";
+import { useSchemaIndexStore } from "@/stores/schema-index-store";
 import { useTabStore } from "@/stores/tab-store";
 import { useUIStore } from "@/stores/ui-store";
 
@@ -162,6 +164,10 @@ export function useQueryLifecycle({ setCommandPaletteOpen }: UseQueryLifecycleAr
       // Without this a failure inside the error path would leave the tab
       // spinning on "Executing query..." with no way back.
       setExecuting(tabId, false);
+      // A DDL statement can have added or dropped what completion offers.
+      if (changesSchema(tab.editorValue)) {
+        useSchemaIndexStore.getState().invalidateProject(tab.projectId);
+      }
     }
     useUIStore.getState().setSelectedRow(0);
   }, [setExecuting, updateResult, setVirtualQuery, addHistoryEntry, connectProject]);

@@ -1,5 +1,6 @@
 import type { MutationReport, RowMutation } from "@/lib/mutations";
 import { type CellValue, decodeResult } from "@/lib/wire";
+import type { SchemaIndex } from "@/monaco/completion/types";
 import type {
   ColumnDetail,
   ConstraintDetail,
@@ -157,6 +158,7 @@ export interface DatabaseDriver {
   loadAvailableExtensions?(projectId: string): Promise<string[][]>;
   loadEnumTypes?(projectId: string): Promise<string[][]>;
   loadPgSettings?(projectId: string): Promise<string[][]>;
+  loadSchemaIndex?(projectId: string, schema: string): Promise<SchemaIndex>;
   applyRowMutations?(
     projectId: string,
     schema: string,

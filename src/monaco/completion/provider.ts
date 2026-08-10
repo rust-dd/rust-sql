@@ -152,10 +152,16 @@ export function registerCompletion(monaco: typeof Monaco): Monaco.IDisposable {
         if (projectId) {
           const wanted = neededSchema(expectation, scope, schemas, defaultSchema);
           const store = useSchemaIndexStore.getState();
-          if (wanted && store.isPending(projectId, wanted)) {
+          // Only wait when a snapshot is actually coming. After a failure the
+          // fetch still retries in the background, but waiting on every
+          // keystroke would just stall the editor for nothing.
+          if (wanted && store.isWorthWaitingFor(projectId, wanted)) {
             await withTimeout(store.ensureIndex(projectId, wanted), INDEX_WAIT_MS);
             if (token.isCancellationRequested) return { suggestions: [] };
             pending = useSchemaIndexStore.getState().isPending(projectId, wanted);
+          } else if (wanted && store.isPending(projectId, wanted)) {
+            void store.ensureIndex(projectId, wanted);
+            pending = true;
           }
         }
 

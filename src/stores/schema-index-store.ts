@@ -21,51 +21,88 @@ function key(projectId: string, schema: string): string {
   return `${projectId}::${schema}`;
 }
 
+/**
+ * Loads currently in flight, keyed the same way.
+ *
+ * A second request for a schema already being fetched has to wait for that
+ * fetch rather than returning at once. Returning early meant a caller that
+ * awaited `ensureIndex` resolved immediately whenever the connect-time warmup
+ * had a load running, so it neither waited nor saw an index.
+ */
+const inFlight = new Map<string, Promise<void>>();
+
 interface SchemaIndexState {
   indexes: Record<string, SchemaIndex>;
   loading: Record<string, boolean>;
   /** Schemas whose snapshot is known to be out of date. */
   stale: Record<string, true>;
+  /** Schemas whose last fetch failed. Still retried, but never waited on. */
+  failed: Record<string, true>;
 
   ensureIndex: (projectId: string, schema: string) => Promise<void>;
   invalidateProject: (projectId: string) => void;
   getIndex: (projectId: string, schema: string) => SchemaIndex | undefined;
   /** True while a snapshot is in flight, or when one has never been taken. */
   isPending: (projectId: string, schema: string) => boolean;
+  /** Whether waiting for this schema is worth it, or its last fetch failed. */
+  isWorthWaitingFor: (projectId: string, schema: string) => boolean;
 }
 
 export const useSchemaIndexStore = create<SchemaIndexState>()((set, get) => ({
   indexes: {},
   loading: {},
   stale: {},
+  failed: {},
 
-  ensureIndex: async (projectId, schema) => {
+  ensureIndex: (projectId, schema) => {
     const k = key(projectId, schema);
-    const { indexes, loading, stale } = get();
-    if (loading[k]) return;
-    if (indexes[k] && !stale[k]) return;
+
+    const running = inFlight.get(k);
+    if (running) return running;
+
+    const { indexes, stale } = get();
+    if (indexes[k] && !stale[k]) return Promise.resolve();
 
     const project = useProjectStore.getState().projects[projectId];
-    if (!project) return;
+    if (!project) return Promise.resolve();
     const driver = DriverFactory.getDriver(project.driver);
-    if (!driver.loadSchemaIndex) return;
+    if (!driver.loadSchemaIndex) return Promise.resolve();
 
     set((s) => ({ loading: { ...s.loading, [k]: true } }));
-    try {
-      const index = await driver.loadSchemaIndex(projectId, schema);
-      set((s) => {
-        const nextStale = { ...s.stale };
-        delete nextStale[k];
-        return {
-          indexes: { ...s.indexes, [k]: index },
-          stale: nextStale,
+
+    const load = driver
+      .loadSchemaIndex(projectId, schema)
+      .then((index) => {
+        set((s) => {
+          const nextStale = { ...s.stale };
+          const nextFailed = { ...s.failed };
+          delete nextStale[k];
+          delete nextFailed[k];
+          return {
+            indexes: { ...s.indexes, [k]: index },
+            stale: nextStale,
+            failed: nextFailed,
+            loading: { ...s.loading, [k]: false },
+          };
+        });
+      })
+      .catch((error) => {
+        // Swallowing this left completion waiting on a snapshot that was never
+        // coming, with nothing to show for it.
+        console.error(`[rsql] Failed to load schema index for ${schema}`, error);
+        // A failed snapshot must not wedge the editor; the next trigger retries,
+        // but nothing waits on it again.
+        set((s) => ({
           loading: { ...s.loading, [k]: false },
-        };
+          failed: { ...s.failed, [k]: true },
+        }));
+      })
+      .finally(() => {
+        inFlight.delete(k);
       });
-    } catch {
-      // A failed snapshot must not wedge the editor; the next trigger retries.
-      set((s) => ({ loading: { ...s.loading, [k]: false } }));
-    }
+
+    inFlight.set(k, load);
+    return load;
   },
 
   invalidateProject: (projectId) => {
@@ -85,6 +122,12 @@ export const useSchemaIndexStore = create<SchemaIndexState>()((set, get) => ({
     const k = key(projectId, schema);
     const { indexes, loading, stale } = get();
     return loading[k] === true || !indexes[k] || stale[k] === true;
+  },
+
+  isWorthWaitingFor: (projectId, schema) => {
+    const k = key(projectId, schema);
+    const { failed } = get();
+    return failed[k] !== true && get().isPending(projectId, schema);
   },
 }));
 

@@ -95,7 +95,7 @@ export interface DatabaseDriver {
     pageSize: number,
     timeoutMs?: number,
     execId?: string,
-  ): Promise<[string, number, string, number]>;
+  ): Promise<[string, number, string, number, boolean]>;
   fetchPage?(
     projectId: string,
     queryId: string,

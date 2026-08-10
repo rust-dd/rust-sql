@@ -1,6 +1,6 @@
-use std::{collections::BTreeMap, sync::Arc};
+use std::{collections::BTreeMap, sync::Arc, time::Duration};
 
-use deadpool_postgres::{Manager as PgManager, ManagerConfig, Pool, RecyclingMethod};
+use deadpool_postgres::{Manager as PgManager, ManagerConfig, Pool, RecyclingMethod, Timeouts};
 
 use crate::AppState;
 use crate::common::enums::{AppError, ProjectConnectionStatus};
@@ -10,11 +10,6 @@ use native_tls::TlsConnector;
 use postgres_native_tls::MakeTlsConnector;
 use tauri::{AppHandle, Manager, Result};
 use tokio_postgres::{CancelToken, Config, NoTls};
-
-pub(crate) fn is_sqlite_lock_error(message: &str) -> bool {
-    let lower = message.to_ascii_lowercase();
-    lower.contains("database is locked") || lower.contains("database busy")
-}
 
 pub(crate) fn full_error_chain(e: &dyn std::error::Error) -> String {
     let mut msg = e.to_string();
@@ -27,6 +22,17 @@ pub(crate) fn full_error_chain(e: &dyn std::error::Error) -> String {
     msg
 }
 
+/// Connections held per project for user queries and for metadata lookups.
+/// Several projects can be open at once, so these are kept modest rather than
+/// letting one window monopolize a shared server's connection budget.
+pub(crate) const QUERY_POOL_SIZE: usize = 8;
+pub(crate) const META_POOL_SIZE: usize = 4;
+
+/// Waiting for a free connection is bounded: an exhausted pool used to block
+/// the caller indefinitely, which showed up as a window that had simply stopped
+/// responding. Query duration itself stays governed by `statement_timeout`.
+const POOL_WAIT: Duration = Duration::from_secs(10);
+
 pub(crate) fn create_pg_pool(
     cfg: &Config,
     use_ssl: bool,
@@ -34,6 +40,10 @@ pub(crate) fn create_pg_pool(
 ) -> std::result::Result<Pool, AppError> {
     let manager_config = ManagerConfig {
         recycling_method: RecyclingMethod::Custom("ROLLBACK".into()),
+    };
+    let timeouts = Timeouts {
+        wait: Some(POOL_WAIT),
+        ..Timeouts::default()
     };
 
     if use_ssl {
@@ -44,12 +54,14 @@ pub(crate) fn create_pg_pool(
         let manager = PgManager::from_config(cfg.clone(), tls, manager_config);
         Pool::builder(manager)
             .max_size(max_size)
+            .timeouts(timeouts)
             .build()
             .map_err(|e| AppError::ConnectionFailed(e.to_string()))
     } else {
         let manager = PgManager::from_config(cfg.clone(), NoTls, manager_config);
         Pool::builder(manager)
             .max_size(max_size)
+            .timeouts(timeouts)
             .build()
             .map_err(|e| AppError::ConnectionFailed(e.to_string()))
     }
@@ -64,9 +76,13 @@ pub(crate) async fn acquire_client(
         get_pool(&pools, project_id)?
     };
 
-    pool.get()
-        .await
-        .map_err(|e| AppError::ConnectionFailed(e.to_string()))
+    pool.get().await.map_err(|e| {
+        AppError::ConnectionFailed(format!(
+            "No connection available within {}s: {}",
+            POOL_WAIT.as_secs(),
+            e
+        ))
+    })
 }
 
 pub(crate) async fn apply_statement_timeout(client: &deadpool_postgres::Client, timeout_ms: u32) {
@@ -233,14 +249,14 @@ pub async fn pgsql_connector(
         .host(&effective_host)
         .port(port);
 
-    let query_pool = match create_pg_pool(&cfg, use_ssl, 16) {
+    let query_pool = match create_pg_pool(&cfg, use_ssl, QUERY_POOL_SIZE) {
         Ok(p) => Arc::new(p),
         Err(e) => {
             tracing::error!("Query pool creation failed: {:?}", e);
             return Err(AppError::ConnectionFailed(full_error_chain(&e)).into());
         }
     };
-    let meta_pool = match create_pg_pool(&cfg, use_ssl, 8) {
+    let meta_pool = match create_pg_pool(&cfg, use_ssl, META_POOL_SIZE) {
         Ok(p) => Arc::new(p),
         Err(e) => {
             tracing::error!("Meta pool creation failed: {:?}", e);

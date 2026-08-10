@@ -1,6 +1,3 @@
-pub(crate) use super::wire::CELL_SEP;
-pub(crate) const SNAPSHOT_PAGE_WRITE_RETRIES: usize = 3;
-
 pub mod admin_commands;
 pub mod metadata_commands;
 pub mod mutation_commands;
@@ -8,7 +5,6 @@ pub mod object_info_commands;
 pub mod pool_connection;
 pub mod pubsub_commands;
 pub mod query_commands;
-pub mod snapshot_persistence;
 pub mod statistics_commands;
 
 pub use admin_commands::*;

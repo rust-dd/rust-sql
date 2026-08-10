@@ -189,7 +189,7 @@ export class PostgreSQLDriver implements DatabaseDriver {
     timeoutMs?: number,
     execId?: string,
   ) {
-    return invoke<[string, number, string, number]>("pgsql_execute_virtual", {
+    return invoke<[string, number, string, number, boolean]>("pgsql_execute_virtual", {
       project_id: projectId,
       sql,
       query_id: queryId,

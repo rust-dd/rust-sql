@@ -57,10 +57,7 @@ pub(crate) fn process_simple_messages(
 
 /// Column names of a simple-query row, in result order.
 pub(crate) fn column_names(row: &tokio_postgres::SimpleQueryRow) -> Vec<String> {
-    row.columns()
-        .iter()
-        .map(|c| c.name().to_owned())
-        .collect()
+    row.columns().iter().map(|c| c.name().to_owned()).collect()
 }
 
 /// Cell values of a simple-query row. `None` is SQL NULL.

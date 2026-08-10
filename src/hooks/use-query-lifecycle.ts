@@ -60,7 +60,7 @@ export function useQueryLifecycle({ setCommandPaletteOpen }: UseQueryLifecycleAr
       if (driver.executeVirtual) {
         const sql = tab.editorValue;
         const queryId = crypto.randomUUID().replace(/-/g, "").slice(0, 12);
-        const [colsPacked, totalRows, pagePacked, elapsed] = await driver.executeVirtual(
+        const [colsPacked, totalRows, pagePacked, elapsed, capped] = await driver.executeVirtual(
           tab.projectId,
           sql,
           queryId,
@@ -91,7 +91,7 @@ export function useQueryLifecycle({ setCommandPaletteOpen }: UseQueryLifecycleAr
 
           if (totalRows <= PAGE_SIZE) {
             await driver.closeVirtual?.(tab.projectId, queryId).catch(() => {});
-            updateResult(tabId, { columns, rows: firstPage, time: elapsed });
+            updateResult(tabId, { columns, rows: firstPage, time: elapsed, capped });
             notifyQueryComplete(tab.editorValue, elapsed, true, firstPage.length);
           } else {
             virtualCache.setPage(queryId, 0, firstPage);
@@ -103,7 +103,7 @@ export function useQueryLifecycle({ setCommandPaletteOpen }: UseQueryLifecycleAr
               colCount: columns.length,
               time: elapsed,
             });
-            updateResult(tabId, { columns, rows: firstPage, time: elapsed });
+            updateResult(tabId, { columns, rows: firstPage, time: elapsed, capped });
             notifyQueryComplete(tab.editorValue, elapsed, true, totalRows);
           }
 

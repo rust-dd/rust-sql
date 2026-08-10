@@ -231,7 +231,11 @@ mod tests {
         };
         let built = build_statement("public", "t", &mutation, &types()).unwrap();
         assert!(built.sql.contains("\"id\" = $1::text::bigint"));
-        assert!(built.sql.contains("\"name\" = $2::text::character varying(255)"));
+        assert!(
+            built
+                .sql
+                .contains("\"name\" = $2::text::character varying(255)")
+        );
         assert_eq!(built.params.len(), 2);
     }
 
@@ -239,7 +243,10 @@ mod tests {
     fn array_and_enum_columns_use_their_catalog_type() {
         let mutation = RowMutation {
             kind: MutationKind::Update,
-            set: vec![("tags".into(), cell("{a,b}")), ("kind".into(), cell("active"))],
+            set: vec![
+                ("tags".into(), cell("{a,b}")),
+                ("kind".into(), cell("active")),
+            ],
             pk: vec![("id".into(), cell("7"))],
         };
         let built = build_statement("public", "t", &mutation, &types()).unwrap();
@@ -303,6 +310,10 @@ mod tests {
             pk: vec![("id".into(), cell("1"))],
         };
         let built = build_statement("my schema", "my table", &mutation, &types()).unwrap();
-        assert!(built.sql.starts_with("DELETE FROM \"my schema\".\"my table\" "));
+        assert!(
+            built
+                .sql
+                .starts_with("DELETE FROM \"my schema\".\"my table\" ")
+        );
     }
 }

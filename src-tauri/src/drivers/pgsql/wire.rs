@@ -99,7 +99,8 @@ pub(crate) fn pack_rows(rows: &[Vec<Cell>]) -> String {
 
 /// Encode column names as a single header line.
 pub(crate) fn pack_columns(columns: &[String]) -> String {
-    let mut out = String::with_capacity(columns.iter().map(String::len).sum::<usize>() + columns.len());
+    let mut out =
+        String::with_capacity(columns.iter().map(String::len).sum::<usize>() + columns.len());
     for (index, name) in columns.iter().enumerate() {
         if index > 0 {
             out.push(CELL_SEP);
@@ -236,7 +237,10 @@ mod tests {
 
     #[test]
     fn capacity_estimate_covers_unescaped_payloads() {
-        let rows = vec![vec![Some("abc".into()), None], vec![Some("de".into()), Some("f".into())]];
+        let rows = vec![
+            vec![Some("abc".into()), None],
+            vec![Some("de".into()), Some("f".into())],
+        ];
         assert!(packed_capacity(&rows) >= pack_rows(&rows).len());
     }
 }

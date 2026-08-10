@@ -11,14 +11,9 @@ use tauri::ipc::Response;
 use tauri::{AppHandle, Manager, Result, State};
 use tokio_postgres::NoTls;
 
-use super::CELL_SEP;
 use super::pool_connection::{
     acquire_client, apply_statement_timeout, clear_cancel_token, reset_statement_timeout,
     set_cancel_token,
-};
-use super::snapshot_persistence::{
-    restore_virtual_from_snapshot, snapshot_cleanup_query, snapshot_load_page, snapshot_store_page,
-    snapshot_upsert_metadata,
 };
 
 #[tauri::command(rename_all = "snake_case")]
@@ -132,30 +127,6 @@ pub async fn pgsql_execute_virtual(
     clear_cancel_token(&app_state, exec_id).await;
     let result = result?;
 
-    let col_count = if result.0.is_empty() {
-        0
-    } else {
-        result.0.split(CELL_SEP).count()
-    };
-    if let Err(e) = snapshot_upsert_metadata(
-        &app_state, project_id, query_id, sql, &result.0, result.1, page_size, col_count,
-    )
-    .await
-    {
-        tracing::warn!(
-            "Failed to persist virtual snapshot metadata for {}: {:?}",
-            query_id,
-            e
-        );
-    }
-    if let Err(e) = snapshot_store_page(&app_state, query_id, 0, &result.2).await {
-        tracing::warn!(
-            "Failed to persist virtual snapshot first page for {}: {:?}",
-            query_id,
-            e
-        );
-    }
-
     let json = sonic_rs::to_string(&result).map_err(|e| AppError::QueryFailed(e.to_string()))?;
     Ok(Response::new(json))
 }
@@ -168,65 +139,14 @@ pub async fn pgsql_fetch_page(
     limit: usize,
     app_state: State<'_, AppState>,
 ) -> Result<Response> {
-    let page_index = if limit == 0 { 0 } else { offset / limit };
-
-    match fetch_virtual_page(&app_state.virtual_cache, query_id, col_count, offset, limit).await {
-        Ok(packed) => {
-            if let Err(e) = snapshot_store_page(&app_state, query_id, page_index, &packed).await {
-                tracing::warn!("Failed to persist fetched page for {}: {:?}", query_id, e);
-            }
-            let json =
-                sonic_rs::to_string(&packed).map_err(|e| AppError::QueryFailed(e.to_string()))?;
-            return Ok(Response::new(json));
-        }
-        Err(err) => {
-            tracing::debug!(
-                "Virtual cache miss for query {}, trying snapshot fallback: {:?}",
-                query_id,
-                err
-            );
-        }
-    }
-
-    if let Some(packed) = snapshot_load_page(&app_state, query_id, page_index).await? {
-        let json =
-            sonic_rs::to_string(&packed).map_err(|e| AppError::QueryFailed(e.to_string()))?;
-        return Ok(Response::new(json));
-    }
-
-    if restore_virtual_from_snapshot(&app_state, query_id).await? {
-        let packed =
-            fetch_virtual_page(&app_state.virtual_cache, query_id, col_count, offset, limit)
-                .await?;
-        if let Err(e) = snapshot_store_page(&app_state, query_id, page_index, &packed).await {
-            tracing::warn!(
-                "Failed to persist restored page for {} (page {}): {:?}",
-                query_id,
-                page_index,
-                e
-            );
-        }
-        let json =
-            sonic_rs::to_string(&packed).map_err(|e| AppError::QueryFailed(e.to_string()))?;
-        return Ok(Response::new(json));
-    }
-
-    Err(AppError::QueryFailed(format!(
-        "Virtual query {} not found in memory and no snapshot available",
-        query_id
-    ))
-    .into())
+    let packed =
+        fetch_virtual_page(&app_state.virtual_cache, query_id, col_count, offset, limit).await?;
+    let json = sonic_rs::to_string(&packed).map_err(|e| AppError::QueryFailed(e.to_string()))?;
+    Ok(Response::new(json))
 }
 
 #[tauri::command(rename_all = "snake_case")]
 pub async fn pgsql_close_virtual(query_id: &str, app_state: State<'_, AppState>) -> Result<()> {
     close_virtual(&app_state.virtual_cache, query_id).await?;
-    if let Err(e) = snapshot_cleanup_query(&app_state, query_id).await {
-        tracing::warn!(
-            "Failed to cleanup virtual snapshot for {}: {:?}",
-            query_id,
-            e
-        );
-    }
     Ok(())
 }

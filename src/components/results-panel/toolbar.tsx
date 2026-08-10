@@ -140,8 +140,13 @@ export function ResultsToolbar(props: ToolbarProps) {
                 : searchTerm
                   ? `${filteredCount.toLocaleString()} / ${result.rows.length.toLocaleString()} rows`
                   : `${result.rows.length.toLocaleString()} rows`}
-              {result.capped && !virtualQuery && (
-                <span className="text-warning ml-1">(capped at 500K)</span>
+              {result.capped && (
+                <span
+                  className="text-warning ml-1"
+                  title="The result hit the in-memory limit. Rows beyond it were not kept — narrow the query to see them."
+                >
+                  (truncated)
+                </span>
               )}
             </span>
             <span className="text-muted-foreground/50">&bull;</span>

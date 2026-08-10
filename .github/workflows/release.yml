@@ -42,9 +42,13 @@ jobs:
         with:
           node-version: lts/*
 
-      # Toolchain version comes from src-tauri/rust-toolchain.toml.
       - name: Install Rust targets
         if: matrix.platform == 'macos-latest'
+        # Run where rust-toolchain.toml applies: from the repository root
+        # rustup adds the targets to the runner's default toolchain, not to the
+        # pinned one the build actually uses, and the cross build then fails
+        # with "target is not installed".
+        working-directory: src-tauri
         run: rustup target add aarch64-apple-darwin x86_64-apple-darwin
 
       - name: Install dependencies (ubuntu only)

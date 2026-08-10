@@ -262,4 +262,4 @@ Push a tag like `v1.x.x` to trigger a release build.
 
 ## License
 
-Open source. See [LICENSE](LICENSE) for details.
+Released under the [MIT License](LICENSE).

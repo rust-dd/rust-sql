@@ -1,17 +1,12 @@
 /**
- * Adapter between monaco-sql-languages' completion callback and the pure core.
+ * Translation between the parser's output and the pure completion core, and
+ * between the core's items and Monaco's shape.
  *
- * Everything here is plumbing: read what the parser found, gather the catalog
- * slices it refers to, call `buildCompletions`, map the result to Monaco's
- * shape. The decisions live in `build.ts` so they can be tested without Monaco.
+ * Kept separate from `provider.ts` so the reading functions can be tested
+ * against real parser output without registering anything.
  */
 
 import type * as Monaco from "monaco-editor";
-import { useProjectStore } from "@/stores/project-store";
-import { catalogFor } from "@/stores/schema-index-store";
-import { useTabStore } from "@/stores/tab-store";
-import { buildCompletions } from "./build";
-import { SQL_SNIPPETS } from "./snippets";
 import type {
   CaretExpectation,
   CompletionItem,
@@ -114,7 +109,7 @@ const KIND_MAP: Record<ItemKind, keyof typeof Monaco.languages.CompletionItemKin
   snippet: "Snippet",
 };
 
-function toMonaco(monaco: typeof Monaco, item: CompletionItem) {
+export function toMonacoItem(monaco: typeof Monaco, item: CompletionItem) {
   return {
     label: item.label,
     kind: monaco.languages.CompletionItemKind[KIND_MAP[item.kind]],
@@ -127,36 +122,5 @@ function toMonaco(monaco: typeof Monaco, item: CompletionItem) {
     detail: item.detail,
     documentation: item.documentation,
     range: item.range,
-  };
-}
-
-export function createCompletionService(monaco: typeof Monaco) {
-  return async (
-    _model: unknown,
-    position: { lineNumber: number; column: number },
-    _context: unknown,
-    suggestions: { syntax: SyntaxSuggestion[]; keywords: string[] } | null,
-    entities: any[] | null,
-  ) => {
-    if (!suggestions) return [];
-
-    const { tabs, selectedTabIndex } = useTabStore.getState();
-    const projectId = tabs[selectedTabIndex]?.projectId;
-    if (!projectId) return [];
-
-    const projectSchemas = useProjectStore.getState().schemas[projectId] ?? [];
-    const defaultSchema = projectSchemas.includes("public")
-      ? "public"
-      : (projectSchemas[0] ?? "public");
-
-    const items = buildCompletions({
-      expectation: readExpectation(suggestions.syntax, position),
-      keywords: suggestions.keywords ?? [],
-      scope: readScope(entities),
-      catalog: catalogFor(projectId, defaultSchema),
-      snippets: SQL_SNIPPETS,
-    });
-
-    return items.map((item) => toMonaco(monaco, item));
   };
 }

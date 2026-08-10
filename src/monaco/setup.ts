@@ -11,7 +11,7 @@ import pgWorker from "monaco-sql-languages/esm/languages/pgsql/pgsql.worker?work
 import "monaco-sql-languages/esm/languages/pgsql/pgsql.contribution";
 import { LanguageIdEnum } from "monaco-sql-languages/esm/common/constants";
 import { setupLanguageFeatures } from "monaco-sql-languages/esm/setupLanguageFeatures";
-import { createCompletionService } from "./completion/service";
+import { registerCompletion } from "./completion/provider";
 import { registerTheme } from "./theme";
 
 self.MonacoEnvironment = {
@@ -26,19 +26,13 @@ self.MonacoEnvironment = {
 loader.config({ monaco });
 
 setupLanguageFeatures(LanguageIdEnum.PG, {
-  // The built-in provider is what parses the statement and reports what the
-  // grammar expects at the caret. An earlier version disabled it and matched
-  // context with regexes, which could not see aliases, CTEs or scopes.
-  completionItems: {
-    enable: true,
-    completionService: createCompletionService(monaco) as never,
-    // Space is deliberately absent: it made the widget open on every word.
-    triggerCharacters: ["."],
-    snippets: [],
-  },
+  // Completion is registered directly in registerCompletion below; the library
+  // still provides diagnostics and navigation through its worker.
+  completionItems: false,
   diagnostics: true,
   definitions: true,
   references: true,
 });
 
 registerTheme(monaco);
+registerCompletion(monaco);

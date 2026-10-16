@@ -37,6 +37,7 @@ xattr -dr com.apple.quarantine /Applications/rsql.app
 - Results over 2,000 rows stay in the backend and load page by page as you scroll, up to 1,000,000 rows or 256 MB
 - On results up to 2,000 rows: search, a single-row record view, inline editing, foreign key navigation and diffing against a pinned result
 - Inline editing works on single-table queries that select the primary key, and applies all changes in one transaction
+- In edit mode, type `NULL` (any letter case) for SQL NULL, or `"NULL"` for literal text. Empty input stays an empty string. Cell-to-cell pastes preserve literal text.
 - Export to CSV, JSON, SQL `INSERT`, Markdown or XML; large results export to CSV
 - CSV import into a table, with column mapping
 - Map view for geometry values (WKT, GeoJSON, EWKB points) on OpenStreetMap

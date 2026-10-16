@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { parseCellInput } from "@/lib/cell-input";
 import type { ForeignKey } from "@/lib/database-driver";
 import { DriverFactory } from "@/lib/database-driver";
 import { buildMutations, countPending, emptySession, rowKeys } from "@/lib/mutations";
@@ -216,7 +217,8 @@ export function useEditMode({ tabId, projectId, editorValue, result }: UseEditMo
       if (!column) return;
 
       const original = result.rows[rowIndex]?.[colIndex];
-      const next: CellValue | undefined = value === original ? undefined : value;
+      const parsed = parseCellInput(value);
+      const next: CellValue | undefined = parsed === original ? undefined : parsed;
       useTabStore.getState().setCellEdit(tabId, key, column, next);
     },
     [tabId, editSession, result, keys],
@@ -246,7 +248,7 @@ export function useEditMode({ tabId, projectId, editorValue, result }: UseEditMo
 
   // The grid still works in row positions, so translate identities back to it.
   const editedCells = useMemo(() => {
-    const map = new Map<string, string>();
+    const map = new Map<string, CellValue>();
     if (!editSession || !result) return map;
     keys.forEach((key, rowIndex) => {
       if (!key) return;
@@ -254,7 +256,7 @@ export function useEditMode({ tabId, projectId, editorValue, result }: UseEditMo
       if (!columns) return;
       for (const [column, value] of Object.entries(columns)) {
         const colIndex = result.columns.indexOf(column);
-        if (colIndex >= 0) map.set(`${rowIndex}:${colIndex}`, value ?? "");
+        if (colIndex >= 0) map.set(`${rowIndex}:${colIndex}`, value);
       }
     });
     return map;

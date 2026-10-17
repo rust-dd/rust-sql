@@ -34,6 +34,7 @@ interface TabState {
   setResult: (tabId: string, result: QueryResult) => void;
   setExecuting: (tabId: string, executing: boolean, execId?: string) => void;
   setProjectId: (tabId: string, projectId: string) => void;
+  remapProjectIds: (legacyIds: Map<string, string>) => void;
   setExplainResult: (tabId: string, plan: ExplainPlan | undefined) => void;
   setVirtualQuery: (tabId: string, vq: VirtualQuery | undefined) => void;
   toggleSplit: (tabId: string) => void;
@@ -54,6 +55,14 @@ interface TabState {
 function withTab(state: TabState, tabId: string, apply: (tab: Tab) => void): void {
   const tab = state.tabs.find((t) => t.id === tabId);
   if (tab) apply(tab);
+}
+
+/** Points tabs persisted under a pre-UUID project key at that project's new key. */
+export function remapTabProjectIds(tabs: Tab[], legacyIds: Map<string, string>): Tab[] {
+  return tabs.map((tab) => {
+    const next = tab.projectId ? legacyIds.get(tab.projectId) : undefined;
+    return next ? { ...tab, projectId: next } : tab;
+  });
 }
 
 function makeSingletonTab(
@@ -208,6 +217,11 @@ export const useTabStore = create<TabState>()(
             tab.execId = executing ? execId : undefined;
           });
         }),
+      remapProjectIds: (legacyIds) => {
+        const tabs = get().tabs;
+        const next = remapTabProjectIds(tabs, legacyIds);
+        if (next.some((tab, idx) => tab !== tabs[idx])) set({ tabs: next });
+      },
       setProjectId: (tabId, projectId) => {
         if (get().tabs.find((tab) => tab.id === tabId)?.projectId === projectId) return;
         releaseTabResources(tabId);

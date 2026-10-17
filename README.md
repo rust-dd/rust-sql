@@ -60,6 +60,7 @@ xattr -dr com.apple.quarantine /Applications/rsql.app
 
 - Saved connections, connection strings and SSL
 - SSH tunnels with password or key file authentication; the server's host key is verified before authenticating
+- Rename a server to give the connections on it one shared label; its address stays visible next to the name
 - Connections can be renamed. On first start, 1.3.2 moves existing connections to stable IDs and first writes a backup of the local database next to it (`rsql.db.<timestamp>.bak`)
 - Passwords are stored unencrypted in the app's local database
 

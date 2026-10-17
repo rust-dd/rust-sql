@@ -9,6 +9,7 @@ import {
   List,
   Loader2,
   Package,
+  Pencil,
   Plus,
   RefreshCw,
   Server,
@@ -21,7 +22,7 @@ import { cn } from "@/lib/utils";
 import type { ProjectDetails } from "@/types";
 import { ProjectConnectionStatus } from "@/types";
 import { I } from "./constants";
-import { databaseConnectionHint, serverGroupLabel } from "./labels";
+import { databaseConnectionHint, serverGroupAddress, serverGroupLabel } from "./labels";
 import { renderSchemas } from "./render-schema-objects";
 import { TreeRow } from "./tree-row";
 import type { SidebarRenderCtx } from "./types";
@@ -51,6 +52,7 @@ export function renderServerGroup(ctx: SidebarRenderCtx, fp: string, pids: strin
     openEnumsTab,
     openPgSettingsTab,
     setAddDbSource,
+    setRenameServerPids,
     showMenu,
     copy,
     onEditConnection,
@@ -63,6 +65,7 @@ export function renderServerGroup(ctx: SidebarRenderCtx, fp: string, pids: strin
   const dbCatKey = `${gKey}::databases`;
 
   const serverLabel = serverGroupLabel(projects, pids);
+  const serverAddress = serverGroupAddress(projects, pids);
   const connectedPid = pids.find((p) => status[p] === ProjectConnectionStatus.Connected);
 
   // Union of databases discovered from pg_database + ones we have a project for
@@ -122,6 +125,11 @@ export function renderServerGroup(ctx: SidebarRenderCtx, fp: string, pids: strin
               icon: <Plus className="h-3 w-3" />,
               onClick: () => setAddDbSource(pids[0]),
             },
+            {
+              label: "Rename Server",
+              icon: <Pencil className="h-3 w-3" />,
+              onClick: () => setRenameServerPids(pids),
+            },
             ...(onEditConnection && pids.length === 1
               ? [
                   {
@@ -149,14 +157,24 @@ export function renderServerGroup(ctx: SidebarRenderCtx, fp: string, pids: strin
           ])
         }
         trailing={
-          <div
-            className={cn(
-              "h-2 w-2 rounded-full shrink-0",
-              anyConnected && "bg-success shadow-[0_0_6px_currentColor]",
-              anyConnecting && "bg-warning shadow-[0_0_6px_currentColor]",
-              !anyConnected && !anyConnecting && "bg-muted",
+          <span className="flex min-w-0 items-center gap-1.5">
+            {serverAddress && (
+              <span
+                className="truncate font-mono text-[10px] text-muted-foreground"
+                title={serverAddress}
+              >
+                {serverAddress}
+              </span>
             )}
-          />
+            <div
+              className={cn(
+                "h-2 w-2 rounded-full shrink-0",
+                anyConnected && "bg-success shadow-[0_0_6px_currentColor]",
+                anyConnecting && "bg-warning shadow-[0_0_6px_currentColor]",
+                !anyConnected && !anyConnecting && "bg-muted",
+              )}
+            />
+          </span>
         }
       />
 

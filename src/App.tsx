@@ -101,6 +101,7 @@ export default function App() {
     }) => {
       const details = {
         name: connection.name,
+        serverAlias: editingConnection?.details.serverAlias ?? "",
         driver: connection.driver as "PGSQL",
         username: connection.username,
         password: connection.password,

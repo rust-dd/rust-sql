@@ -1,4 +1,4 @@
-use super::{select_projects, upsert_project};
+use super::{select_projects, set_server_alias, upsert_project};
 use crate::dbs::schema::create_local_schema;
 use libsql::{Connection, Database};
 
@@ -33,18 +33,30 @@ async fn upserted_project_round_trips_its_details() {
     assert_eq!(projects["k1"][..13], details("orders")[..]);
 }
 
-#[tokio::test]
-async fn name_follows_the_details_and_legacy_id_comes_last() {
-    let (_db, conn) = local_db().await;
-    let mut saved = details("orders");
-    saved.push("Orders (prod)".to_string());
+fn named(database: &str, name: &str, server_alias: &str) -> Vec<String> {
+    let mut saved = details(database);
+    saved.push(name.to_string());
+    saved.push(server_alias.to_string());
+    saved
+}
 
-    upsert_project(&conn, "k1", &saved).await.unwrap();
+async fn server_alias_of(conn: &Connection, id: &str) -> String {
+    select_projects(conn).await.unwrap()[id][14].clone()
+}
+
+#[tokio::test]
+async fn name_and_server_alias_follow_the_details_and_legacy_id_comes_last() {
+    let (_db, conn) = local_db().await;
+
+    upsert_project(&conn, "k1", &named("orders", "Orders (prod)", "Railway"))
+        .await
+        .unwrap();
 
     let project = &select_projects(&conn).await.unwrap()["k1"];
-    assert_eq!(project.len(), 15);
+    assert_eq!(project.len(), 16);
     assert_eq!(project[13], "Orders (prod)");
-    assert_eq!(project[14], "");
+    assert_eq!(project[14], "Railway");
+    assert_eq!(project[15], "");
 }
 
 #[tokio::test]
@@ -56,12 +68,43 @@ async fn saving_an_existing_project_keeps_its_legacy_id() {
     )
     .await
     .unwrap();
-    let mut saved = details("orders");
-    saved.push("renamed".to_string());
-
-    upsert_project(&conn, "k1", &saved).await.unwrap();
+    upsert_project(&conn, "k1", &named("orders", "renamed", ""))
+        .await
+        .unwrap();
 
     let project = &select_projects(&conn).await.unwrap()["k1"];
     assert_eq!(project[13], "renamed");
-    assert_eq!(project[14], "prod");
+    assert_eq!(project[15], "prod");
+}
+
+#[tokio::test]
+async fn editing_a_project_keeps_its_server_alias() {
+    let (_db, conn) = local_db().await;
+    upsert_project(&conn, "k1", &named("orders", "prod", "Railway"))
+        .await
+        .unwrap();
+
+    upsert_project(&conn, "k1", &named("orders", "renamed", ""))
+        .await
+        .unwrap();
+
+    assert_eq!(server_alias_of(&conn, "k1").await, "Railway");
+}
+
+#[tokio::test]
+async fn server_alias_is_set_on_the_listed_projects_only() {
+    let (_db, conn) = local_db().await;
+    for id in ["k1", "k2", "k3"] {
+        upsert_project(&conn, id, &named("orders", id, ""))
+            .await
+            .unwrap();
+    }
+
+    set_server_alias(&conn, &["k1".to_string(), "k2".to_string()], "Railway")
+        .await
+        .unwrap();
+
+    assert_eq!(server_alias_of(&conn, "k1").await, "Railway");
+    assert_eq!(server_alias_of(&conn, "k2").await, "Railway");
+    assert_eq!(server_alias_of(&conn, "k3").await, "");
 }

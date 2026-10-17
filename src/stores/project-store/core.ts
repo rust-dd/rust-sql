@@ -1,5 +1,10 @@
 import type { StateCreator } from "zustand";
-import { deleteProject as deleteProjectApi, getProjects, insertProject } from "@/tauri";
+import {
+  deleteProject as deleteProjectApi,
+  getProjects,
+  insertProject,
+  setServerAlias,
+} from "@/tauri";
 import type { DriverType, ProjectConnectionStatus, ProjectDetails, ProjectMap } from "@/types";
 import { ProjectConnectionStatus as PCS } from "@/types";
 import { useTabStore } from "../tab-store";
@@ -13,6 +18,7 @@ export type CoreSlice = {
   deleteProject: (projectId: string) => Promise<void>;
   saveConnection: (projectId: string, details: ProjectDetails) => Promise<void>;
   updateConnection: (projectId: string, details: ProjectDetails) => Promise<void>;
+  renameServer: (projectIds: string[], alias: string) => Promise<void>;
   addDatabaseToServer: (sourceProjectId: string, name: string, database: string) => Promise<void>;
 };
 
@@ -32,10 +38,11 @@ export function parseProjectDetails(arr: string[]): ProjectDetails {
     sshPassword: arr[11] ?? "",
     sshKeyPath: arr[12] ?? "",
     name: arr[13] ?? "",
+    serverAlias: arr[14] ?? "",
   };
 }
 
-/** Same order as the backend's detail columns; the legacy id is read-only and never sent back. */
+/** Same order as the backend's columns; the legacy id is read-only and never sent back. */
 export function toDetailArray(details: ProjectDetails): string[] {
   return [
     details.driver,
@@ -52,6 +59,7 @@ export function toDetailArray(details: ProjectDetails): string[] {
     details.sshPassword ?? "",
     details.sshKeyPath ?? "",
     details.name,
+    details.serverAlias,
   ];
 }
 
@@ -65,7 +73,7 @@ export function buildProjectMap(raw: Record<string, string[]>): {
   );
   const legacyIds = new Map<string, string>();
   for (const [id, arr] of Object.entries(raw)) {
-    if (arr[14]) legacyIds.set(arr[14], id);
+    if (arr[15]) legacyIds.set(arr[15], id);
   }
   return { projects: Object.fromEntries(entries), legacyIds };
 }
@@ -119,6 +127,11 @@ export const createCoreSlice: StateCreator<
 
   updateConnection: async (projectId: string, details: ProjectDetails) => {
     await insertProject(projectId, toDetailArray(details));
+    await get().loadProjects();
+  },
+
+  renameServer: async (projectIds: string[], alias: string) => {
+    await setServerAlias(projectIds, alias.trim());
     await get().loadProjects();
   },
 

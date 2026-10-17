@@ -44,6 +44,7 @@ pub(crate) async fn create_local_schema(conn: &Connection) -> libsql::Result<()>
         "ssh_key_path",
         "name",
         "legacy_id",
+        "server_alias",
     ] {
         conn.execute(
             &format!("ALTER TABLE projects ADD COLUMN {col} TEXT NOT NULL DEFAULT ''"),

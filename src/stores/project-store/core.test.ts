@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { buildProjectMap, projectName, toDetailArray } from "./core";
 
-const row = (database: string, name: string, legacyId = "") => [
+const row = (database: string, name: string, legacyId = "", serverAlias = "") => [
   "PGSQL",
   "app",
   "secret",
@@ -16,6 +16,7 @@ const row = (database: string, name: string, legacyId = "") => [
   "",
   "",
   name,
+  serverAlias,
   legacyId,
 ];
 
@@ -39,11 +40,12 @@ describe("buildProjectMap", () => {
 });
 
 describe("toDetailArray", () => {
-  it("sends the name right after the SSH fields", () => {
-    const { projects } = buildProjectMap({ k: row("orders", "prod", "prod") });
+  it("sends the name and server alias right after the SSH fields", () => {
+    const { projects } = buildProjectMap({ k: row("orders", "prod", "prod", "Railway") });
     const details = projects.k;
     if (!details) throw new Error("project missing");
-    expect(toDetailArray(details)).toEqual(row("orders", "prod").slice(0, 14));
+    expect(projects.k?.serverAlias).toBe("Railway");
+    expect(toDetailArray(details)).toEqual(row("orders", "prod", "", "Railway").slice(0, 15));
   });
 });
 

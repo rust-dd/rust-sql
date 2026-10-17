@@ -1,9 +1,10 @@
 import { describe, expect, it } from "vitest";
 import type { ProjectDetails, ProjectMap } from "@/types";
-import { databaseConnectionHint, serverGroupLabel } from "./labels";
+import { databaseConnectionHint, serverGroupAddress, serverGroupLabel } from "./labels";
 
-const project = (name: string, database: string): ProjectDetails => ({
+const project = (name: string, database: string, serverAlias = ""): ProjectDetails => ({
   name,
+  serverAlias,
   driver: "PGSQL",
   username: "app",
   password: "",
@@ -42,5 +43,26 @@ describe("databaseConnectionHint", () => {
 
   it("stays quiet when the server row already carries the name", () => {
     expect(databaseConnectionHint(projects, ["k1"], "k1", "orders")).toBeUndefined();
+  });
+});
+
+describe("server alias", () => {
+  const aliased: ProjectMap = {
+    k1: project("Orders prod", "orders"),
+    k2: project("users", "users", "Railway"),
+  };
+
+  it("replaces the label of a lone or shared server", () => {
+    expect(serverGroupLabel(aliased, ["k2"])).toBe("Railway");
+    expect(serverGroupLabel(aliased, ["k1", "k2"])).toBe("Railway");
+  });
+
+  it("moves the address next to the label", () => {
+    expect(serverGroupAddress(aliased, ["k1", "k2"])).toBe("db.local:5432");
+    expect(serverGroupAddress(projects, ["k1", "k2"])).toBeUndefined();
+  });
+
+  it("brings back the connection name under a lone server", () => {
+    expect(databaseConnectionHint(aliased, ["k2"], "k2", "orders")).toBe("users");
   });
 });

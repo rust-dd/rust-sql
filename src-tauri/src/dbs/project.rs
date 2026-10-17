@@ -5,7 +5,7 @@ use libsql::Connection;
 use std::collections::BTreeMap;
 use tauri::{Result, State};
 
-/// Column order of the details vector exchanged with the frontend.
+/// Column order of the details vector exchanged with the frontend, followed by `SERVER_ALIAS`.
 /// `select_projects` appends `legacy_id`, which only the id migration writes.
 const DETAIL_COLUMNS: [&str; 14] = [
     "driver",
@@ -23,6 +23,9 @@ const DETAIL_COLUMNS: [&str; 14] = [
     "ssh_key_path",
     "name",
 ];
+
+/// Set when a project is created and by `set_server_alias`; editing a connection leaves it alone.
+const SERVER_ALIAS: &str = "server_alias";
 
 #[cfg(test)]
 mod tests;
@@ -56,7 +59,7 @@ pub async fn project_db_insert(
 
 pub(crate) async fn select_projects(conn: &Connection) -> libsql::Result<BTreeVecStore> {
     let sql = format!(
-        "SELECT id, {}, legacy_id FROM projects ORDER BY id",
+        "SELECT id, {}, {SERVER_ALIAS}, legacy_id FROM projects ORDER BY id",
         DETAIL_COLUMNS.join(", ")
     );
     let mut rows = conn.query(&sql, ()).await?;
@@ -64,8 +67,8 @@ pub(crate) async fn select_projects(conn: &Connection) -> libsql::Result<BTreeVe
     let mut projects = BTreeMap::new();
     while let Some(row) = rows.next().await? {
         let id: String = row.get(0)?;
-        let mut details = Vec::with_capacity(DETAIL_COLUMNS.len() + 1);
-        for idx in 1..=DETAIL_COLUMNS.len() as i32 + 1 {
+        let mut details = Vec::with_capacity(DETAIL_COLUMNS.len() + 2);
+        for idx in 1..=DETAIL_COLUMNS.len() as i32 + 2 {
             details.push(row.get::<String>(idx)?);
         }
         projects.insert(id, details);
@@ -78,7 +81,7 @@ pub(crate) async fn upsert_project(
     project_id: &str,
     details: &[String],
 ) -> libsql::Result<()> {
-    let placeholders: Vec<String> = (1..=DETAIL_COLUMNS.len() + 1)
+    let placeholders: Vec<String> = (1..=DETAIL_COLUMNS.len() + 2)
         .map(|idx| format!("?{idx}"))
         .collect();
     let updates: Vec<String> = DETAIL_COLUMNS
@@ -86,7 +89,7 @@ pub(crate) async fn upsert_project(
         .map(|column| format!("{column} = excluded.{column}"))
         .collect();
     let sql = format!(
-        "INSERT INTO projects (id, {}) VALUES ({}) ON CONFLICT(id) DO UPDATE SET {}",
+        "INSERT INTO projects (id, {}, {SERVER_ALIAS}) VALUES ({}) ON CONFLICT(id) DO UPDATE SET {}",
         DETAIL_COLUMNS.join(", "),
         placeholders.join(", "),
         updates.join(", ")
@@ -101,7 +104,45 @@ pub(crate) async fn upsert_project(
                 .to_string(),
         );
     }
+    values.push(
+        details
+            .get(DETAIL_COLUMNS.len())
+            .cloned()
+            .unwrap_or_default(),
+    );
     conn.execute(&sql, libsql::params_from_iter(values)).await?;
+    Ok(())
+}
+
+pub(crate) async fn set_server_alias(
+    conn: &Connection,
+    project_ids: &[String],
+    alias: &str,
+) -> libsql::Result<()> {
+    let tx = conn.transaction().await?;
+    for id in project_ids {
+        tx.execute(
+            &format!("UPDATE projects SET {SERVER_ALIAS} = ?1 WHERE id = ?2"),
+            [alias, id.as_str()],
+        )
+        .await?;
+    }
+    tx.commit().await
+}
+
+#[tauri::command(rename_all = "snake_case")]
+pub async fn project_db_set_server_alias(
+    project_ids: Vec<String>,
+    alias: &str,
+    app_state: State<'_, AppState>,
+) -> Result<()> {
+    let conn = app_state
+        .local_db
+        .connect()
+        .map_err(|e| AppError::DatabaseError(e.to_string()))?;
+    set_server_alias(&conn, &project_ids, alias)
+        .await
+        .map_err(|e| AppError::DatabaseError(e.to_string()))?;
     Ok(())
 }
 

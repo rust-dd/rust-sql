@@ -100,7 +100,7 @@ The PostgreSQL integration tests are ignored by default and need a database:
 ```bash
 cd src-tauri
 export RSQL_TEST_DATABASE_URL=postgres://postgres:postgres@localhost:5432/postgres
-cargo test --test row_mutations --test schema_index -- --ignored
+cargo test --test row_mutations --test schema_index --test foreign_keys -- --ignored
 cargo test --bin rsql -- --ignored
 ```
 
